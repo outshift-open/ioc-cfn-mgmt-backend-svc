@@ -144,14 +144,14 @@ class TestWorkspaceEndpoints:
         assert del_r_resp.status_code == 200
 
         del_kep_resp = client.delete(f"/api/workspaces/{workspace_id}/knowledge-adapters/{kep_id}")
-        assert del_kep_resp.status_code == 200
+        assert del_kep_resp.status_code == 204
 
         del_mas_resp = client.delete(f"/api/workspaces/{workspace_id}/multi-agentic-systems/{mas_id}")
-        assert del_mas_resp.status_code == 200
+        assert del_mas_resp.status_code == 204
 
         # Workspace delete succeeds
         del_ws_resp_ok = client.delete(f"/api/workspaces/{workspace_id}")
-        assert del_ws_resp_ok.status_code == 200
+        assert del_ws_resp_ok.status_code == 204
 
     def test_delete_default_workspace_public_forbidden(self, client):
         """Public delete of Default Workspace should be forbidden (403)."""

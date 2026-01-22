@@ -29,7 +29,7 @@ class ApiKeyService:
         """Generate a secure random API key with prefix"""
         random_part = secrets.token_urlsafe(self.KEY_LENGTH)
         # Remove any padding characters and limit length
-        random_part = random_part.replace("-", "").replace("_", "")[:self.KEY_LENGTH]
+        random_part = random_part.replace("-", "").replace("_", "")[: self.KEY_LENGTH]
         return f"{self.KEY_PREFIX}{random_part}"
 
     def _hash_api_key(self, api_key: str) -> str:

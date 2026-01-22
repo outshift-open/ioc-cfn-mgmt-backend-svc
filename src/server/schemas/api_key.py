@@ -13,7 +13,7 @@ class ApiKeyCreate(BaseModel):
     roles: List[str] = Field(
         ...,
         description="List of roles assigned to this API key (e.g., ['admin', 'viewer'])",
-        min_items=1,
+        min_length=1,
     )
     workspace_id: Optional[str] = Field(
         None,
