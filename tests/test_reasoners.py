@@ -1,5 +1,5 @@
 """
-Tests for Reasoner endpoints in ci-tkf-data-logic-svc.
+Tests for Reasoner endpoints in ioc-cfn-mgmt-backend.
 """
 import pytest
 

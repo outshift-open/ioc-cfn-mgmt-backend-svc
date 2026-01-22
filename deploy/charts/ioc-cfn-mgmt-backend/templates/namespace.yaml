@@ -5,7 +5,7 @@ metadata:
 {{- if  .Values.namespace }}
   name: {{ .Values.namespace }}
 {{- else }}
-  name: ci-tkf-data-logic-svc
+  name: ioc-cfn-mgmt-backend
 {{- end }}
   labels:
 {{- if  .Values.imageSignatureVerification }}

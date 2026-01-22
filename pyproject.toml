@@ -1,5 +1,5 @@
 [project]
-name = "ci-tkf-data-logic-svc"
+name = "ioc-cfn-mgmt-backend"
 version = "0.1.0"
 description = "TKF Data Logic Service"
 readme = "README.md"
@@ -16,6 +16,7 @@ dependencies = [
     "neo4j (==6.0.3)",
     "atlas-provider-sqlalchemy (==0.4.1)",
     "pytest-asyncio (>=1.3.0,<2.0.0)",
+    "regopy (==1.0.0)",
 ]
 
 [project.optional-dependencies]
@@ -37,6 +38,7 @@ email-validator = "2.1.1"
 requests = "2.31.0"
 psycopg2-binary = "2.9.11"
 python-dotenv = "1.0.0"
+regopy = "1.0.0"
 
 [tool.poetry.group.dev.dependencies]
 pytest-cov = "4.1.0"

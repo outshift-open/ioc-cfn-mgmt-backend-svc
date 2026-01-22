@@ -1,5 +1,5 @@
 """
-Tests for Knowledge Adapter endpoints in ci-tkf-data-logic-svc.
+Tests for Knowledge Adapter endpoints in ioc-cfn-mgmt-backend.
 """
 import pytest
 

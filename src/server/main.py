@@ -88,7 +88,7 @@ def health():
 @app.get("/env")
 def env_var():
     return {
-        "service": "ci-tkf-data-logic-svc",
+        "service": "ioc-cfn-mgmt-backend",
         "environment_variables": {
             "CONFIGMAP_TEST": os.environ.get("CONFIGMAP_TEST"),
             "CONFIGMAP_DEFAULT_EXAMPLE": os.environ.get("CONFIGMAP_DEFAULT_EXAMPLE"),
@@ -117,5 +117,5 @@ if __name__ == "__main__":
     version = os.environ.get("APPLICATION_VERSION")
     logger.info(f"Starting up the '{service_name}' FastAPI app! Version: '{version}'")
 
-    port = int(os.environ.get("PORT", 8001))
+    port = int(os.environ.get("PORT", 8000))
     uvicorn.run(app, host="0.0.0.0", port=port)

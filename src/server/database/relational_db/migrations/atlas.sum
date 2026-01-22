@@ -1,4 +1,4 @@
-h1:eodxPtdTbbJp7kOyqI44uhojTfLt8XEjTiivnJAcMMY=
+h1:eo5ZJ7Mflg/smUFYnc7XcPKA348bxnBzxZ/85FY6akw=
 20251125234207_software table.sql h1:LsYotw7Y0UcJ3MrC3dQjJeM1tQvCyzV2AoZ3p7YFhdA=
 20251201192513_update software table type field length.sql h1:uLsCjIMVthN6zDUyXfEmZHvW5z6zo8aWXHUhMfmicMs=
 20251203175820_add users table.sql h1:2eisVi6V4H9uriV9WVQFJwCm3vMxjTYr4KuDVsrGLeU=
@@ -24,3 +24,4 @@ h1:eodxPtdTbbJp7kOyqI44uhojTfLt8XEjTiivnJAcMMY=
 20251223100000_add_unique_indexes_mas_reasoner_kep.sql h1:c6pOlXMRFY1MJ90vFDBleVBPubUQUFsIRLauavmtyK0=
 20260113000000_add_reasoner_history_table.sql h1:9OAfnMjYWzSn4r0feEdF+HtMQKM4jPiPR3wahZ17EJo=
 20260114121310_add_query_input_to_reasoner_history.sql h1:+HkZqHMrG7CHa4iWkRrGdW0ql0NCfOVVlEB9PeI2sSE=
+20260122000000_add_api_key_table.sql h1:AECROOsD3LsCctBIfJyN9inWYDr+zbv/xAs88ukOnMs=

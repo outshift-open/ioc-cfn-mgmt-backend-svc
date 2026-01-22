@@ -1,5 +1,5 @@
 """
-Tests for Multi-Agent System endpoints in ci-tkf-data-logic-svc.
+Tests for Multi-Agent System endpoints in ioc-cfn-mgmt-backend.
 """
 import pytest
 

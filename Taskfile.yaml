@@ -50,7 +50,7 @@ tasks:
   dev:
     desc: Start development server with hot reload
     cmds:
-      - poetry run uvicorn server.main:app --host 0.0.0.0 --port 8001 --reload
+      - poetry run uvicorn server.main:app --host 0.0.0.0 --port 8000 --reload
     dir: "{{.SRC_DIR}}"
 
   run:
@@ -122,12 +122,12 @@ tasks:
           --build-arg GIT_COMMIT_TIME=$(git log -1 --format=%cI) \
           --build-arg GIT_BRANCH=$(git rev-parse --abbrev-ref HEAD) \
           --no-cache \
-          -t ci-tkf-data-logic-svc:latest .
+          -t ioc-cfn-mgmt-backend:latest .
 
   docker-run:
     desc: Run Docker container
     cmds:
-      - docker run -p 8001:8001 ci-tkf-data-logic-svc:latest
+      - docker run -p 8000:8000 ioc-cfn-mgmt-backend:latest
 
   docker-compose-up:
     desc: Start all services with docker-compose
@@ -183,7 +183,7 @@ tasks:
   db-seed:
     desc: Seed the database with initial data
     cmds:
-      - poetry run psql postgresql://$POSTGRES_USER:$POSTGRES_PASSWORD@localhost:5455/tkf -f scripts/populate_software.sql
+      - poetry run psql postgresql://$POSTGRES_USER:$POSTGRES_PASSWORD@localhost:$POSTGRES_PORT/tkf -f scripts/populate_software.sql
     dir: "{{.SRC_DIR}}/server/database/relational_db"
 
   help:

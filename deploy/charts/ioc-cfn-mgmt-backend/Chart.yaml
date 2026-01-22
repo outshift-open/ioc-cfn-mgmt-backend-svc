@@ -1,5 +1,5 @@
 apiVersion: v2
 appVersion: 0.1.0
 description: TKF Data Logic Service
-name: ci-tkf-data-logic-svc
+name: ioc-cfn-mgmt-backend
 version: 0.1.0

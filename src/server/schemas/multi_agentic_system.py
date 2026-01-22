@@ -26,6 +26,29 @@ class MultiAgenticSystemRequest(BaseModel):
     )
 
 
+class MultiAgenticSystemUpdate(BaseModel):
+    """Schema for updating a Multi-Agentic System"""
+
+    name: Optional[str] = Field(
+        None,
+        description="Updated name for the multi-agentic system",
+        min_length=1,
+        max_length=255,
+    )
+    description: Optional[str] = Field(
+        None,
+        description="Updated description of the multi-agentic system",
+    )
+    agents: Optional[Dict[str, Any]] = Field(
+        None,
+        description="Updated configuration of agents in the system",
+    )
+    config: Optional[Dict[str, Any]] = Field(
+        None,
+        description="Updated configuration object",
+    )
+
+
 class MultiAgenticSystemResponse(BaseModel):
     """Schema for multi-agentic system creation response"""
 

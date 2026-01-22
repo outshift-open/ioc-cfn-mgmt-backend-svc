@@ -1,4 +1,4 @@
-# ci-tkf-data-logic-svc
+# ioc-cfn-mgmt-backend
 
 TKF Data Logic Service - FastAPI workspace, user, and API key management
 
@@ -58,7 +58,7 @@ poetry install
 task dev
 ```
 
-**API Documentation:** http://localhost:8001/docs
+**API Documentation:** http://localhost:8000/docs
 
 ## Development
 

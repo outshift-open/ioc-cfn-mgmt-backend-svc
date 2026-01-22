@@ -1,4 +1,4 @@
-name: ci-tkf-data-logic-svc CI workflow
+name: ioc-cfn-mgmt-backend CI workflow
 
 on:
   # we want pull requests so we can build(test) but not push to image registry

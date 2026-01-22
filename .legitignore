@@ -14,3 +14,5 @@ value_url_https://atlasgo.sh
 
 # Ignore secrets in Taskfile.yaml
 Taskfile.yaml
+# Ignore example API key in schema
+src/server/schemas/api_key.py

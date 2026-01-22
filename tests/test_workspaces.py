@@ -1,5 +1,5 @@
 """
-Tests for workspace endpoints in ci-tkf-data-logic-svc.
+Tests for workspace endpoints in ioc-cfn-mgmt-backend.
 """
 import pytest
 

@@ -1,4 +1,4 @@
-from fastapi import APIRouter, status
+from fastapi import APIRouter, status, Depends
 
 from server.schemas.knowledge_adapter import (
     KnowledgeAdapterRequest,
@@ -7,6 +7,8 @@ from server.schemas.knowledge_adapter import (
     KnowledgeAdapters,
 )
 from server.services import knowledge_adapter_service
+from server.api.dependencies import get_current_user
+from server.authz.authz_service import authz_service
 
 router = APIRouter()
 
@@ -19,6 +21,7 @@ router = APIRouter()
 def create_knowledge_adapter(
     workspace_id: str,
     kep_data: KnowledgeAdapterRequest,
+    current_user: dict = Depends(get_current_user),
 ):
     """
     Create a new Knowledge Adapter (KEP) within a workspace
@@ -32,6 +35,7 @@ def create_knowledge_adapter(
 
     Returns the UUID and name of the created knowledge adapter
     """
+    authz_service.require_permission(current_user, "create", "workspace")
     return knowledge_adapter_service.create_knowledge_adapter(workspace_id, kep_data)
 
 
@@ -39,7 +43,10 @@ def create_knowledge_adapter(
     "/{workspace_id}/knowledge-adapters",
     response_model=KnowledgeAdapters,
 )
-def list_knowledge_adapters(workspace_id: str):
+def list_knowledge_adapters(
+    workspace_id: str,
+    current_user: dict = Depends(get_current_user),
+):
     """
     List all Knowledge Adapters in a workspace
 
@@ -47,6 +54,7 @@ def list_knowledge_adapters(workspace_id: str):
 
     Returns list of knowledge adapters in the workspace
     """
+    authz_service.require_permission(current_user, "get", "workspace")
     return knowledge_adapter_service.list_knowledge_adapters(workspace_id)
 
 
@@ -54,7 +62,11 @@ def list_knowledge_adapters(workspace_id: str):
     "/{workspace_id}/knowledge-adapters/{kep_id}",
     response_model=KnowledgeAdapter,
 )
-def get_knowledge_adapter(workspace_id: str, kep_id: str):
+def get_knowledge_adapter(
+    workspace_id: str,
+    kep_id: str,
+    current_user: dict = Depends(get_current_user),
+):
     """
     Get a specific Knowledge Adapter by ID
 
@@ -63,14 +75,20 @@ def get_knowledge_adapter(workspace_id: str, kep_id: str):
 
     Returns detailed knowledge adapter information
     """
+    authz_service.require_permission(current_user, "get", "workspace")
     return knowledge_adapter_service.get_knowledge_adapter(workspace_id, kep_id)
 
 
 @router.delete(
     "/{workspace_id}/knowledge-adapters/{kep_id}",
-    status_code=status.HTTP_200_OK,
+    status_code=status.HTTP_204_NO_CONTENT,
 )
-def delete_knowledge_adapter(workspace_id: str, kep_id: str, _purge: bool = False):
+def delete_knowledge_adapter(
+    workspace_id: str,
+    kep_id: str,
+    _purge: bool = False,
+    current_user: dict = Depends(get_current_user),
+):
     """
     Delete a Knowledge Adapter
 
@@ -80,4 +98,6 @@ def delete_knowledge_adapter(workspace_id: str, kep_id: str, _purge: bool = Fals
 
     Returns success message
     """
-    return knowledge_adapter_service.delete_knowledge_adapter(workspace_id, kep_id, _purge)
+    authz_service.require_permission(current_user, "delete", "workspace")
+    knowledge_adapter_service.delete_knowledge_adapter(workspace_id, kep_id, _purge)
+    return None

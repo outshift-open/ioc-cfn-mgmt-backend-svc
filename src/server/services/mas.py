@@ -7,6 +7,7 @@ from sqlalchemy.exc import IntegrityError
 
 from server.schemas.multi_agentic_system import (
     MultiAgenticSystemRequest,
+    MultiAgenticSystemUpdate,
     MultiAgenticSystemResponse,
     MultiAgenticSystem as MultiAgenticSystemSchema,
     MultiAgenticSystems,
@@ -208,6 +209,116 @@ class MultiAgenticSystemService:
             raise HTTPException(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
                 detail=f"Failed to retrieve multi-agentic system: {str(e)}",
+            )
+
+    def update_multi_agentic_system(
+        self, workspace_id: str, mas_id: str, mas_data: MultiAgenticSystemUpdate
+    ) -> MultiAgenticSystemSchema:
+        """Update a multi-agentic system"""
+        try:
+            db = RelationalDB()
+            session = db.get_session()
+
+            try:
+                # Find the MAS
+                mas = (
+                    session.query(MultiAgenticSystemModel)
+                    .filter(
+                        MultiAgenticSystemModel.id == mas_id,
+                        MultiAgenticSystemModel.workspace_id == workspace_id,
+                        MultiAgenticSystemModel.deleted_at.is_(None),
+                    )
+                    .first()
+                )
+
+                if not mas:
+                    raise HTTPException(
+                        status_code=status.HTTP_404_NOT_FOUND,
+                        detail="Multi-agentic system not found",
+                    )
+
+                # Update only provided fields
+                if mas_data.name is not None:
+                    # Check for duplicate name in the same workspace
+                    existing = (
+                        session.query(MultiAgenticSystemModel)
+                        .filter(
+                            MultiAgenticSystemModel.workspace_id == workspace_id,
+                            MultiAgenticSystemModel.name == mas_data.name,
+                            MultiAgenticSystemModel.id != mas_id,
+                            MultiAgenticSystemModel.deleted_at.is_(None),
+                        )
+                        .first()
+                    )
+                    if existing:
+                        raise HTTPException(
+                            status_code=status.HTTP_409_CONFLICT,
+                            detail=f"Multi-agentic system with name '{mas_data.name}' already exists in this workspace",
+                        )
+                    mas.name = mas_data.name
+
+                if mas_data.description is not None:
+                    mas.description = mas_data.description
+
+                if mas_data.agents is not None:
+                    mas.agents = mas_data.agents
+
+                if mas_data.config is not None:
+                    mas.config = mas_data.config
+
+                mas.updated_at = datetime.now(timezone.utc)
+
+                session.commit()
+                session.refresh(mas)
+
+                response = MultiAgenticSystemSchema(
+                    id=mas.id,
+                    workspace_id=mas.workspace_id,
+                    name=mas.name,
+                    description=mas.description,
+                    agents=mas.agents,
+                    config=mas.config,
+                    created_at=mas.created_at,
+                    updated_at=mas.updated_at,
+                    created_by=mas.created_by,
+                    updated_by=mas.updated_by,
+                )
+
+                # add to audits table
+                audit_service.create_audit(
+                    AuditRequest(
+                        resource_type=ResourceType.MAS,
+                        audit_type=AuditEventType.RESOURCE_UPDATED,
+                        audit_resource_id=mas_id,
+                        updated_by="",  # TODO: get user from apikey
+                        audit_information=mas_data.model_dump(),
+                        audit_extra_information="success",
+                        updated_at=mas.updated_at,
+                    )
+                )
+
+                return response
+
+            except IntegrityError as e:
+                session.rollback()
+                if "idx_mas_workspace_name_unique" in str(e):
+                    raise HTTPException(
+                        status_code=status.HTTP_409_CONFLICT,
+                        detail=f"Multi-agentic system with name '{mas_data.name}' already exists in this workspace",
+                    )
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail=f"Database integrity error: {str(e)}",
+                )
+            finally:
+                session.close()
+
+        except HTTPException:
+            raise
+        except Exception as e:
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail=f"Failed to update multi-agentic system: {str(e)}",
             )
 
     def delete_multi_agentic_system(self, workspace_id: str, mas_id: str, _purge: bool = False) -> dict:

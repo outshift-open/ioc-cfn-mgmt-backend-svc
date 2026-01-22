@@ -43,16 +43,16 @@ services:
       timeout: 5s
       retries: 5
 
-  ci-tkf-data-logic-svc:
+  ioc-cfn-mgmt-backend:
     build:
       context: .
       dockerfile: Dockerfile
     profiles:
       - api
     ports:
-      - "8001:8001"
+      - "8000:8000"
     environment:
-      - SERVICE_NAME=ci-tkf-data-logic-svc
+      - SERVICE_NAME=ioc-cfn-mgmt-backend
       - APPLICATION_VERSION=dev
       - LOG_LEVEL=${LOG_LEVEL:-INFO}
       - POSTGRES_HOST=tkf-relational-db
@@ -72,7 +72,7 @@ services:
       tkf-graph-vector-db:
         condition: service_healthy
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8001/health"]
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
       interval: 30s
       timeout: 10s
       retries: 3
