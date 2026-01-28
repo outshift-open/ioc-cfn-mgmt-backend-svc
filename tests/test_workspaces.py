@@ -118,34 +118,12 @@ class TestWorkspaceEndpoints:
         assert mas_resp.status_code == 201
         mas_id = mas_resp.json()["id"]
 
-        reasoner_data = {"name": "WS-Del Reasoner", "mas_id": mas_id, "config": {}}
-        r_resp = client.post(f"/api/workspaces/{workspace_id}/reasoners", json=reasoner_data)
-        assert r_resp.status_code == 201
-        reasoner_id = r_resp.json()["id"]
-
-        kep_data = {
-            "name": "WS-Del KEP",
-            "mas_ids": [mas_id],
-            "type": "pull",
-            "software_type": "info-extraction",
-            "software_config": {"entities": ["PERSON"], "confidence_threshold": 0.8},
-        }
-        kep_resp = client.post(f"/api/workspaces/{workspace_id}/knowledge-adapters", json=kep_data)
-        assert kep_resp.status_code == 201
-        kep_id = kep_resp.json()["id"]
-
         # Attempt to delete workspace should be blocked (409) due to dependents
         del_ws_resp_blocked = client.delete(f"/api/workspaces/{workspace_id}")
         assert del_ws_resp_blocked.status_code == 409
         assert "Workspace has dependent objects" in del_ws_resp_blocked.json()["detail"]
 
         # Delete dependents first
-        del_r_resp = client.delete(f"/api/workspaces/{workspace_id}/reasoners/{reasoner_id}")
-        assert del_r_resp.status_code == 200
-
-        del_kep_resp = client.delete(f"/api/workspaces/{workspace_id}/knowledge-adapters/{kep_id}")
-        assert del_kep_resp.status_code == 204
-
         del_mas_resp = client.delete(f"/api/workspaces/{workspace_id}/multi-agentic-systems/{mas_id}")
         assert del_mas_resp.status_code == 204
 

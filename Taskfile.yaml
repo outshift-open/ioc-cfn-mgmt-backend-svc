@@ -1,7 +1,7 @@
 version: "3"
 
 dotenv:
-  - .env
+  - env.conf
 
 vars:
   TASK_VERSION: v3.39.2
@@ -58,7 +58,7 @@ tasks:
     cmds:
       - task: deps
       - task: db-migrate-apply
-      - task: db-seed
+      # - task: db-seed
       - task: generate-dek
       - poetry run python -m server.main
     dir: "{{.SRC_DIR}}"
@@ -129,30 +129,30 @@ tasks:
     cmds:
       - docker run -p 8000:8000 ioc-cfn-mgmt-backend:latest
 
-  docker-compose-up:
+  docker-compose-full-stack-up:
     desc: Start all services with docker-compose
     cmds:
-      - docker compose --env-file .env --profile db-only --profile api up --build
+      - docker compose --env-file env.conf --profile full-stack up
 
-  docker-compose-down:
+  docker-compose-full-stack-down:
     desc: Stop all services with docker-compose
     cmds:
-      - docker compose --env-file .env --profile db-only --profile api down
+      - docker compose --env-file env.conf --profile full-stack down
 
   docker-compose-db-up:
     desc: Start only databases (PostgreSQL and Neo4j) with db-only profile
     cmds:
-      - docker compose --env-file .env --profile db-only up -d
+      - docker compose --env-file env.conf --profile db-only up -d
 
   docker-compose-db-down:
     desc: Stop only databases with db-only profile
     cmds:
-      - docker compose --env-file .env --profile db-only down
+      - docker compose --env-file env.conf --profile db-only down
 
   docker-compose-db-down-with-volumes:
     desc: Stop databases and remove volumes with db-only profile
     cmds:
-      - docker compose --env-file .env --profile db-only down -v
+      - docker compose --env-file env.conf --profile db-only down -v
 
   # Database migration tasks
   db-migrate-apply:

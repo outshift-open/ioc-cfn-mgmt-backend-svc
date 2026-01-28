@@ -1,0 +1,15 @@
+{
+  "recommendations": [
+    "ms-python.python",
+    "ms-python.vscode-pylance",
+    "ms-python.debugpy",
+    "ms-python.black-formatter",
+    "ms-python.flake8",
+    "charliermarsh.ruff",
+    "ms-vscode.makefile-tools",
+    "ms-vscode.docker",
+    "redhat.vscode-yaml",
+    "eamodio.gitlens",
+    "GitHub.copilot"
+  ]
+}

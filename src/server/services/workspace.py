@@ -3,22 +3,29 @@
 from datetime import datetime, timezone
 
 from fastapi import HTTPException, status
-from sqlalchemy.exc import IntegrityError
 from sqlalchemy import and_, exists
+from sqlalchemy.exc import IntegrityError
 
+from server.database.relational_db.db import RelationalDB
+from server.database.relational_db.models.mas import MultiAgenticSystem as MASModel
+from server.database.relational_db.models.workspace import Workspace as WorkspaceModel
+from server.database.relational_db.models.workspace_member import WorkspaceMember as WorkspaceMemberModel
+from server.database.relational_db.models.workspace_invitation import (
+    WorkspaceInvitation as WorkspaceInvitationModel,
+)
 from server.schemas.workspace import (
     WorkspaceCreate,
-    WorkspaceResponse,
     WorkspaceDetail,
-    WorkspaceUpdate,
     WorkspaceList,
+    WorkspaceResponse,
+    WorkspaceUpdate,
 )
-from server.database.relational_db.models.workspace import Workspace as WorkspaceModel
-from server.database.relational_db.models.mas import MultiAgenticSystem as MASModel
-from server.database.relational_db.models.reasoner import Reasoner as ReasonerModel
-from server.database.relational_db.models.knowledge_adapter import KnowledgeAdapter as KnowledgeAdapterModel
-from server.database.relational_db.db import RelationalDB
-from server.services.audit import AuditEventType, ResourceType, audit_service, AuditRequest
+from server.services.audit import (
+    AuditEventType,
+    AuditRequest,
+    ResourceType,
+    audit_service,
+)
 
 
 class WorkspaceService:
@@ -30,63 +37,40 @@ class WorkspaceService:
         """Check if workspace has dependent objects before deletion.
         Returns a tuple: (has_dependents: bool, detail: str)
         """
-        mas_exists = session.query(
-            exists().where(and_(MASModel.workspace_id == workspace_id, MASModel.deleted_at.is_(None)))
-        ).scalar()
+        mas_exists = bool(
+            session.query(
+                exists().where(and_(MASModel.workspace_id == workspace_id, MASModel.deleted_at.is_(None)))
+            ).scalar()
+        )
 
-        reasoner_exists = session.query(
-            exists().where(and_(ReasonerModel.workspace_id == workspace_id, ReasonerModel.deleted_at.is_(None)))
-        ).scalar()
-
-        kep_exists = session.query(
-            exists().where(
-                and_(
-                    KnowledgeAdapterModel.workspace_id == workspace_id,
-                    KnowledgeAdapterModel.deleted_at.is_(None),
-                )
-            )
-        ).scalar()
-
-        if not (mas_exists or reasoner_exists or kep_exists):
+        if not mas_exists:
             return False, ""
 
         mas_count = (
             session.query(MASModel).filter(MASModel.workspace_id == workspace_id, MASModel.deleted_at.is_(None)).count()
         )
-        reasoner_count = (
-            session.query(ReasonerModel)
-            .filter(ReasonerModel.workspace_id == workspace_id, ReasonerModel.deleted_at.is_(None))
-            .count()
-        )
-        kep_count = (
-            session.query(KnowledgeAdapterModel)
-            .filter(
-                KnowledgeAdapterModel.workspace_id == workspace_id,
-                KnowledgeAdapterModel.deleted_at.is_(None),
-            )
-            .count()
-        )
 
         found_parts = []
         if mas_count > 0:
             found_parts.append(f"{mas_count} MAS")
-        if reasoner_count > 0:
-            found_parts.append(f"{reasoner_count} {'reasoner' if reasoner_count == 1 else 'reasoners'}")
-        if kep_count > 0:
-            found_parts.append(f"{kep_count} {'knowledge adapter' if kep_count == 1 else 'knowledge adapters'}")
         return True, ", ".join(found_parts)
 
     def _purge_dependents(self, session, workspace_id: str):
         """Hard delete all dependent objects for a workspace during internal purge operations"""
-        session.query(ReasonerModel).filter(ReasonerModel.workspace_id == workspace_id).delete(
+        # Delete workspace members
+        session.query(WorkspaceMemberModel).filter(WorkspaceMemberModel.workspace_id == workspace_id).delete(
             synchronize_session=False
         )
-        session.query(KnowledgeAdapterModel).filter(KnowledgeAdapterModel.workspace_id == workspace_id).delete(
+
+        # Delete workspace invitations
+        session.query(WorkspaceInvitationModel).filter(WorkspaceInvitationModel.workspace_id == workspace_id).delete(
             synchronize_session=False
         )
+
+        # Delete multi-agentic systems
         session.query(MASModel).filter(MASModel.workspace_id == workspace_id).delete(synchronize_session=False)
 
-    def create_workspace(self, workspace_data: WorkspaceCreate) -> WorkspaceResponse:
+    def create_workspace(self, workspace_data: WorkspaceCreate, creator_user_id: str) -> WorkspaceResponse:
         """Create a new workspace"""
         try:
             db = RelationalDB()
@@ -117,6 +101,16 @@ class WorkspaceService:
                 session.add(new_workspace)
                 session.commit()
                 session.refresh(new_workspace)
+
+                # Automatically add creator as workspace admin
+                from server.services.workspace_member import workspace_member_service
+
+                workspace_member_service.add_member(
+                    workspace_id=new_workspace.id,  # type: ignore[arg-type]
+                    user_id=creator_user_id,
+                    role="admin",
+                    created_by=creator_user_id,
+                )
 
                 response = WorkspaceResponse(id=new_workspace.id)  # type: ignore[arg-type]
 

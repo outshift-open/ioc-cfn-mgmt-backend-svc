@@ -45,3 +45,14 @@ def encrypt_data(data: str, key: bytes) -> str:
     except Exception as e:
         logger.error(f"Data encryption failed: {e}")
         raise
+
+
+def decrypt_data(encrypted_data: str, key: bytes) -> str:
+    """Decrypt data using the provided key"""
+    try:
+        f = Fernet(key)
+        decrypted = f.decrypt(encrypted_data.encode())
+        return decrypted.decode()
+    except Exception as e:
+        logger.error(f"Data decryption failed: {e}")
+        raise

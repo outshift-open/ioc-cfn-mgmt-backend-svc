@@ -27,13 +27,12 @@ def create_api_key(
     Create a new API key
 
     - **name**: Human-readable name for the API key
-    - **roles**: List of roles to assign to this key (e.g., ["admin", "viewer"])
-    - **workspace_id**: Optional workspace ID to associate with the key
 
-    Returns the created API key information including the full key (only shown once)
+    The API key is linked to the current authenticated user and inherits their role.
+    Returns the created API key information including the full key (only shown once).
     """
     authz_service.require_permission(current_user, "create", "api_key")
-    return api_key_service.create_api_key(api_key_data)
+    return api_key_service.create_api_key(api_key_data, user_id=current_user["id"])
 
 
 @router.get(
@@ -41,18 +40,22 @@ def create_api_key(
     response_model=ApiKeyList,
 )
 def list_api_keys(
-    workspace_id: str = None,
     current_user: dict = Depends(get_current_user),
 ):
     """
-    List all API keys
+    List API keys
 
-    - **workspace_id**: Optional query parameter to filter by workspace
+    - Non-admin users see only their own API keys
+    - Admin users see all API keys in the system
 
-    Returns a list of all API keys (without the full key value)
+    Returns a list of API keys (without the full key value)
     """
     authz_service.require_permission(current_user, "get", "api_key")
-    return api_key_service.list_api_keys(workspace_id=workspace_id)
+
+    # Non-admins see only their own keys, admins see all
+    user_id = None if current_user["role"] == "admin" else current_user["id"]
+
+    return api_key_service.list_api_keys(user_id=user_id)
 
 
 @router.delete(
@@ -68,10 +71,11 @@ def delete_api_key(
 
     - **key_id**: UUID of the API key to delete
 
-    Performs a soft delete of the API key
+    Users can only delete their own API keys unless they are admins.
+    Performs a soft delete of the API key.
     """
     authz_service.require_permission(current_user, "delete", "api_key")
-    api_key_service.delete_api_key(key_id)
+    api_key_service.delete_api_key(key_id, user_id=current_user["id"], is_admin=current_user["role"] == "admin")
     return None
 
 

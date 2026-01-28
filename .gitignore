@@ -139,10 +139,12 @@ uv.lock.bak
 .dockerignore.bak
 
 # IDE
-.vscode/
 .idea/
 
 # Mac files
 .DS_Store
 
 .runme.branch
+
+# Claude code
+CLAUDE.md

@@ -1,5 +1,6 @@
 import logging
 import os
+import uvicorn
 from contextlib import asynccontextmanager
 from dotenv import load_dotenv
 from fastapi import FastAPI
@@ -7,7 +8,6 @@ from fastapi.middleware.cors import CORSMiddleware
 from prometheus_fastapi_instrumentator import Instrumentator
 from server.api.api import api_router
 from server.database.relational_db.db import RelationalDB
-from server.database.graph_db.neo4j.src.db_async import GraphDB
 
 from server.common import service_name
 from server.services.user import UserService
@@ -35,12 +35,12 @@ async def lifespan(app: FastAPI):
         logger.error(f"Relational Database initialization failed: {str(e)}")
         raise
 
-    try:
-        graph_db = GraphDB()
-        await graph_db.init()
-    except Exception as e:
-        logger.error(f"Graph Database initialization failed: {str(e)}")
-        raise
+    # try:
+    #     graph_db = GraphDB()
+    #     await graph_db.init()
+    # except Exception as e:
+    #     logger.error(f"Graph Database initialization failed: {str(e)}")
+    #     raise
 
     logger.info("Database connections initialized")
 
@@ -56,7 +56,7 @@ async def lifespan(app: FastAPI):
     # Shutdown
     logger.info("Closing database connection...")
     db.close()
-    await graph_db.close()
+    # await graph_db.close()
     logger.info("Database connection closed")
 
 
@@ -107,8 +107,6 @@ def env_var():
 app.include_router(api_router, prefix="/api")
 
 if __name__ == "__main__":
-    import uvicorn
-
     log_level = os.environ.get("LOG_LEVEL", "DEBUG").upper()
     logging.basicConfig(level=getattr(logging, log_level))
 

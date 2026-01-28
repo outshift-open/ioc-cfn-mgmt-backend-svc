@@ -10,15 +10,6 @@ class ApiKeyCreate(BaseModel):
         min_length=1,
         max_length=200,
     )
-    roles: List[str] = Field(
-        ...,
-        description="List of roles assigned to this API key (e.g., ['admin', 'viewer'])",
-        min_length=1,
-    )
-    workspace_id: Optional[str] = Field(
-        None,
-        description="Optional workspace ID to associate with this API key",
-    )
 
 
 class ApiKeyResponse(BaseModel):
@@ -29,8 +20,7 @@ class ApiKeyResponse(BaseModel):
                 "key": "tkf_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
                 "key_preview": "tkf_xxx...",
                 "name": "Production API Key",
-                "roles": ["admin"],
-                "workspace_id": "550e8400-e29b-41d4-a716-446655440001",
+                "user_id": "550e8400-e29b-41d4-a716-446655440002",
                 "created_at": "2024-11-14T10:30:00Z",
             }
         }
@@ -40,8 +30,7 @@ class ApiKeyResponse(BaseModel):
     key: str = Field(..., description="Full API key (only returned on creation)")
     key_preview: str = Field(..., description="Preview of the API key (first few characters)")
     name: str = Field(..., description="Human-readable name for the API key")
-    roles: List[str] = Field(..., description="List of roles assigned to this API key")
-    workspace_id: Optional[str] = Field(None, description="Associated workspace ID")
+    user_id: str = Field(..., description="ID of the user who owns this API key")
     created_at: datetime = Field(..., description="Timestamp when the API key was created")
 
 
@@ -52,8 +41,7 @@ class ApiKeyListItem(BaseModel):
                 "id": "550e8400-e29b-41d4-a716-446655440000",
                 "key_preview": "tkf_abc123...",
                 "name": "Production API Key",
-                "roles": ["admin"],
-                "workspace_id": "550e8400-e29b-41d4-a716-446655440001",
+                "user_id": "550e8400-e29b-41d4-a716-446655440002",
                 "created_at": "2024-11-14T10:30:00Z",
             }
         }
@@ -62,8 +50,7 @@ class ApiKeyListItem(BaseModel):
     id: str = Field(..., description="Unique identifier for the API key")
     key_preview: str = Field(..., description="Preview of the API key (first few characters)")
     name: str = Field(..., description="Human-readable name for the API key")
-    roles: List[str] = Field(..., description="List of roles assigned to this API key")
-    workspace_id: Optional[str] = Field(None, description="Associated workspace ID")
+    user_id: str = Field(..., description="ID of the user who owns this API key")
     created_at: datetime = Field(..., description="Timestamp when the API key was created")
 
 
@@ -76,8 +63,7 @@ class ApiKeyList(BaseModel):
                         "id": "550e8400-e29b-41d4-a716-446655440000",
                         "key_preview": "tkf_abc123...",
                         "name": "Production API Key",
-                        "roles": ["admin"],
-                        "workspace_id": "550e8400-e29b-41d4-a716-446655440001",
+                        "user_id": "550e8400-e29b-41d4-a716-446655440002",
                         "created_at": "2024-11-14T10:30:00Z",
                     }
                 ],

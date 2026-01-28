@@ -1,0 +1,43 @@
+from sqlalchemy import Column, String, DateTime, text, Index, ForeignKey
+
+from server.database.relational_db.models import Base
+
+
+class WorkspaceMember(Base):
+    __tablename__ = "workspace_member"
+
+    id = Column(String(36), primary_key=True, server_default=text("gen_random_uuid()::text"))
+
+    # Required fields
+    workspace_id = Column(String(36), ForeignKey("workspace.id"), nullable=False)
+    user_id = Column(String(36), ForeignKey("user.id"), nullable=False)
+    role = Column(String(50), nullable=False)
+
+    # Timestamp fields
+    joined_at = Column(DateTime, nullable=False, server_default=text("CURRENT_TIMESTAMP"))
+
+    # Optional fields
+    created_by = Column(String(255), nullable=True)
+
+    # Soft delete field
+    deleted_at = Column(DateTime, nullable=True)
+
+    # Indexes
+    __table_args__ = (
+        Index("idx_workspace_member_workspace_id", "workspace_id"),
+        Index("idx_workspace_member_user_id", "user_id"),
+        Index("idx_workspace_member_deleted_at", "deleted_at"),
+        Index(
+            "idx_workspace_member_unique",
+            "workspace_id",
+            "user_id",
+            unique=True,
+            postgresql_where=text("deleted_at IS NULL"),
+        ),
+    )
+
+    def __repr__(self):
+        return (
+            f"<WorkspaceMember(id='{self.id}', workspace_id='{self.workspace_id}', "
+            f"user_id='{self.user_id}', role='{self.role}')>"
+        )

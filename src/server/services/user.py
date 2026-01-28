@@ -20,7 +20,7 @@ logger = logging.getLogger(__name__)
 ADMIN_USER_USERNAME_DEFAULT = "admin"
 ADMIN_USER_PASSWORD_DEFAULT = "admin"
 ADMIN_USER_DOMAIN_DEFAULT = "tkf.local"
-ADMIN_USER_ROLE_DEFAULT = "Software Admin"
+ADMIN_USER_ROLE_DEFAULT = "admin"
 
 
 class UserService:
@@ -55,6 +55,7 @@ class UserService:
                     logger.info(
                         f"Admin user '{ADMIN_USER_USERNAME_DEFAULT}' already exists with ID: {existing_user.id}"
                     )
+                    # Return without API key since user already exists
                     return UserResponse(id=existing_user.id)
 
                 # Create new admin user

@@ -15,13 +15,14 @@ from server.schemas.api_key import (
     ApiKeyList,
 )
 from server.database.relational_db.models.api_key import ApiKey as ApiKeyModel
+from server.database.relational_db.models.user import User as UserModel
 from server.database.relational_db.db import RelationalDB
 
 
 class ApiKeyService:
     """Service layer for API key business logic"""
 
-    KEY_PREFIX = "tkf_"
+    KEY_PREFIX = "ioc_"
     KEY_LENGTH = 48  # Length of the random part (excluding prefix)
     PREVIEW_LENGTH = 15  # Number of characters to show in preview
 
@@ -40,8 +41,8 @@ class ApiKeyService:
         """Create a preview of the API key (first N characters + ...)"""
         return f"{api_key[:self.PREVIEW_LENGTH]}..."
 
-    def create_api_key(self, api_key_data: ApiKeyCreate) -> ApiKeyResponse:
-        """Create a new API key"""
+    def create_api_key(self, api_key_data: ApiKeyCreate, user_id: str) -> ApiKeyResponse:
+        """Create a new API key linked to a user"""
         try:
             db = RelationalDB()
             session = db.get_session()
@@ -54,11 +55,10 @@ class ApiKeyService:
 
                 # Create new API key record
                 new_api_key = ApiKeyModel(
-                    workspace_id=api_key_data.workspace_id,
+                    user_id=user_id,
                     key_hash=key_hash,
                     key_preview=key_preview,
                     name=api_key_data.name,
-                    roles=api_key_data.roles,
                 )
 
                 session.add(new_api_key)
@@ -71,8 +71,7 @@ class ApiKeyService:
                     key=api_key,
                     key_preview=key_preview,
                     name=new_api_key.name,  # type: ignore[arg-type]
-                    roles=new_api_key.roles or [],  # type: ignore[arg-type]
-                    workspace_id=new_api_key.workspace_id,  # type: ignore[arg-type]
+                    user_id=new_api_key.user_id,  # type: ignore[arg-type]
                     created_at=new_api_key.created_at,  # type: ignore[arg-type]
                 )
 
@@ -85,8 +84,8 @@ class ApiKeyService:
                 detail=f"Failed to create API key: {str(e)}",
             )
 
-    def list_api_keys(self, workspace_id: Optional[str] = None) -> ApiKeyList:
-        """List all active API keys, optionally filtered by workspace"""
+    def list_api_keys(self, user_id: Optional[str] = None) -> ApiKeyList:
+        """List all active API keys, optionally filtered by user"""
         try:
             db = RelationalDB()
             session = db.get_session()
@@ -94,9 +93,9 @@ class ApiKeyService:
             try:
                 query = session.query(ApiKeyModel).filter(ApiKeyModel.deleted_at.is_(None))
 
-                # Filter by workspace if provided
-                if workspace_id:
-                    query = query.filter(ApiKeyModel.workspace_id == workspace_id)
+                # Filter by user if provided
+                if user_id:
+                    query = query.filter(ApiKeyModel.user_id == user_id)
 
                 api_keys = query.all()
 
@@ -105,8 +104,7 @@ class ApiKeyService:
                         id=api_key.id,  # type: ignore[arg-type]
                         key_preview=api_key.key_preview,  # type: ignore[arg-type]
                         name=api_key.name,  # type: ignore[arg-type]
-                        roles=api_key.roles or [],  # type: ignore[arg-type]
-                        workspace_id=api_key.workspace_id,  # type: ignore[arg-type]
+                        user_id=api_key.user_id,  # type: ignore[arg-type]
                         created_at=api_key.created_at,  # type: ignore[arg-type]
                     )
                     for api_key in api_keys
@@ -123,8 +121,14 @@ class ApiKeyService:
                 detail=f"Failed to list API keys: {str(e)}",
             )
 
-    def delete_api_key(self, key_id: str) -> dict:
-        """Delete an API key (soft delete)"""
+    def delete_api_key(self, key_id: str, user_id: str, is_admin: bool = False) -> dict:
+        """Delete an API key (soft delete)
+
+        Args:
+            key_id: ID of the API key to delete
+            user_id: ID of the user requesting deletion
+            is_admin: Whether the user is an admin
+        """
         try:
             db = RelationalDB()
             session = db.get_session()
@@ -145,6 +149,13 @@ class ApiKeyService:
                     raise HTTPException(
                         status_code=status.HTTP_404_NOT_FOUND,
                         detail="API key not found",
+                    )
+
+                # Check ownership - users can only delete their own keys unless admin
+                if not is_admin and api_key.user_id != user_id:  # type: ignore[attr-defined]
+                    raise HTTPException(
+                        status_code=status.HTTP_403_FORBIDDEN,
+                        detail="You can only delete your own API keys",
                     )
 
                 # Soft delete
@@ -196,17 +207,28 @@ class ApiKeyService:
                 if not api_key_record:
                     return None
 
-                # Return user information based on the API key
-                # The first role in the list is used as the primary role
-                primary_role = api_key_record.roles[0] if api_key_record.roles else "viewer"  # type: ignore[index]
+                # Fetch the actual user from the User table (single source of truth)
+                user = (
+                    session.query(UserModel)
+                    .filter(
+                        and_(
+                            UserModel.id == api_key_record.user_id,  # type: ignore[attr-defined]
+                            UserModel.deleted_at.is_(None),
+                        )
+                    )
+                    .first()
+                )
 
+                if not user:
+                    return None
+
+                # Return real user information (single source of truth for permissions)
                 return {
-                    "id": api_key_record.id,
-                    "username": api_key_record.name,
-                    "role": primary_role,
-                    "email": f"{api_key_record.name}@api.key",
-                    "workspace_id": api_key_record.workspace_id,
-                    "roles": api_key_record.roles,
+                    "id": user.id,  # Real user ID
+                    "username": user.username,  # Real username
+                    "role": user.role,  # User's global role (single source of truth)
+                    "email": f"{user.username}@{user.domain}",  # Real email
+                    "api_key_id": api_key_record.id,  # For audit trails
                 }
 
             finally:

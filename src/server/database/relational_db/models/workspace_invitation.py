@@ -1,0 +1,39 @@
+from sqlalchemy import Column, String, DateTime, text, Index, ForeignKey
+
+from server.database.relational_db.models import Base
+
+
+class WorkspaceInvitation(Base):
+    __tablename__ = "workspace_invitation"
+
+    id = Column(String(36), primary_key=True, server_default=text("gen_random_uuid()::text"))
+
+    # Required fields
+    workspace_id = Column(String(36), ForeignKey("workspace.id"), nullable=False)
+    inviter_id = Column(String(36), ForeignKey("user.id"), nullable=False)
+    invitee_username = Column(String(360), nullable=False)
+    role = Column(String(50), nullable=False)
+    status = Column(String(50), nullable=False, server_default=text("'pending'"))
+
+    # Timestamp fields
+    created_at = Column(DateTime, nullable=False, server_default=text("CURRENT_TIMESTAMP"))
+    expires_at = Column(DateTime, nullable=False)
+    responded_at = Column(DateTime, nullable=True)
+
+    # Soft delete field
+    deleted_at = Column(DateTime, nullable=True)
+
+    # Indexes
+    __table_args__ = (
+        Index("idx_workspace_invitation_workspace_id", "workspace_id"),
+        Index("idx_workspace_invitation_invitee_username", "invitee_username"),
+        Index("idx_workspace_invitation_status", "status"),
+        Index("idx_workspace_invitation_expires_at", "expires_at"),
+        Index("idx_workspace_invitation_deleted_at", "deleted_at"),
+    )
+
+    def __repr__(self):
+        return (
+            f"<WorkspaceInvitation(id='{self.id}', workspace_id='{self.workspace_id}', "
+            f"invitee_username='{self.invitee_username}', status='{self.status}')>"
+        )

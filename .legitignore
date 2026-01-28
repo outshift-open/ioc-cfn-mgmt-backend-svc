@@ -16,3 +16,6 @@ value_url_https://atlasgo.sh
 Taskfile.yaml
 # Ignore example API key in schema
 src/server/schemas/api_key.py
+
+# Test files
+tests/**

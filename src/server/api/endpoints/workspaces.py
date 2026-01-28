@@ -34,7 +34,7 @@ def create_workspace(
     Returns the UUID of the created workspace
     """
     authz_service.require_permission(current_user, "create", "workspace")
-    return workspace_service.create_workspace(workspace_data)
+    return workspace_service.create_workspace(workspace_data, creator_user_id=current_user["id"])
 
 
 @router.get("/", response_model=WorkspaceList)
