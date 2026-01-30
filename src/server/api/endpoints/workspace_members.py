@@ -1,12 +1,12 @@
-from fastapi import APIRouter, status, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, status
 
+from server.auth.auth import get_current_user
 from server.schemas.workspace_member import (
+    WorkspaceMemberDetail,
     WorkspaceMemberList,
     WorkspaceMemberRoleUpdate,
-    WorkspaceMemberDetail,
 )
 from server.services.workspace_member import workspace_member_service
-from server.api.dependencies import get_current_user
 
 router = APIRouter()
 

@@ -94,6 +94,12 @@ class WorkspaceMemberService:
                     )
                 )
 
+                # Check if user is the workspace creator
+                from server.database.relational_db.models.workspace import Workspace as WorkspaceModel
+
+                workspace = session.query(WorkspaceModel).filter(WorkspaceModel.id == workspace_id).first()
+                is_creator = workspace.created_by == user_id if workspace else False
+
                 return WorkspaceMemberDetail(
                     id=new_member.id,  # type: ignore[arg-type]
                     workspace_id=new_member.workspace_id,  # type: ignore[arg-type]
@@ -101,6 +107,7 @@ class WorkspaceMemberService:
                     username=user.username,  # type: ignore[arg-type]
                     role=WorkspaceRole(new_member.role),  # type: ignore[arg-type]
                     joined_at=new_member.joined_at,  # type: ignore[arg-type]
+                    is_creator=is_creator,
                 )
 
             finally:
@@ -226,6 +233,12 @@ class WorkspaceMemberService:
                     )
                 )
 
+                # Check if user is the workspace creator
+                from server.database.relational_db.models.workspace import Workspace as WorkspaceModel
+
+                workspace = session.query(WorkspaceModel).filter(WorkspaceModel.id == workspace_id).first()
+                is_creator = workspace.created_by == user_id if workspace else False
+
                 return WorkspaceMemberDetail(
                     id=member.id,  # type: ignore[arg-type]
                     workspace_id=member.workspace_id,  # type: ignore[arg-type]
@@ -233,6 +246,7 @@ class WorkspaceMemberService:
                     username=user.username if user else None,  # type: ignore[arg-type]
                     role=WorkspaceRole(member.role),  # type: ignore[arg-type]
                     joined_at=member.joined_at,  # type: ignore[arg-type]
+                    is_creator=is_creator,
                 )
 
             finally:
@@ -254,6 +268,12 @@ class WorkspaceMemberService:
             session = db.get_session()
 
             try:
+                from server.database.relational_db.models.workspace import Workspace as WorkspaceModel
+
+                # Get workspace creator_id
+                workspace = session.query(WorkspaceModel).filter(WorkspaceModel.id == workspace_id).first()
+                creator_id = workspace.created_by if workspace else None
+
                 members = (
                     session.query(WorkspaceMemberModel, UserModel)
                     .join(UserModel, WorkspaceMemberModel.user_id == UserModel.id)
@@ -275,6 +295,7 @@ class WorkspaceMemberService:
                         username=user.username,  # type: ignore[arg-type]
                         role=WorkspaceRole(member.role),  # type: ignore[arg-type]
                         joined_at=member.joined_at,  # type: ignore[arg-type]
+                        is_creator=member.user_id == creator_id,  # type: ignore[arg-type]
                     )
                     for member, user in members
                 ]

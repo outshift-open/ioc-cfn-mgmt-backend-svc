@@ -1,6 +1,7 @@
-from pydantic import BaseModel, Field, ConfigDict
 from datetime import datetime
 from typing import List, Optional
+
+from pydantic import BaseModel, ConfigDict, Field
 
 
 class UserResponse(BaseModel):
@@ -25,7 +26,7 @@ class User(BaseModel):
             "example": {
                 "id": "550e8400-e29b-41d4-a716-446655440000",
                 "username": "admin",
-                "domain": "tkf.local",
+                "domain": "ioc.local",
                 "role": "admin",
                 "created_at": "2024-11-14T10:30:00Z",
                 "updated_at": "2024-11-14T11:15:00Z",
@@ -49,7 +50,7 @@ class Users(BaseModel):
                     {
                         "id": "550e8400-e29b-41d4-a716-446655440000",
                         "username": "admin",
-                        "domain": "tkf.local",
+                        "domain": "ioc.local",
                         "role": "admin",
                         "created_at": "2024-11-14T10:30:00Z",
                         "updated_at": "2024-11-14T11:15:00Z",

@@ -1,7 +1,8 @@
 """Authentication schemas"""
 
-from pydantic import BaseModel, Field
 from typing import Optional
+
+from pydantic import BaseModel, EmailStr, Field, field_validator
 
 
 class LoginRequest(BaseModel):
@@ -9,6 +10,24 @@ class LoginRequest(BaseModel):
 
     username: str = Field(..., description="Username")
     password: str = Field(..., description="Password")
+
+
+class SignupRequest(BaseModel):
+    """Schema for user sign-up request"""
+
+    username: str = Field(..., min_length=3, max_length=100, description="Desired username")
+    email: EmailStr = Field(..., description="Email address")
+    password: str = Field(..., min_length=8, description="Password (minimum 8 characters)")
+    domain: str = Field(default="ioc.local", description="User domain")
+    role: str = Field(default="admin", description="User role")  # Every new user is an admin by default
+
+    @field_validator("username")
+    @classmethod
+    def validate_username(cls, v: str) -> str:
+        """Validate username format"""
+        if not v.replace("_", "").replace("-", "").isalnum():
+            raise ValueError("Username can only contain alphanumeric characters, hyphens, and underscores")
+        return v
 
 
 class TokenResponse(BaseModel):

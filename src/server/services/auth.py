@@ -1,15 +1,18 @@
 """Authentication service - Business logic for user authentication"""
 
 import logging
-from typing import Optional, Dict, Any
+import uuid
+from typing import Any, Dict, Optional
 
 from fastapi import HTTPException, status
 from sqlalchemy import and_
 
+from server.auth.jwt import create_access_token, create_refresh_token
+from server.common import decrypt_data, encrypt_data, get_global_encryption_key
 from server.database.relational_db.db import RelationalDB
 from server.database.relational_db.models.user import User as UserModel
-from server.common import get_global_encryption_key, decrypt_data
-from server.auth.jwt import create_access_token, create_refresh_token
+from server.schemas.workspace import WorkspaceCreate
+from server.services.workspace import workspace_service
 
 logger = logging.getLogger(__name__)
 
@@ -108,6 +111,124 @@ class AuthService:
             "token_type": "bearer",
             "user": user,
         }
+
+    def signup(
+        self,
+        username: str,
+        email: str,
+        password: str,
+        domain: str = "ioc.local",
+        role: str = "user",
+    ) -> Dict[str, Any]:
+        """
+        Register a new user.
+
+        Args:
+            username: User's desired username
+            email: User's email address
+            password: User's password
+            domain: User's domain (default: ioc.local)
+            role: User's role (default: user)
+
+        Returns:
+            Dictionary containing user information and JWT tokens
+
+        Raises:
+            HTTPException: If username already exists or other validation errors occur
+        """
+        try:
+            db = RelationalDB()
+            session = db.get_session()
+
+            try:
+                # Check if username already exists
+                existing_user = (
+                    session.query(UserModel)
+                    .filter(
+                        and_(
+                            UserModel.username == username,
+                            UserModel.deleted_at.is_(None),
+                        )
+                    )
+                    .first()
+                )
+
+                if existing_user:
+                    logger.warning(f"Sign-up failed: Username '{username}' already exists")
+                    raise HTTPException(
+                        status_code=status.HTTP_409_CONFLICT,
+                        detail=f"Username '{username}' is already taken",
+                    )
+
+                # Create new user
+                user_id = str(uuid.uuid4())
+                key = get_global_encryption_key()
+                encrypted_password = encrypt_data(password, key)
+
+                new_user = UserModel(
+                    id=user_id,
+                    username=username,
+                    password=encrypted_password,
+                    domain=domain,
+                    role=role,
+                )
+
+                session.add(new_user)
+                session.commit()
+
+                logger.info(f"New user registered successfully - Username: {username}, Domain: {domain}, Role: {role}")
+
+                # Create default workspace for the new user
+                try:
+                    workspace_service.create_workspace(
+                        WorkspaceCreate(name="Default Workspace", config={}),
+                        creator_user_id=user_id,
+                    )
+                    logger.info(f"Default workspace created for user {username}")
+                except Exception as e:
+                    logger.warning(f"Failed to create default workspace for user {username}: {str(e)}")
+                    # Don't fail signup if workspace creation fails
+
+                # Prepare user data
+                user_data = {
+                    "id": user_id,
+                    "username": username,
+                    "domain": domain,
+                    "role": role,
+                    "email": email,
+                }
+
+                # Create JWT tokens
+                access_token = create_access_token(data={"sub": user_id, "username": username, "role": role})
+                refresh_token = create_refresh_token(data={"sub": user_id})
+
+                return {
+                    "access_token": access_token,
+                    "refresh_token": refresh_token,
+                    "token_type": "bearer",
+                    "user": user_data,
+                }
+
+            except HTTPException:
+                raise
+            except Exception as e:
+                session.rollback()
+                logger.error(f"Database error during sign-up: {str(e)}")
+                raise HTTPException(
+                    status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                    detail=f"Error creating user: {str(e)}",
+                )
+            finally:
+                session.close()
+
+        except HTTPException:
+            raise
+        except Exception as e:
+            logger.error(f"Unexpected error during sign-up: {str(e)}")
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail=f"Sign-up failed: {str(e)}",
+            )
 
 
 # Create singleton instance

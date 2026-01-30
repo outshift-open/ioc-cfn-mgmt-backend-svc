@@ -1,24 +1,26 @@
 """Pytest fixtures and minimal test DB bootstrap."""
+import contextlib
+import hashlib
 import os
 import time
-import contextlib
-import pytest
-import psycopg2
 
+import psycopg2
+import pytest
 from fastapi.testclient import TestClient
-from server.main import app
+
 from server.database.relational_db.db import RelationalDB
 from server.database.relational_db.models import Base
-from server.database.relational_db.models.mas import MultiAgenticSystem
-from server.database.relational_db.models.workspace import Workspace
-from server.database.relational_db.models.user import User
 from server.database.relational_db.models.api_key import ApiKey
+from server.database.relational_db.models.mas import MultiAgenticSystem
+from server.database.relational_db.models.user import User
+from server.database.relational_db.models.workspace import Workspace
+from server.database.relational_db.models.workspace_invitation import (
+    WorkspaceInvitation,
+)
 from server.database.relational_db.models.workspace_member import WorkspaceMember
-from server.database.relational_db.models.workspace_invitation import WorkspaceInvitation
-from server.services.api_key import api_key_service
+from server.main import app
 from server.schemas.api_key import ApiKeyCreate
-import hashlib
-
+from server.services.api_key import api_key_service
 
 os.environ.setdefault("POSTGRES_DB", "ioc_test")
 os.environ.setdefault("POSTGRES_USER", "postgresUser")
@@ -84,11 +86,13 @@ def _ensure_test_database_exists(max_wait_seconds: int = 20) -> None:
 
     if last_error:
         print(
-            f"Test DB bootstrap warning: could not ensure '{db_name}' exists on {host}:{candidate_ports}. Last error: {last_error}"
+            f"Test DB bootstrap warning: could not ensure '{db_name}' exists on "
+            f"{host}:{candidate_ports}. Last error: {last_error}"
         )
     else:
         print(
-            f"Test DB bootstrap warning: could not ensure '{db_name}' exists on {host}:{candidate_ports} (no connection attempts succeeded)"
+            f"Test DB bootstrap warning: could not ensure '{db_name}' exists on "
+            f"{host}:{candidate_ports} (no connection attempts succeeded)"
         )
 
 
@@ -209,6 +213,7 @@ def created_workspace(client, sample_workspace_data):
 def test_user():
     """Create a test user in the database and return user data."""
     import uuid
+
     from server.common import encrypt_data, get_global_encryption_key
 
     db = RelationalDB()
@@ -244,6 +249,7 @@ def test_user():
 def admin_user():
     """Create an admin user in the database and return user data."""
     import uuid
+
     from server.common import encrypt_data, get_global_encryption_key
 
     db = RelationalDB()

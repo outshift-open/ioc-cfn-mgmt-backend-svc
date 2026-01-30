@@ -19,7 +19,6 @@ CREATE TABLE "workspace" (
 
 CREATE INDEX "idx_workspace_name" ON "workspace" ("name");
 CREATE INDEX "idx_workspace_deleted_at" ON "workspace" ("deleted_at");
-CREATE UNIQUE INDEX "idx_workspace_name_unique" ON "workspace" ("name") WHERE "deleted_at" IS NULL;
 
 -- ====================
 -- Table: multi_agentic_system
@@ -60,6 +59,7 @@ CREATE TABLE "user" (
 );
 
 CREATE INDEX "idx_user_deleted_at" ON "user" ("deleted_at");
+CREATE UNIQUE INDEX "idx_user_username_unique" ON "user" ("username") WHERE "deleted_at" IS NULL;
 
 -- ====================
 -- Table: api_key (user-scoped)
@@ -78,6 +78,7 @@ CREATE TABLE "api_key" (
 CREATE INDEX "idx_api_key_user_id" ON "api_key" ("user_id");
 CREATE INDEX "idx_api_key_deleted_at" ON "api_key" ("deleted_at");
 CREATE INDEX "idx_api_key_key_hash" ON "api_key" ("key_hash");
+CREATE UNIQUE INDEX "idx_api_key_user_name_unique" ON "api_key" ("user_id", "name") WHERE "deleted_at" IS NULL;
 
 -- ====================
 -- Table: audit

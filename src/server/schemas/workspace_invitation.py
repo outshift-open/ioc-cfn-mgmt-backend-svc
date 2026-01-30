@@ -57,13 +57,10 @@ class WorkspaceInvitationResponse(BaseModel):
     id: str
 
 
-class InvitationAcceptRequest(BaseModel):
-    """Schema for accepting an invitation - no body needed"""
+class WorkspaceInvitationAcceptResponse(BaseModel):
+    """Schema for invitation acceptance response"""
 
-    pass
-
-
-class InvitationDeclineRequest(BaseModel):
-    """Schema for declining an invitation - no body needed"""
-
-    pass
+    message: str
+    workspace_id: str
+    workspace_name: str
+    assigned_role: str

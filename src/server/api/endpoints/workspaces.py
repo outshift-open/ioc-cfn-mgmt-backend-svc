@@ -1,15 +1,15 @@
-from fastapi import APIRouter, status, Depends
+from fastapi import APIRouter, Depends, status
 
+from server.auth.auth import get_current_user
+from server.authz.authz_service import authz_service
 from server.schemas.workspace import (
     WorkspaceCreate,
-    WorkspaceResponse,
     WorkspaceDetail,
-    WorkspaceUpdate,
     WorkspaceList,
+    WorkspaceResponse,
+    WorkspaceUpdate,
 )
 from server.services.workspace import workspace_service
-from server.api.dependencies import get_current_user
-from server.authz.authz_service import authz_service
 
 router = APIRouter()
 internal_router = APIRouter()
@@ -40,12 +40,12 @@ def create_workspace(
 @router.get("/", response_model=WorkspaceList)
 def list_workspaces(current_user: dict = Depends(get_current_user)):
     """
-    List all workspaces
+    List workspaces accessible to the user
 
-    Returns a list of all workspaces in the system
+    Users see only workspaces they are members of. Super admins (future) see all workspaces.
     """
     authz_service.require_permission(current_user, "get", "workspace")
-    return workspace_service.list_workspaces()
+    return workspace_service.list_workspaces(user_id=current_user["id"], user_role=current_user["role"])
 
 
 @router.get("/{workspace_id}", response_model=WorkspaceDetail)
@@ -58,10 +58,10 @@ def get_workspace(
 
     - **workspace_id**: UUID of the workspace
 
-    Returns detailed workspace information
+    Returns detailed workspace information if user has access
     """
     authz_service.require_permission(current_user, "get", "workspace")
-    return workspace_service.get_workspace(workspace_id)
+    return workspace_service.get_workspace(workspace_id, user_id=current_user["id"], user_role=current_user["role"])
 
 
 @router.put("/{workspace_id}", response_model=WorkspaceDetail)
@@ -76,10 +76,12 @@ def update_workspace(
     - **workspace_id**: UUID of the workspace
     - **name**: New name for the workspace (optional)
 
-    Returns the updated workspace details
+    Returns the updated workspace details if user has access
     """
     authz_service.require_permission(current_user, "update", "workspace")
-    return workspace_service.update_workspace(workspace_id, workspace_data)
+    return workspace_service.update_workspace(
+        workspace_id, workspace_data, user_id=current_user["id"], user_role=current_user["role"]
+    )
 
 
 @router.delete("/{workspace_id}", status_code=status.HTTP_204_NO_CONTENT)
@@ -95,10 +97,12 @@ def delete_workspace(
     - **_purge**: Optional query parameter. If false (default), performs soft
       delete. If true, performs hard delete.
 
-    Returns success message
+    Returns success message if user has access
     """
     authz_service.require_permission(current_user, "delete", "workspace")
-    workspace_service.delete_workspace(workspace_id, _purge, allow_default_delete=False)
+    workspace_service.delete_workspace(
+        workspace_id, _purge, allow_default_delete=False, user_id=current_user["id"], user_role=current_user["role"]
+    )
     return None
 
 

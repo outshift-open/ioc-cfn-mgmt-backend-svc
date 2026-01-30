@@ -28,6 +28,7 @@ class WorkspaceMemberDetail(BaseModel):
     username: Optional[str] = Field(None, description="Username joined from user table")
     role: WorkspaceRole
     joined_at: datetime
+    is_creator: bool = Field(False, description="True if this member created the workspace")
 
 
 class WorkspaceMemberList(BaseModel):

@@ -1,15 +1,15 @@
 """IAM (Identity and Access Management) endpoints"""
 
-from fastapi import APIRouter, status, Depends
 from typing import List
 
-from server.schemas.api_key import ApiKeyCreate, ApiKeyResponse, ApiKeyList
+from fastapi import APIRouter, Depends, status
+
+from server.auth.auth import get_current_user
+from server.authz.authz_service import authz_service
+from server.schemas.api_key import ApiKeyCreate, ApiKeyList, ApiKeyResponse
 from server.schemas.user import Users
 from server.services.api_key import api_key_service
 from server.services.user import user_service
-from server.api.dependencies import get_current_user
-from server.authz.authz_service import authz_service
-
 
 router = APIRouter()
 

@@ -190,6 +190,75 @@ class TestWorkspaceInvitationFlow:
         assert response.status_code == 409
         assert "already exists" in response.json()["detail"].lower()
 
+    def test_accept_invitation_returns_assigned_role(self, client, admin_user, test_user):
+        """Test that accepting an invitation returns workspace details and assigned role."""
+        from fastapi.testclient import TestClient
+        from server.main import app
+        from server.database.relational_db.db import RelationalDB
+        from server.database.relational_db.models.api_key import ApiKey as ApiKeyModel
+        import hashlib
+
+        # Create an API key for test_user
+        db = RelationalDB()
+        session = db.session_factory()
+        try:
+            raw_api_key = "ioc_test_user_api_key_12345678901234567890123456"
+            hashed_key = hashlib.sha256(raw_api_key.encode()).hexdigest()
+            key_preview = raw_api_key[:20]  # First 20 chars for preview
+
+            api_key = ApiKeyModel(
+                user_id=test_user["id"],
+                name="Test API Key",
+                key_hash=hashed_key,
+                key_preview=key_preview,
+            )
+            session.add(api_key)
+            session.commit()
+        finally:
+            session.close()
+
+        # Create workspace as admin
+        response = client.post("/api/workspaces/", json={"name": "Test Workspace"})
+        assert response.status_code == 201
+        workspace_id = response.json()["id"]
+
+        # Invite test_user with viewer role
+        invitation_data = {
+            "invitee_username": test_user["username"],
+            "role": "viewer"
+        }
+        response = client.post(
+            f"/api/workspaces/{workspace_id}/invitations",
+            json=invitation_data
+        )
+        assert response.status_code == 201
+        invitation_id = response.json()["id"]
+
+        # Accept invitation as test_user
+        test_user_client = TestClient(app)
+        test_user_client.headers = {"X-API-Key": raw_api_key}
+
+        response = test_user_client.post(f"/api/invitations/{invitation_id}/accept")
+        assert response.status_code == 200
+
+        # Verify response includes workspace details and assigned role
+        data = response.json()
+        assert "message" in data
+        assert data["message"] == "Invitation accepted successfully"
+        assert "workspace_id" in data
+        assert data["workspace_id"] == workspace_id
+        assert "workspace_name" in data
+        assert data["workspace_name"] == "Test Workspace"
+        assert "assigned_role" in data
+        assert data["assigned_role"] == "viewer"
+
+        # Verify test_user can now see the workspace (viewers can list workspaces)
+        workspaces_response = test_user_client.get("/api/workspaces/")
+        assert workspaces_response.status_code == 200
+        workspaces = workspaces_response.json()["workspaces"]
+        assert len(workspaces) == 1
+        assert workspaces[0]["id"] == workspace_id
+
 
 class TestWorkspaceMemberManagement:
     """Test cases for workspace member management."""
@@ -208,6 +277,7 @@ class TestWorkspaceMemberManagement:
         # Creator should be auto-added as admin
         assert data["total"] == 1
         assert data["members"][0]["role"] == "admin"
+        assert data["members"][0]["is_creator"] is True
 
     def test_update_member_role(self, client, test_user):
         """Test updating a member's role."""
@@ -273,6 +343,49 @@ class TestWorkspaceMemberManagement:
         )
         assert response.status_code == 403
         assert "cannot remove yourself" in response.json()["detail"].lower()
+
+    def test_is_creator_flag_in_member_list(self, client, test_user):
+        """Test that is_creator flag correctly identifies workspace creator."""
+        from server.database.relational_db.db import RelationalDB
+        from server.database.relational_db.models.workspace_member import WorkspaceMember
+
+        # Create workspace as dev-user
+        response = client.post("/api/workspaces/", json={"name": "Test Workspace"})
+        workspace_id = response.json()["id"]
+
+        # Add test_user as a member (not creator)
+        db = RelationalDB()
+        session = db.session_factory()
+        try:
+            member = WorkspaceMember(
+                workspace_id=workspace_id,
+                user_id=test_user["id"],
+                role="admin",
+                created_by="dev-user",
+            )
+            session.add(member)
+            session.commit()
+        finally:
+            session.close()
+
+        # List members
+        response = client.get(f"/api/workspaces/{workspace_id}/members")
+        assert response.status_code == 200
+        members = response.json()["members"]
+
+        # Should have 2 members
+        assert len(members) == 2
+
+        # Find dev-user and test_user
+        dev_user_member = next((m for m in members if m["user_id"] == "dev-user"), None)
+        test_user_member = next((m for m in members if m["user_id"] == test_user["id"]), None)
+
+        assert dev_user_member is not None
+        assert test_user_member is not None
+
+        # dev-user is creator, test_user is not
+        assert dev_user_member["is_creator"] is True
+        assert test_user_member["is_creator"] is False
 
 
 class TestWorkspaceInvitationExpiration:

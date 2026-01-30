@@ -1,21 +1,23 @@
 """Workspace Invitation service - Business logic for workspace invitation operations"""
 
 import logging
-from datetime import datetime, timezone, timedelta
+from datetime import datetime, timedelta, timezone
 from typing import Optional
 
 from fastapi import HTTPException, status
 from sqlalchemy import and_
 
 from server.database.relational_db.db import RelationalDB
-from server.database.relational_db.models.workspace_invitation import WorkspaceInvitation as WorkspaceInvitationModel
-from server.database.relational_db.models.workspace import Workspace as WorkspaceModel
 from server.database.relational_db.models.user import User as UserModel
+from server.database.relational_db.models.workspace import Workspace as WorkspaceModel
+from server.database.relational_db.models.workspace_invitation import (
+    WorkspaceInvitation as WorkspaceInvitationModel,
+)
 from server.schemas.workspace_invitation import (
+    InvitationStatus,
     WorkspaceInvitationDetail,
     WorkspaceInvitationList,
     WorkspaceInvitationResponse,
-    InvitationStatus,
 )
 from server.services.audit import (
     AuditEventType,
@@ -204,6 +206,8 @@ class WorkspaceInvitationService:
                 self._mark_expired_invitations(session)
 
                 # Get pending invitations
+                # Convert now to naive datetime for database comparison
+                now_naive = now.replace(tzinfo=None)
                 results = (
                     session.query(WorkspaceInvitationModel, WorkspaceModel, UserModel)
                     .join(WorkspaceModel, WorkspaceInvitationModel.workspace_id == WorkspaceModel.id)
@@ -212,7 +216,7 @@ class WorkspaceInvitationService:
                         and_(
                             WorkspaceInvitationModel.invitee_username == username,
                             WorkspaceInvitationModel.status == InvitationStatus.PENDING.value,
-                            WorkspaceInvitationModel.expires_at > now,
+                            WorkspaceInvitationModel.expires_at > now_naive,
                             WorkspaceInvitationModel.deleted_at.is_(None),
                         )
                     )
@@ -341,7 +345,13 @@ class WorkspaceInvitationService:
 
                 # Check if expired
                 now = datetime.now(timezone.utc)
-                if invitation.expires_at < now:
+                # Make expires_at timezone-aware if it's naive
+                expires_at = (
+                    invitation.expires_at
+                    if invitation.expires_at.tzinfo
+                    else invitation.expires_at.replace(tzinfo=timezone.utc)
+                )  # type: ignore[union-attr]
+                if expires_at < now:
                     invitation.status = InvitationStatus.EXPIRED.value  # type: ignore[assignment]
                     session.commit()
                     raise HTTPException(
@@ -379,7 +389,17 @@ class WorkspaceInvitationService:
                     )
                 )
 
-                return {"message": "Invitation accepted successfully"}
+                # Get workspace name for response
+                from server.database.relational_db.models.workspace import Workspace as WorkspaceModel
+
+                workspace = session.query(WorkspaceModel).filter(WorkspaceModel.id == invitation.workspace_id).first()
+
+                return {
+                    "message": "Invitation accepted successfully",
+                    "workspace_id": invitation.workspace_id,
+                    "workspace_name": workspace.name if workspace else "Unknown",  # type: ignore[union-attr]
+                    "assigned_role": invitation.role,
+                }
 
             finally:
                 session.close()
@@ -541,13 +561,15 @@ class WorkspaceInvitationService:
         """Mark expired invitations (helper method for internal use)"""
         try:
             now = datetime.now(timezone.utc)
+            # Convert now to naive datetime for database comparison
+            now_naive = now.replace(tzinfo=None)
 
             expired_invitations = (
                 session.query(WorkspaceInvitationModel)
                 .filter(
                     and_(
                         WorkspaceInvitationModel.status == InvitationStatus.PENDING.value,
-                        WorkspaceInvitationModel.expires_at < now,
+                        WorkspaceInvitationModel.expires_at < now_naive,
                         WorkspaceInvitationModel.deleted_at.is_(None),
                     )
                 )

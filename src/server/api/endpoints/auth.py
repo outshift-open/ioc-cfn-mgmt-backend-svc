@@ -1,12 +1,43 @@
 """Authentication endpoints"""
 
-from fastapi import APIRouter, status, HTTPException
+from fastapi import APIRouter, HTTPException, status
+from sqlalchemy import and_
 
-from server.schemas.auth import LoginRequest, TokenResponse, RefreshTokenRequest, TokenRefreshResponse
+from server.auth.jwt import create_access_token, decode_token, verify_token_type
+from server.database.relational_db.db import RelationalDB
+from server.database.relational_db.models.user import User as UserModel
+from server.schemas.auth import (
+    LoginRequest,
+    RefreshTokenRequest,
+    SignupRequest,
+    TokenRefreshResponse,
+    TokenResponse,
+)
 from server.services.auth import auth_service
-from server.auth.jwt import decode_token, verify_token_type, create_access_token
 
 router = APIRouter()
+
+
+@router.post("/signup", response_model=TokenResponse, status_code=status.HTTP_201_CREATED)
+def signup(signup_data: SignupRequest):
+    """
+    Register a new user account.
+
+    - **username**: Desired username (3-100 characters, alphanumeric with hyphens and underscores)
+    - **email**: Email address
+    - **password**: Password (minimum 8 characters)
+    - **domain**: User domain (optional, default: ioc.local)
+    - **role**: User role (optional, default: user)
+
+    Returns JWT access token, refresh token, and user information
+    """
+    return auth_service.signup(
+        username=signup_data.username,
+        email=signup_data.email,
+        password=signup_data.password,
+        domain=signup_data.domain,
+        role=signup_data.role,
+    )
 
 
 @router.post("/login", response_model=TokenResponse, status_code=status.HTTP_200_OK)
@@ -45,10 +76,6 @@ def refresh_token(refresh_data: RefreshTokenRequest):
             )
 
         # Get user info from database to ensure user still exists
-        from server.database.relational_db.db import RelationalDB
-        from server.database.relational_db.models.user import User as UserModel
-        from sqlalchemy import and_
-
         db = RelationalDB()
         session = db.get_session()
 

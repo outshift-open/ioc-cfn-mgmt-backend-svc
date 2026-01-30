@@ -1,4 +1,4 @@
-from sqlalchemy import Column, String, DateTime, text, Index
+from sqlalchemy import Column, String, DateTime, text, Index, UniqueConstraint
 
 from server.database.relational_db.models import Base
 
@@ -27,6 +27,14 @@ class ApiKey(Base):
         Index("idx_api_key_user_id", "user_id"),
         Index("idx_api_key_deleted_at", "deleted_at"),
         Index("idx_api_key_key_hash", "key_hash"),
+        # Unique constraint: one user cannot have multiple API keys with the same name (excluding soft-deleted)
+        Index(
+            "idx_api_key_user_name_unique",
+            "user_id",
+            "name",
+            unique=True,
+            postgresql_where=text("deleted_at IS NULL"),
+        ),
     )
 
     def __repr__(self):

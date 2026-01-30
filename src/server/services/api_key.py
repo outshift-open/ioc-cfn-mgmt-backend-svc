@@ -1,22 +1,23 @@
 """API Key service - Business logic for API key operations"""
 
-import secrets
 import hashlib
+import secrets
 from datetime import datetime, timezone
-from typing import Dict, Any, Optional
+from typing import Any, Dict, Optional
 
 from fastapi import HTTPException, status
 from sqlalchemy import and_
+from sqlalchemy.exc import IntegrityError
 
-from server.schemas.api_key import (
-    ApiKeyCreate,
-    ApiKeyResponse,
-    ApiKeyListItem,
-    ApiKeyList,
-)
+from server.database.relational_db.db import RelationalDB
 from server.database.relational_db.models.api_key import ApiKey as ApiKeyModel
 from server.database.relational_db.models.user import User as UserModel
-from server.database.relational_db.db import RelationalDB
+from server.schemas.api_key import (
+    ApiKeyCreate,
+    ApiKeyList,
+    ApiKeyListItem,
+    ApiKeyResponse,
+)
 
 
 class ApiKeyService:
@@ -43,46 +44,57 @@ class ApiKeyService:
 
     def create_api_key(self, api_key_data: ApiKeyCreate, user_id: str) -> ApiKeyResponse:
         """Create a new API key linked to a user"""
+        db = RelationalDB()
+        session = db.get_session()
+
         try:
-            db = RelationalDB()
-            session = db.get_session()
+            # Generate API key
+            api_key = self._generate_api_key()
+            key_hash = self._hash_api_key(api_key)
+            key_preview = self._create_key_preview(api_key)
 
-            try:
-                # Generate API key
-                api_key = self._generate_api_key()
-                key_hash = self._hash_api_key(api_key)
-                key_preview = self._create_key_preview(api_key)
+            # Create new API key record
+            new_api_key = ApiKeyModel(
+                user_id=user_id,
+                key_hash=key_hash,
+                key_preview=key_preview,
+                name=api_key_data.name,
+            )
 
-                # Create new API key record
-                new_api_key = ApiKeyModel(
-                    user_id=user_id,
-                    key_hash=key_hash,
-                    key_preview=key_preview,
-                    name=api_key_data.name,
+            session.add(new_api_key)
+            session.commit()
+            session.refresh(new_api_key)
+
+            # Return response with the plain key (only time it's visible)
+            return ApiKeyResponse(
+                id=new_api_key.id,  # type: ignore[arg-type]
+                key=api_key,
+                key_preview=key_preview,
+                name=new_api_key.name,  # type: ignore[arg-type]
+                user_id=new_api_key.user_id,  # type: ignore[arg-type]
+                created_at=new_api_key.created_at,  # type: ignore[arg-type]
+            )
+
+        except IntegrityError as e:
+            session.rollback()
+            # Check if it's a unique constraint violation for the name
+            if "idx_api_key_user_name_unique" in str(e.orig):
+                raise HTTPException(
+                    status_code=status.HTTP_409_CONFLICT,
+                    detail=f"An API key with the name '{api_key_data.name}' already exists for this user",
                 )
-
-                session.add(new_api_key)
-                session.commit()
-                session.refresh(new_api_key)
-
-                # Return response with the plain key (only time it's visible)
-                return ApiKeyResponse(
-                    id=new_api_key.id,  # type: ignore[arg-type]
-                    key=api_key,
-                    key_preview=key_preview,
-                    name=new_api_key.name,  # type: ignore[arg-type]
-                    user_id=new_api_key.user_id,  # type: ignore[arg-type]
-                    created_at=new_api_key.created_at,  # type: ignore[arg-type]
-                )
-
-            finally:
-                session.close()
-
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail="Failed to create API key due to a database constraint",
+            )
         except Exception as e:
+            session.rollback()
             raise HTTPException(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
                 detail=f"Failed to create API key: {str(e)}",
             )
+        finally:
+            session.close()
 
     def list_api_keys(self, user_id: Optional[str] = None) -> ApiKeyList:
         """List all active API keys, optionally filtered by user"""

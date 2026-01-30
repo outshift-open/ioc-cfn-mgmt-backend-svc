@@ -1,15 +1,14 @@
-from fastapi import APIRouter, status, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, status
 
+from server.auth.auth import get_current_user
 from server.schemas.workspace_invitation import (
+    WorkspaceInvitationAcceptResponse,
     WorkspaceInvitationCreate,
-    WorkspaceInvitationResponse,
     WorkspaceInvitationList,
-    InvitationAcceptRequest,
-    InvitationDeclineRequest,
+    WorkspaceInvitationResponse,
 )
 from server.services.workspace_invitation import workspace_invitation_service
 from server.services.workspace_member import workspace_member_service
-from server.api.dependencies import get_current_user
 
 router = APIRouter()
 
@@ -118,6 +117,7 @@ def get_pending_invitations(
 
 @router.post(
     "/invitations/{invitation_id}/accept",
+    response_model=WorkspaceInvitationAcceptResponse,
     status_code=status.HTTP_200_OK,
 )
 def accept_invitation(
@@ -129,7 +129,7 @@ def accept_invitation(
 
     - **invitation_id**: UUID of the invitation
 
-    Returns success message
+    Returns success message with workspace details and assigned role
     """
     return workspace_invitation_service.accept_invitation(invitation_id, current_user["id"])
 

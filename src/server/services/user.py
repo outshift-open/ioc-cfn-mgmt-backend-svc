@@ -1,17 +1,22 @@
 """UserTable service - Business logic for user operations"""
 
 import logging
-import uuid
 import os
+import uuid
 from datetime import datetime
 
 from fastapi import HTTPException, status
 
-from server.schemas.user import UserResponse, User, Users
-from server.database.relational_db.models.user import User as UserModel
+from server.common import encrypt_data, get_global_encryption_key
 from server.database.relational_db.db import RelationalDB
-from server.common import get_global_encryption_key, encrypt_data
-from server.services.audit import AuditEventType, ResourceType, audit_service, AuditRequest
+from server.database.relational_db.models.user import User as UserModel
+from server.schemas.user import User, UserResponse, Users
+from server.services.audit import (
+    AuditEventType,
+    AuditRequest,
+    ResourceType,
+    audit_service,
+)
 
 # Get logger instance (logging is setup in main.py)
 logger = logging.getLogger(__name__)
@@ -19,7 +24,7 @@ logger = logging.getLogger(__name__)
 # Admin user constants
 ADMIN_USER_USERNAME_DEFAULT = "admin"
 ADMIN_USER_PASSWORD_DEFAULT = "admin"
-ADMIN_USER_DOMAIN_DEFAULT = "tkf.local"
+ADMIN_USER_DOMAIN_DEFAULT = "ioc.local"
 ADMIN_USER_ROLE_DEFAULT = "admin"
 
 
@@ -56,7 +61,7 @@ class UserService:
                         f"Admin user '{ADMIN_USER_USERNAME_DEFAULT}' already exists with ID: {existing_user.id}"
                     )
                     # Return without API key since user already exists
-                    return UserResponse(id=existing_user.id)
+                    return UserResponse(id=str(existing_user.id), api_key=None, api_key_preview=None)
 
                 # Create new admin user
                 user_id = str(uuid.uuid4())
@@ -84,7 +89,7 @@ class UserService:
                     f"with ID: {user_id}"
                 )
 
-                response = UserResponse(id=user_id)
+                response = UserResponse(id=user_id, api_key=None, api_key_preview=None)
 
                 # add to audits table
                 audit_service.create_audit(
@@ -143,12 +148,12 @@ class UserService:
 
                 user_details = [
                     User(
-                        id=user.id,
-                        username=user.username,
-                        domain=user.domain,
-                        role=user.role,
-                        created_at=user.created_at,
-                        updated_at=user.updated_at,
+                        id=str(user.id),
+                        username=str(user.username),
+                        domain=str(user.domain),
+                        role=str(user.role),
+                        created_at=user.created_at,  # type: ignore[arg-type]
+                        updated_at=user.updated_at,  # type: ignore[arg-type]
                     )
                     for user in users
                 ]
@@ -163,6 +168,55 @@ class UserService:
             logger.error(f"Error retrieving users: {str(e)}")
             raise HTTPException(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"Error retrieving users: {str(e)}"
+            )
+
+    def get_user_by_id(self, user_id: str) -> User:
+        """
+        Get a specific user by ID
+
+        Args:
+            user_id: The user ID to retrieve
+
+        Returns:
+            User: The requested user
+
+        Raises:
+            HTTPException: If user not found or database error occurs
+        """
+        logger.info(f"Retrieving user with ID: {user_id}")
+
+        try:
+            db = RelationalDB()
+            session = db.get_session()
+
+            try:
+                user = session.query(UserModel).filter(UserModel.id == user_id, UserModel.deleted_at.is_(None)).first()
+
+                if not user:
+                    logger.warning(f"User with ID '{user_id}' not found")
+                    raise HTTPException(
+                        status_code=status.HTTP_404_NOT_FOUND,
+                        detail=f"User with ID '{user_id}' not found",
+                    )
+
+                return User(
+                    id=str(user.id),
+                    username=str(user.username),
+                    domain=str(user.domain),
+                    role=str(user.role),
+                    created_at=user.created_at,  # type: ignore[arg-type]
+                    updated_at=user.updated_at,  # type: ignore[arg-type]
+                )
+
+            finally:
+                session.close()
+
+        except HTTPException:
+            raise
+        except Exception as e:
+            logger.error(f"Error retrieving user: {str(e)}")
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"Error retrieving user: {str(e)}"
             )
 
 

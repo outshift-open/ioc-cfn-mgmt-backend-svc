@@ -2,8 +2,9 @@
 Tests for API key endpoints in ioc-cfn-mgmt-backend.
 """
 import pytest
+
+from server.auth.auth import get_current_user
 from server.main import app
-from server.api.dependencies import get_current_user
 
 
 def override_get_current_user(user_data):
@@ -390,9 +391,9 @@ class TestAPIKeyValidation:
 
     def test_api_key_inherits_updated_user_role(self, client, test_user):
         """Test that API key inherits updated user role dynamically."""
-        from server.services.api_key import api_key_service
         from server.database.relational_db.db import RelationalDB
         from server.database.relational_db.models.user import User
+        from server.services.api_key import api_key_service
 
         app.dependency_overrides[get_current_user] = override_get_current_user(test_user)
         try:
@@ -448,7 +449,7 @@ class TestAPIKeyWorkspaceAccess:
             app.dependency_overrides.clear()
 
     def test_admin_api_key_access_all_workspaces(self, client, admin_user, test_user):
-        """Test that admin API key can access all workspaces."""
+        """Test that super_admin can access all workspaces, but regular admin cannot."""
         # Create workspace as regular user
         app.dependency_overrides[get_current_user] = override_get_current_user(test_user)
         workspace_data = {"name": "Test Workspace"}
@@ -457,8 +458,25 @@ class TestAPIKeyWorkspaceAccess:
         workspace_id = response.json()["id"]
         app.dependency_overrides.clear()
 
-        # Admin should be able to access any workspace
+        # Regular admin (default role) should NOT be able to access other user's workspace
         app.dependency_overrides[get_current_user] = override_get_current_user(admin_user)
+        try:
+            response = client.get(f"/api/workspaces/{workspace_id}")
+            assert response.status_code == 403  # Access denied
+        finally:
+            app.dependency_overrides.clear()
+
+        # Create a super_admin user
+        super_admin_user = {
+            "id": admin_user["id"],
+            "username": admin_user["username"],
+            "domain": admin_user["domain"],
+            "role": "super_admin",  # Super admin role
+            "email": admin_user.get("email"),
+        }
+
+        # Super admin SHOULD be able to access any workspace
+        app.dependency_overrides[get_current_user] = override_get_current_user(super_admin_user)
         try:
             response = client.get(f"/api/workspaces/{workspace_id}")
             assert response.status_code == 200
