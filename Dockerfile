@@ -1,4 +1,4 @@
-FROM --platform=linux/arm64 ghcr.io/cisco-eti/sre-python-docker:v3.11.9-hardened-debian-12
+FROM ghcr.io/cisco-eti/sre-python-docker:v3.11.9-hardened-debian-12
 
 # OCI image labels for package metadata and repository linking
 LABEL org.opencontainers.image.source="https://github.com/cisco-eti/ioc-cfn-mgmt-backend"
@@ -6,7 +6,14 @@ LABEL org.opencontainers.image.description="IOC CFN Management Backend - FastAPI
 LABEL org.opencontainers.image.licenses="Proprietary"
 
 # Install curl for health checks, wget for atlas installation, postgresql-client for database seeding, and build essentials for regopy
-RUN apt-get update && apt-get install -y curl wget postgresql-client build-essential libatomic1 && rm -rf /var/lib/apt/lists/*
+# libatomic1 is required for regopy on some architectures
+RUN apt-get update && apt-get install -y \
+    curl \
+    wget \
+    postgresql-client \
+    build-essential \
+    libatomic1 \
+    && rm -rf /var/lib/apt/lists/*
 
 # Add user app
 RUN useradd -u 1001 app

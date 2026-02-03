@@ -1,7 +1,7 @@
 services:
   ### Database Services ###
   ioc-mgmt-relational-db:
-    image: timescale/timescaledb-ha:pg17
+    image: postgres:17-alpine
     profiles:
       - db-only
       - full-stack
@@ -9,11 +9,10 @@ services:
       POSTGRES_DB: ${POSTGRES_DB:-ioc}
       POSTGRES_USER: ${POSTGRES_USER}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
-      POSTGRES_INITDB_ARGS: "-c shared_preload_libraries=timescaledb"
     ports:
       - "${POSTGRES_PORT:-5432}:5432"
     volumes:
-      - timescaledb_data:/var/lib/timescaledb/data
+      - postgres_data:/var/lib/postgresql/data
     healthcheck:
       test:
         ["CMD-SHELL", "pg_isready -d ${POSTGRES_DB:-ioc} -U ${POSTGRES_USER}"]
@@ -67,6 +66,6 @@ services:
   ### End Application Services ###
 
 volumes:
-  timescaledb_data:
+  postgres_data:
   neo4j_data:
   neo4j_logs:

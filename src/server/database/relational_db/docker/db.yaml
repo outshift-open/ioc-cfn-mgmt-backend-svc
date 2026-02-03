@@ -1,6 +1,6 @@
 services:
   tkf-relational-db:
-    image: timescale/timescaledb-ha:pg17
+    image: postgres:17-alpine
     environment:
       POSTGRES_DB: ${POSTGRES_DB:-tkf}
       POSTGRES_USER: ${POSTGRES_USER:-postgresUser}
@@ -8,7 +8,7 @@ services:
     ports:
       - "${POSTGRES_PORT:-5432}:5432"
     volumes:
-      - timescaledb_data:/var/lib/timescaledb/data
+      - postgres_data:/var/lib/postgresql/data
 
 volumes:
-  timescaledb_data:
+  postgres_data:

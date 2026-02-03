@@ -1,7 +1,7 @@
 ### Relational DB
 
-TimescaleDB (Postgres17) is used as the Relational DB for this service.
-https://www.tigerdata.com/docs/self-hosted/latest/install/installation-docker
+PostgreSQL 17 Alpine is used as the Relational DB for this service.
+https://hub.docker.com/_/postgres
 
 #### Database Setup
 ```

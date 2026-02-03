@@ -16,7 +16,7 @@ TKF Data Logic Service - FastAPI workspace, user, and API key management
 
 #### Dependencies for the Relational DB
 For details please refer to the [README](src/server/database/relational_db/README.md)
-- [TimescaleDB(Postgres17)](https://www.tigerdata.com/docs/self-hosted/latest/install/installation-docker)
+- [PostgreSQL 17 Alpine](https://hub.docker.com/_/postgres)
 - [Atlas](https://atlasgo.io/guides/orms/sqlalchemy/getting-started)
 
 ## Quick Start
