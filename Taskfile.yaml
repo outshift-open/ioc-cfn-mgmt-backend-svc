@@ -16,6 +16,7 @@ tasks:
     cmds:
       - task: install-atlas
       - task: install-poetry
+      - task: poetry-lock
     silent: false
 
   install-atlas:
@@ -47,6 +48,12 @@ tasks:
     cmds:
       - poetry run python scripts/generate_DEK.py
 
+  generate-openapi-spec:
+    desc: Generate OpenAPI specification and save to docs/openapi.json
+    cmds:
+      - poetry run python scripts/generate_openapi_spec.py
+    dir: "{{.PWD}}"
+
   dev:
     desc: Start development server with hot reload
     cmds:
@@ -60,6 +67,7 @@ tasks:
       - task: db-migrate-apply
       # - task: db-seed
       - task: generate-dek
+      - task: generate-openapi-spec
       - poetry run python -m server.main
     dir: "{{.SRC_DIR}}"
 

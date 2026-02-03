@@ -3,11 +3,11 @@ Tests for API key endpoints in ioc-cfn-mgmt-backend.
 """
 import pytest
 
-from server.auth.auth import get_current_user
+from server.auth.auth import get_auth_user
 from server.main import app
 
 
-def override_get_current_user(user_data):
+def override_get_auth_user(user_data):
     """Create a dependency override that returns specific user data."""
     async def _override():
         return user_data
@@ -20,7 +20,7 @@ class TestAPIKeyCreate:
     def test_create_api_key_success(self, client, test_user):
         """Test successful API key creation."""
         # Override the dependency to return test_user
-        app.dependency_overrides[get_current_user] = override_get_current_user(test_user)
+        app.dependency_overrides[get_auth_user] = override_get_auth_user(test_user)
         try:
             response = client.post(
                 "/api/iam/api-keys",
@@ -51,7 +51,7 @@ class TestAPIKeyCreate:
 
     def test_create_api_key_inherits_user_role(self, client, test_user):
         """Test that API key inherits user's role."""
-        app.dependency_overrides[get_current_user] = override_get_current_user(test_user)
+        app.dependency_overrides[get_auth_user] = override_get_auth_user(test_user)
         try:
             response = client.post(
                 "/api/iam/api-keys",
@@ -71,7 +71,7 @@ class TestAPIKeyCreate:
 
     def test_create_api_key_invalid_name(self, client, test_user):
         """Test API key creation with invalid name."""
-        app.dependency_overrides[get_current_user] = override_get_current_user(test_user)
+        app.dependency_overrides[get_auth_user] = override_get_auth_user(test_user)
         try:
             # Empty name
             response = client.post(
@@ -105,7 +105,7 @@ class TestAPIKeyList:
 
     def test_list_api_keys_empty(self, client, test_user):
         """Test listing API keys when none exist."""
-        app.dependency_overrides[get_current_user] = override_get_current_user(test_user)
+        app.dependency_overrides[get_auth_user] = override_get_auth_user(test_user)
         try:
             response = client.get("/api/iam/api-keys")
 
@@ -120,7 +120,7 @@ class TestAPIKeyList:
 
     def test_list_user_api_keys(self, client, test_user):
         """Test that users see only their own API keys."""
-        app.dependency_overrides[get_current_user] = override_get_current_user(test_user)
+        app.dependency_overrides[get_auth_user] = override_get_auth_user(test_user)
         try:
             # Create two API keys
             response1 = client.post(
@@ -160,7 +160,7 @@ class TestAPIKeyList:
     def test_list_admin_sees_all_keys(self, client, test_user, admin_user):
         """Test that admin users see all API keys."""
         # Create key as regular user
-        app.dependency_overrides[get_current_user] = override_get_current_user(test_user)
+        app.dependency_overrides[get_auth_user] = override_get_auth_user(test_user)
         response1 = client.post(
             "/api/iam/api-keys",
             json={"name": "User Key"}
@@ -169,7 +169,7 @@ class TestAPIKeyList:
         app.dependency_overrides.clear()
 
         # Create key as admin and list
-        app.dependency_overrides[get_current_user] = override_get_current_user(admin_user)
+        app.dependency_overrides[get_auth_user] = override_get_auth_user(admin_user)
         try:
             response2 = client.post(
                 "/api/iam/api-keys",
@@ -194,7 +194,7 @@ class TestAPIKeyList:
 
     def test_list_api_keys_excludes_deleted(self, client, test_user):
         """Test that soft-deleted keys are not returned."""
-        app.dependency_overrides[get_current_user] = override_get_current_user(test_user)
+        app.dependency_overrides[get_auth_user] = override_get_auth_user(test_user)
         try:
             # Create key
             response = client.post(
@@ -224,7 +224,7 @@ class TestAPIKeyDelete:
 
     def test_delete_own_api_key(self, client, test_user):
         """Test that users can delete their own API keys."""
-        app.dependency_overrides[get_current_user] = override_get_current_user(test_user)
+        app.dependency_overrides[get_auth_user] = override_get_auth_user(test_user)
         try:
             # Create key
             response = client.post(
@@ -247,7 +247,7 @@ class TestAPIKeyDelete:
     def test_delete_other_user_key_forbidden(self, client, test_user, admin_user):
         """Test that users cannot delete other users' API keys."""
         # Create key as admin
-        app.dependency_overrides[get_current_user] = override_get_current_user(admin_user)
+        app.dependency_overrides[get_auth_user] = override_get_auth_user(admin_user)
         response = client.post(
             "/api/iam/api-keys",
             json={"name": "Admin Key"}
@@ -257,7 +257,7 @@ class TestAPIKeyDelete:
         app.dependency_overrides.clear()
 
         # Try to delete as regular user
-        app.dependency_overrides[get_current_user] = override_get_current_user(test_user)
+        app.dependency_overrides[get_auth_user] = override_get_auth_user(test_user)
         try:
             response = client.delete(f"/api/iam/api-keys/{admin_key_id}")
             assert response.status_code == 403
@@ -268,7 +268,7 @@ class TestAPIKeyDelete:
     def test_admin_can_delete_any_key(self, client, test_user, admin_user):
         """Test that admin users can delete any API key."""
         # Create key as regular user
-        app.dependency_overrides[get_current_user] = override_get_current_user(test_user)
+        app.dependency_overrides[get_auth_user] = override_get_auth_user(test_user)
         response = client.post(
             "/api/iam/api-keys",
             json={"name": "User Key"}
@@ -278,7 +278,7 @@ class TestAPIKeyDelete:
         app.dependency_overrides.clear()
 
         # Delete as admin
-        app.dependency_overrides[get_current_user] = override_get_current_user(admin_user)
+        app.dependency_overrides[get_auth_user] = override_get_auth_user(admin_user)
         try:
             response = client.delete(f"/api/iam/api-keys/{user_key_id}")
             assert response.status_code == 204
@@ -288,7 +288,7 @@ class TestAPIKeyDelete:
     def test_delete_nonexistent_key(self, client, test_user):
         """Test deleting a key that doesn't exist."""
         import uuid
-        app.dependency_overrides[get_current_user] = override_get_current_user(test_user)
+        app.dependency_overrides[get_auth_user] = override_get_auth_user(test_user)
         try:
             fake_id = str(uuid.uuid4())
             response = client.delete(f"/api/iam/api-keys/{fake_id}")
@@ -301,7 +301,7 @@ class TestAPIKeyDelete:
         from server.database.relational_db.db import RelationalDB
         from server.database.relational_db.models.api_key import ApiKey
 
-        app.dependency_overrides[get_current_user] = override_get_current_user(test_user)
+        app.dependency_overrides[get_auth_user] = override_get_auth_user(test_user)
         try:
             # Create key
             response = client.post(
@@ -335,7 +335,7 @@ class TestAPIKeyValidation:
         """Test that API key validation returns real user data."""
         from server.services.api_key import api_key_service
 
-        app.dependency_overrides[get_current_user] = override_get_current_user(test_user)
+        app.dependency_overrides[get_auth_user] = override_get_auth_user(test_user)
         try:
             # Create API key
             response = client.post(
@@ -368,7 +368,7 @@ class TestAPIKeyValidation:
         """Test that deleted keys cannot authenticate."""
         from server.services.api_key import api_key_service
 
-        app.dependency_overrides[get_current_user] = override_get_current_user(test_user)
+        app.dependency_overrides[get_auth_user] = override_get_auth_user(test_user)
         try:
             # Create and then delete key
             response = client.post(
@@ -395,7 +395,7 @@ class TestAPIKeyValidation:
         from server.database.relational_db.models.user import User
         from server.services.api_key import api_key_service
 
-        app.dependency_overrides[get_current_user] = override_get_current_user(test_user)
+        app.dependency_overrides[get_auth_user] = override_get_auth_user(test_user)
         try:
             # Create API key as viewer
             response = client.post(
@@ -431,7 +431,7 @@ class TestAPIKeyWorkspaceAccess:
 
     def test_api_key_access_user_workspace(self, client, test_user, sample_workspace_data):
         """Test that API key can access workspaces the user is a member of."""
-        app.dependency_overrides[get_current_user] = override_get_current_user(test_user)
+        app.dependency_overrides[get_auth_user] = override_get_auth_user(test_user)
         try:
             # Create workspace with user as member
             workspace_data = {
@@ -451,7 +451,7 @@ class TestAPIKeyWorkspaceAccess:
     def test_admin_api_key_access_all_workspaces(self, client, admin_user, test_user):
         """Test that super_admin can access all workspaces, but regular admin cannot."""
         # Create workspace as regular user
-        app.dependency_overrides[get_current_user] = override_get_current_user(test_user)
+        app.dependency_overrides[get_auth_user] = override_get_auth_user(test_user)
         workspace_data = {"name": "Test Workspace"}
         response = client.post("/api/workspaces", json=workspace_data)
         assert response.status_code == 201
@@ -459,7 +459,7 @@ class TestAPIKeyWorkspaceAccess:
         app.dependency_overrides.clear()
 
         # Regular admin (default role) should NOT be able to access other user's workspace
-        app.dependency_overrides[get_current_user] = override_get_current_user(admin_user)
+        app.dependency_overrides[get_auth_user] = override_get_auth_user(admin_user)
         try:
             response = client.get(f"/api/workspaces/{workspace_id}")
             assert response.status_code == 403  # Access denied
@@ -476,7 +476,7 @@ class TestAPIKeyWorkspaceAccess:
         }
 
         # Super admin SHOULD be able to access any workspace
-        app.dependency_overrides[get_current_user] = override_get_current_user(super_admin_user)
+        app.dependency_overrides[get_auth_user] = override_get_auth_user(super_admin_user)
         try:
             response = client.get(f"/api/workspaces/{workspace_id}")
             assert response.status_code == 200

@@ -1,0 +1,4165 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "ioc-cfn-mgmt-backend API",
+    "description": "IOC CFN Management Backend Service API",
+    "version": "0.1.0"
+  },
+  "paths": {
+    "/metrics": {
+      "get": {
+        "summary": "Metrics",
+        "description": "Endpoint that serves Prometheus metrics.",
+        "operationId": "metrics_metrics_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        }
+      }
+    },
+    "/health": {
+      "get": {
+        "summary": "Health",
+        "operationId": "health_health_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        }
+      }
+    },
+    "/env": {
+      "get": {
+        "summary": "Env Var",
+        "operationId": "env_var_env_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/auth/signup": {
+      "post": {
+        "tags": [
+          "authentication"
+        ],
+        "summary": "Signup",
+        "description": "Register a new user account.\n\n- **username**: Desired username (3-100 characters, alphanumeric with hyphens and underscores)\n- **email**: Email address\n- **password**: Password (minimum 8 characters)\n- **domain**: User domain (optional, default: ioc.local)\n- **role**: User role (optional, default: user)\n\nReturns JWT access token, refresh token, and user information",
+        "operationId": "signup_api_auth_signup_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SignupRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TokenResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/auth/login": {
+      "post": {
+        "tags": [
+          "authentication"
+        ],
+        "summary": "Login",
+        "description": "Authenticate user with username and password, return JWT tokens.\n\n- **username**: User's username\n- **password**: User's password\n\nReturns JWT access token (1 hour) and refresh token (7 days)",
+        "operationId": "login_api_auth_login_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LoginRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TokenResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/auth/refresh": {
+      "post": {
+        "tags": [
+          "authentication"
+        ],
+        "summary": "Refresh Token",
+        "description": "Refresh an access token using a valid refresh token.\n\n- **refresh_token**: Valid JWT refresh token\n\nReturns a new JWT access token",
+        "operationId": "refresh_token_api_auth_refresh_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RefreshTokenRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TokenRefreshResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/workspaces/": {
+      "post": {
+        "tags": [
+          "workspaces"
+        ],
+        "summary": "Create Workspace",
+        "description": "Create a new workspace\n\n- **name**: Name of the workspace (required)\n- **users**: List of user IDs (optional)\n- **config**: Workspace configuration (optional)\n\nReturns the UUID of the created workspace",
+        "operationId": "create_workspace_api_workspaces__post",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "X-API-Key",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Api-Key"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/WorkspaceCreate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkspaceResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "get": {
+        "tags": [
+          "workspaces"
+        ],
+        "summary": "List Workspaces",
+        "description": "List workspaces accessible to the user\n\nUsers see only workspaces they are members of. Super admins (future) see all workspaces.",
+        "operationId": "list_workspaces_api_workspaces__get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "X-API-Key",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Api-Key"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkspaceList"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/workspaces/{workspace_id}": {
+      "get": {
+        "tags": [
+          "workspaces"
+        ],
+        "summary": "Get Workspace",
+        "description": "Get a specific workspace by ID\n\n- **workspace_id**: UUID of the workspace\n\nReturns detailed workspace information if user has access",
+        "operationId": "get_workspace_api_workspaces__workspace_id__get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "workspace_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Workspace Id"
+            }
+          },
+          {
+            "name": "X-API-Key",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Api-Key"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkspaceDetail"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "tags": [
+          "workspaces"
+        ],
+        "summary": "Update Workspace",
+        "description": "Update a workspace\n\n- **workspace_id**: UUID of the workspace\n- **name**: New name for the workspace (optional)\n\nReturns the updated workspace details if user has access",
+        "operationId": "update_workspace_api_workspaces__workspace_id__put",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "workspace_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Workspace Id"
+            }
+          },
+          {
+            "name": "X-API-Key",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Api-Key"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/WorkspaceUpdate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkspaceDetail"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "workspaces"
+        ],
+        "summary": "Delete Workspace",
+        "description": "Delete a workspace\n\n- **workspace_id**: UUID of the workspace\n- **_purge**: Optional query parameter. If false (default), performs soft\n  delete. If true, performs hard delete.\n\nReturns success message if user has access",
+        "operationId": "delete_workspace_api_workspaces__workspace_id__delete",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "workspace_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Workspace Id"
+            }
+          },
+          {
+            "name": "_purge",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "boolean",
+              "default": false,
+              "title": " Purge"
+            }
+          },
+          {
+            "name": "X-API-Key",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Api-Key"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/internal/workspaces/{workspace_id}": {
+      "delete": {
+        "tags": [
+          "internal-workspaces"
+        ],
+        "summary": "Delete Workspace Internal",
+        "description": "Internal delete for workspaces. Allows deleting the Default Workspace,\nstill enforces dependency checks.",
+        "operationId": "delete_workspace_internal_api_internal_workspaces__workspace_id__delete",
+        "parameters": [
+          {
+            "name": "workspace_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Workspace Id"
+            }
+          },
+          {
+            "name": "_purge",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "boolean",
+              "default": false,
+              "title": " Purge"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/workspaces/{workspace_id}/multi-agentic-systems": {
+      "post": {
+        "tags": [
+          "multi-agentic-systems"
+        ],
+        "summary": "Create Multi Agentic System",
+        "description": "Create a new Multi-Agentic System (MAS) within a workspace\n\n- **workspace_id**: UUID of the workspace\n- **name**: Unique name within the workspace for the MAS\n- **description**: Optional description of the MAS\n- **agents**: Optional configuration of agents in the system\n- **config**: Optional configuration for managing long-term memories\n\nReturns the UUID and name of the created MAS",
+        "operationId": "create_multi_agentic_system_api_workspaces__workspace_id__multi_agentic_systems_post",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "workspace_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Workspace Id"
+            }
+          },
+          {
+            "name": "X-API-Key",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Api-Key"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MultiAgenticSystemRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MultiAgenticSystemResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "get": {
+        "tags": [
+          "multi-agentic-systems"
+        ],
+        "summary": "List Multi Agentic Systems",
+        "description": "List all Multi-Agentic Systems in a workspace\n\n- **workspace_id**: UUID of the workspace\n\nReturns list of MAS in the workspace",
+        "operationId": "list_multi_agentic_systems_api_workspaces__workspace_id__multi_agentic_systems_get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "workspace_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Workspace Id"
+            }
+          },
+          {
+            "name": "X-API-Key",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Api-Key"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MultiAgenticSystems"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/workspaces/{workspace_id}/multi-agentic-systems/{mas_id}": {
+      "get": {
+        "tags": [
+          "multi-agentic-systems"
+        ],
+        "summary": "Get Multi Agentic System",
+        "description": "Get a specific Multi-Agentic System by ID\n\n- **workspace_id**: UUID of the workspace\n- **mas_id**: UUID of the multi-agentic system\n\nReturns detailed MAS information",
+        "operationId": "get_multi_agentic_system_api_workspaces__workspace_id__multi_agentic_systems__mas_id__get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "workspace_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Workspace Id"
+            }
+          },
+          {
+            "name": "mas_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Mas Id"
+            }
+          },
+          {
+            "name": "X-API-Key",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Api-Key"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MultiAgenticSystem"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "tags": [
+          "multi-agentic-systems"
+        ],
+        "summary": "Update Multi Agentic System",
+        "description": "Update a Multi-Agentic System\n\n- **workspace_id**: UUID of the workspace\n- **mas_id**: UUID of the multi-agentic system to update\n- **name**: Updated name for the MAS (optional)\n- **description**: Updated description (optional)\n- **agents**: Updated agent configuration (optional)\n- **config**: Updated configuration (optional)\n\nReturns the updated MAS details",
+        "operationId": "update_multi_agentic_system_api_workspaces__workspace_id__multi_agentic_systems__mas_id__put",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "workspace_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Workspace Id"
+            }
+          },
+          {
+            "name": "mas_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Mas Id"
+            }
+          },
+          {
+            "name": "X-API-Key",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Api-Key"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MultiAgenticSystemUpdate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MultiAgenticSystem"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "multi-agentic-systems"
+        ],
+        "summary": "Delete Multi Agentic System",
+        "description": "Delete a Multi-Agentic System\n\n- **workspace_id**: UUID of the workspace\n- **mas_id**: UUID of the multi-agentic system to delete\n- **_purge**: Optional query parameter. If false (default), performs soft delete. If true, performs hard delete.\n\nReturns success message",
+        "operationId": "delete_multi_agentic_system_api_workspaces__workspace_id__multi_agentic_systems__mas_id__delete",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "workspace_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Workspace Id"
+            }
+          },
+          {
+            "name": "mas_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Mas Id"
+            }
+          },
+          {
+            "name": "_purge",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "boolean",
+              "default": false,
+              "title": " Purge"
+            }
+          },
+          {
+            "name": "X-API-Key",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Api-Key"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/workspaces/{workspace_id}/cognitive-fabric-node/register": {
+      "post": {
+        "tags": [
+          "cognitive-fabric-nodes"
+        ],
+        "summary": "Register Cfn Node",
+        "description": "Register a new CFN node or re-enable a disabled one\n\n- **cfn_id**: Persistent CFN identifier (provided by CFN, immutable)\n- **cfn_name**: Human-readable CFN name (can be updated later)\n- **cfn_config**: Optional current CFN configuration\n\nReturns the cfn_id, cfn_name, status (offline), and cloud_config for the CFN to apply",
+        "operationId": "register_cfn_node_api_workspaces__workspace_id__cognitive_fabric_node_register_post",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "workspace_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Workspace Id"
+            }
+          },
+          {
+            "name": "X-API-Key",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Api-Key"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CognitiveFabricNodeRegisterRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CognitiveFabricNodeRegisterResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/workspaces/{workspace_id}/cognitive-fabric-node/{cfn_id}": {
+      "put": {
+        "tags": [
+          "cognitive-fabric-nodes"
+        ],
+        "summary": "Update Cfn Node",
+        "description": "Update CFN node information\n\n- **workspace_id**: UUID of the workspace\n- **cfn_id**: CFN identifier (immutable)\n- **cfn_name**: Optional updated CFN name\n- **cfn_config**: Optional updated CFN configuration\n\nReturns full CFN details including updated cloud_config",
+        "operationId": "update_cfn_node_api_workspaces__workspace_id__cognitive_fabric_node__cfn_id__put",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "workspace_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Workspace Id"
+            }
+          },
+          {
+            "name": "cfn_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Cfn Id"
+            }
+          },
+          {
+            "name": "X-API-Key",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Api-Key"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CognitiveFabricNodeUpdateRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CognitiveFabricNodeDetail"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "cognitive-fabric-nodes"
+        ],
+        "summary": "Deregister Cfn Node",
+        "description": "De-register CFN node (soft delete/disable)\n\n- **workspace_id**: UUID of the workspace\n- **cfn_id**: CFN identifier\n\nDe-registering a CFN disables it by setting enabled=False and deleted_at timestamp.\nThe CFN will no longer appear in listings and cannot send heartbeats.\n\nTo re-enable, the CFN should call POST /register again (IoT-style registration).\nNo response body (204 No Content).",
+        "operationId": "deregister_cfn_node_api_workspaces__workspace_id__cognitive_fabric_node__cfn_id__delete",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "workspace_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Workspace Id"
+            }
+          },
+          {
+            "name": "cfn_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Cfn Id"
+            }
+          },
+          {
+            "name": "X-API-Key",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Api-Key"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "get": {
+        "tags": [
+          "cognitive-fabric-nodes"
+        ],
+        "summary": "Get Cfn Node",
+        "description": "Get detailed CFN node information\n\n- **workspace_id**: UUID of the workspace\n- **cfn_id**: CFN identifier\n\nReturns full CFN details including configuration, status, and timestamps.",
+        "operationId": "get_cfn_node_api_workspaces__workspace_id__cognitive_fabric_node__cfn_id__get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "workspace_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Workspace Id"
+            }
+          },
+          {
+            "name": "cfn_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Cfn Id"
+            }
+          },
+          {
+            "name": "X-API-Key",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Api-Key"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CognitiveFabricNodeDetail"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/workspaces/{workspace_id}/cognitive-fabric-node/{cfn_id}/heartbeat": {
+      "put": {
+        "tags": [
+          "cognitive-fabric-nodes"
+        ],
+        "summary": "Cfn Heartbeat",
+        "description": "CFN heartbeat endpoint - updates last_seen timestamp\n\n- **workspace_id**: UUID of the workspace\n- **cfn_id**: CFN identifier\n\nCFN nodes call this periodically (e.g., every 30 seconds) to indicate they are online.\nReturns the current status and last_seen timestamp.\n\nNote: This endpoint requires authentication but not write access.\nDisabled or de-registered nodes will receive 403 Forbidden.",
+        "operationId": "cfn_heartbeat_api_workspaces__workspace_id__cognitive_fabric_node__cfn_id__heartbeat_put",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "workspace_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Workspace Id"
+            }
+          },
+          {
+            "name": "cfn_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Cfn Id"
+            }
+          },
+          {
+            "name": "X-API-Key",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Api-Key"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CognitiveFabricNodeHeartbeatResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/workspaces/{workspace_id}/cognitive-fabric-node": {
+      "get": {
+        "tags": [
+          "cognitive-fabric-nodes"
+        ],
+        "summary": "List Cfn Nodes",
+        "description": "List all CFN nodes in workspace\n\n- **workspace_id**: UUID of the workspace\n- **status**: Optional status filter (online, offline, blocked)\n\nReturns a list of CFN nodes with summary information and total count.",
+        "operationId": "list_cfn_nodes_api_workspaces__workspace_id__cognitive_fabric_node_get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "workspace_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Workspace Id"
+            }
+          },
+          {
+            "name": "status",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Filter by status (online, offline, blocked)",
+              "title": "Status"
+            },
+            "description": "Filter by status (online, offline, blocked)"
+          },
+          {
+            "name": "X-API-Key",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Api-Key"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CognitiveFabricNodeList"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/audits/": {
+      "post": {
+        "tags": [
+          "audits"
+        ],
+        "summary": "Create Audit",
+        "description": "Create a new audit entry\n\nNote: Audit entries are created automatically by the system.\nThis endpoint is for documentation purposes.",
+        "operationId": "create_audit_api_audits__post",
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AuditResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "get": {
+        "tags": [
+          "audits"
+        ],
+        "summary": "List Audits",
+        "description": "List all audits with pagination",
+        "operationId": "list_audits_api_audits__get",
+        "parameters": [
+          {
+            "name": "skip",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 0,
+              "default": 0,
+              "title": "Skip"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 1000,
+              "minimum": 1,
+              "default": 100,
+              "title": "Limit"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AuditListResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/audits/{audit_id}": {
+      "get": {
+        "tags": [
+          "audits"
+        ],
+        "summary": "Get Audit",
+        "description": "Get a specific audit entry by ID",
+        "operationId": "get_audit_api_audits__audit_id__get",
+        "parameters": [
+          {
+            "name": "audit_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Audit Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AuditResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "audits"
+        ],
+        "summary": "Delete Audit",
+        "description": "Delete a specific audit by ID (soft delete)",
+        "operationId": "delete_audit_api_audits__audit_id__delete",
+        "parameters": [
+          {
+            "name": "audit_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Audit Id"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/iam/api-keys": {
+      "post": {
+        "tags": [
+          "iam"
+        ],
+        "summary": "Create Api Key",
+        "description": "Create a new API key\n\n- **name**: Human-readable name for the API key\n\nThe API key is linked to the current authenticated user and inherits their role.\nReturns the created API key information including the full key (only shown once).",
+        "operationId": "create_api_key_api_iam_api_keys_post",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "X-API-Key",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Api-Key"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ApiKeyCreate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiKeyResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "get": {
+        "tags": [
+          "iam"
+        ],
+        "summary": "List Api Keys",
+        "description": "List API keys\n\n- Non-admin users see only their own API keys\n- Admin users see all API keys in the system\n\nReturns a list of API keys (without the full key value)",
+        "operationId": "list_api_keys_api_iam_api_keys_get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "X-API-Key",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Api-Key"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiKeyList"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/iam/api-keys/{key_id}": {
+      "delete": {
+        "tags": [
+          "iam"
+        ],
+        "summary": "Delete Api Key",
+        "description": "Delete an API key\n\n- **key_id**: UUID of the API key to delete\n\nUsers can only delete their own API keys unless they are admins.\nPerforms a soft delete of the API key.",
+        "operationId": "delete_api_key_api_iam_api_keys__key_id__delete",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "key_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Key Id"
+            }
+          },
+          {
+            "name": "X-API-Key",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Api-Key"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/iam/roles": {
+      "get": {
+        "tags": [
+          "iam"
+        ],
+        "summary": "List Roles",
+        "description": "List all available IAM roles\n\nReturns a list of role names that can be assigned to API keys",
+        "operationId": "list_roles_api_iam_roles_get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "X-API-Key",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Api-Key"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  },
+                  "title": "Response List Roles Api Iam Roles Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/iam/users": {
+      "get": {
+        "tags": [
+          "iam"
+        ],
+        "summary": "List Iam Users",
+        "description": "List all users in the system\n\nReturns a list of all users with their basic information",
+        "operationId": "list_iam_users_api_iam_users_get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "X-API-Key",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Api-Key"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Users"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/workspaces/{workspace_id}/invitations": {
+      "post": {
+        "tags": [
+          "workspace-invitations"
+        ],
+        "summary": "Create Invitation",
+        "description": "Create a workspace invitation (admin only)\n\n- **workspace_id**: UUID of the workspace\n- **invitee_username**: Username of user to invite\n- **role**: Role to assign (admin/viewer/guest)\n\nReturns the UUID of the created invitation",
+        "operationId": "create_invitation_api_workspaces__workspace_id__invitations_post",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "workspace_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Workspace Id"
+            }
+          },
+          {
+            "name": "X-API-Key",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Api-Key"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/WorkspaceInvitationCreate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkspaceInvitationResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "get": {
+        "tags": [
+          "workspace-invitations"
+        ],
+        "summary": "List Workspace Invitations",
+        "description": "List all invitations for a workspace (admin only)\n\n- **workspace_id**: UUID of the workspace\n\nReturns a list of all invitations (pending, accepted, declined, expired)",
+        "operationId": "list_workspace_invitations_api_workspaces__workspace_id__invitations_get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "workspace_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Workspace Id"
+            }
+          },
+          {
+            "name": "X-API-Key",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Api-Key"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkspaceInvitationList"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/workspaces/{workspace_id}/invitations/{invitation_id}": {
+      "delete": {
+        "tags": [
+          "workspace-invitations"
+        ],
+        "summary": "Cancel Invitation",
+        "description": "Cancel a pending invitation (admin only)\n\n- **workspace_id**: UUID of the workspace\n- **invitation_id**: UUID of the invitation\n\nReturns success message",
+        "operationId": "cancel_invitation_api_workspaces__workspace_id__invitations__invitation_id__delete",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "workspace_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Workspace Id"
+            }
+          },
+          {
+            "name": "invitation_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Invitation Id"
+            }
+          },
+          {
+            "name": "X-API-Key",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Api-Key"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/invitations/pending": {
+      "get": {
+        "tags": [
+          "workspace-invitations"
+        ],
+        "summary": "Get Pending Invitations",
+        "description": "Get all pending invitations for the current user\n\nReturns a list of pending invitations",
+        "operationId": "get_pending_invitations_api_invitations_pending_get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "X-API-Key",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Api-Key"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkspaceInvitationList"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/invitations/{invitation_id}/accept": {
+      "post": {
+        "tags": [
+          "workspace-invitations"
+        ],
+        "summary": "Accept Invitation",
+        "description": "Accept a workspace invitation\n\n- **invitation_id**: UUID of the invitation\n\nReturns success message with workspace details and assigned role",
+        "operationId": "accept_invitation_api_invitations__invitation_id__accept_post",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "invitation_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Invitation Id"
+            }
+          },
+          {
+            "name": "X-API-Key",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Api-Key"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkspaceInvitationAcceptResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/invitations/{invitation_id}/decline": {
+      "post": {
+        "tags": [
+          "workspace-invitations"
+        ],
+        "summary": "Decline Invitation",
+        "description": "Decline a workspace invitation\n\n- **invitation_id**: UUID of the invitation\n\nReturns success message",
+        "operationId": "decline_invitation_api_invitations__invitation_id__decline_post",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "invitation_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Invitation Id"
+            }
+          },
+          {
+            "name": "X-API-Key",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Api-Key"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/workspaces/{workspace_id}/members": {
+      "get": {
+        "tags": [
+          "workspace-members"
+        ],
+        "summary": "List Members",
+        "description": "List all members of a workspace\n\n- **workspace_id**: UUID of the workspace\n\nReturns a list of all workspace members with their roles",
+        "operationId": "list_members_api_workspaces__workspace_id__members_get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "workspace_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Workspace Id"
+            }
+          },
+          {
+            "name": "X-API-Key",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Api-Key"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkspaceMemberList"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/workspaces/{workspace_id}/members/{user_id}": {
+      "delete": {
+        "tags": [
+          "workspace-members"
+        ],
+        "summary": "Remove Member",
+        "description": "Remove a member from a workspace (admin only, cannot remove self)\n\n- **workspace_id**: UUID of the workspace\n- **user_id**: UUID of the user to remove\n\nReturns success message",
+        "operationId": "remove_member_api_workspaces__workspace_id__members__user_id__delete",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "workspace_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Workspace Id"
+            }
+          },
+          {
+            "name": "user_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "User Id"
+            }
+          },
+          {
+            "name": "X-API-Key",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Api-Key"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "tags": [
+          "workspace-members"
+        ],
+        "summary": "Update Member Role",
+        "description": "Update a member's role in a workspace (admin only)\n\n- **workspace_id**: UUID of the workspace\n- **user_id**: UUID of the user\n- **role**: New role to assign (admin/viewer/guest)\n\nReturns the updated member details",
+        "operationId": "update_member_role_api_workspaces__workspace_id__members__user_id__put",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "workspace_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Workspace Id"
+            }
+          },
+          {
+            "name": "user_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "User Id"
+            }
+          },
+          {
+            "name": "X-API-Key",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Api-Key"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/WorkspaceMemberRoleUpdate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkspaceMemberDetail"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "ApiKeyCreate": {
+        "properties": {
+          "name": {
+            "type": "string",
+            "maxLength": 200,
+            "minLength": 1,
+            "title": "Name",
+            "description": "Human-readable name for the API key"
+          }
+        },
+        "type": "object",
+        "required": [
+          "name"
+        ],
+        "title": "ApiKeyCreate"
+      },
+      "ApiKeyList": {
+        "properties": {
+          "api_keys": {
+            "items": {
+              "$ref": "#/components/schemas/ApiKeyListItem"
+            },
+            "type": "array",
+            "title": "Api Keys"
+          },
+          "total": {
+            "type": "integer",
+            "title": "Total"
+          }
+        },
+        "type": "object",
+        "required": [
+          "api_keys",
+          "total"
+        ],
+        "title": "ApiKeyList",
+        "example": {
+          "api_keys": [
+            {
+              "created_at": "2024-11-14T10:30:00Z",
+              "id": "550e8400-e29b-41d4-a716-446655440000",
+              "key_preview": "tkf_abc123...",
+              "name": "Production API Key",
+              "user_id": "550e8400-e29b-41d4-a716-446655440002"
+            }
+          ],
+          "total": 1
+        }
+      },
+      "ApiKeyListItem": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id",
+            "description": "Unique identifier for the API key"
+          },
+          "key_preview": {
+            "type": "string",
+            "title": "Key Preview",
+            "description": "Preview of the API key (first few characters)"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name",
+            "description": "Human-readable name for the API key"
+          },
+          "user_id": {
+            "type": "string",
+            "title": "User Id",
+            "description": "ID of the user who owns this API key"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At",
+            "description": "Timestamp when the API key was created"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "key_preview",
+          "name",
+          "user_id",
+          "created_at"
+        ],
+        "title": "ApiKeyListItem",
+        "example": {
+          "created_at": "2024-11-14T10:30:00Z",
+          "id": "550e8400-e29b-41d4-a716-446655440000",
+          "key_preview": "tkf_abc123...",
+          "name": "Production API Key",
+          "user_id": "550e8400-e29b-41d4-a716-446655440002"
+        }
+      },
+      "ApiKeyResponse": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id",
+            "description": "Unique identifier for the API key"
+          },
+          "key": {
+            "type": "string",
+            "title": "Key",
+            "description": "Full API key (only returned on creation)"
+          },
+          "key_preview": {
+            "type": "string",
+            "title": "Key Preview",
+            "description": "Preview of the API key (first few characters)"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name",
+            "description": "Human-readable name for the API key"
+          },
+          "user_id": {
+            "type": "string",
+            "title": "User Id",
+            "description": "ID of the user who owns this API key"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At",
+            "description": "Timestamp when the API key was created"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "key",
+          "key_preview",
+          "name",
+          "user_id",
+          "created_at"
+        ],
+        "title": "ApiKeyResponse",
+        "example": {
+          "created_at": "2024-11-14T10:30:00Z",
+          "id": "550e8400-e29b-41d4-a716-446655440000",
+          "key": "tkf_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+          "key_preview": "tkf_xxx...",
+          "name": "Production API Key",
+          "user_id": "550e8400-e29b-41d4-a716-446655440002"
+        }
+      },
+      "AuditListResponse": {
+        "properties": {
+          "total": {
+            "type": "integer",
+            "title": "Total",
+            "description": "Total number of audits"
+          },
+          "audits": {
+            "items": {
+              "$ref": "#/components/schemas/AuditResponse"
+            },
+            "type": "array",
+            "title": "Audits",
+            "description": "List of audit entries"
+          }
+        },
+        "type": "object",
+        "required": [
+          "total",
+          "audits"
+        ],
+        "title": "AuditListResponse",
+        "description": "Response model for listing audits"
+      },
+      "AuditResponse": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id",
+            "description": "Unique audit ID"
+          },
+          "request_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Request Id",
+            "description": "Unique request ID"
+          },
+          "resource_type": {
+            "type": "string",
+            "title": "Resource Type",
+            "description": "Type of the resource being audited"
+          },
+          "audit_type": {
+            "type": "string",
+            "title": "Audit Type",
+            "description": "Type of audit action"
+          },
+          "audit_resource_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Audit Resource Id",
+            "description": "ID of the resource being audited"
+          },
+          "audit_information": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Audit Information",
+            "description": "Information about the audit as a JSON object"
+          },
+          "audit_extra_information": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Audit Extra Information",
+            "description": "Additional audit information"
+          },
+          "created_by": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Created By",
+            "description": "User who created the audit"
+          },
+          "updated_by": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Updated By",
+            "description": "User who last updated the audit"
+          },
+          "deleted_by": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Deleted By",
+            "description": "User who deleted the audit"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At",
+            "description": "Timestamp when the audit was created"
+          },
+          "updated_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Updated At",
+            "description": "Timestamp when the audit was last updated"
+          },
+          "deleted_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Deleted At",
+            "description": "Timestamp when the audit was deleted"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "resource_type",
+          "audit_type",
+          "created_at"
+        ],
+        "title": "AuditResponse",
+        "description": "Response model for audit entries"
+      },
+      "CognitiveFabricNodeDetail": {
+        "properties": {
+          "cfn_id": {
+            "type": "string",
+            "title": "Cfn Id",
+            "description": "Cognitive Fabric Node identifier"
+          },
+          "workspace_id": {
+            "type": "string",
+            "title": "Workspace Id",
+            "description": "Workspace identifier"
+          },
+          "cfn_name": {
+            "type": "string",
+            "title": "Cfn Name",
+            "description": "Cognitive Fabric Node name"
+          },
+          "cfn_config": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cfn Config",
+            "description": "Node configuration"
+          },
+          "cloud_config": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cloud Config",
+            "description": "Cloud configuration"
+          },
+          "status": {
+            "$ref": "#/components/schemas/CognitiveFabricNodeStatus",
+            "description": "Current node status"
+          },
+          "last_seen": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Last Seen",
+            "description": "Last heartbeat timestamp"
+          },
+          "enabled": {
+            "type": "boolean",
+            "title": "Enabled",
+            "description": "Whether node is enabled"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At",
+            "description": "Creation timestamp"
+          },
+          "updated_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Updated At",
+            "description": "Last update timestamp"
+          },
+          "created_by": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Created By",
+            "description": "Creator user ID"
+          },
+          "updated_by": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Updated By",
+            "description": "Last updater user ID"
+          }
+        },
+        "type": "object",
+        "required": [
+          "cfn_id",
+          "workspace_id",
+          "cfn_name",
+          "status",
+          "last_seen",
+          "enabled",
+          "created_at"
+        ],
+        "title": "CognitiveFabricNodeDetail",
+        "description": "Schema for detailed Cognitive Fabric Node information",
+        "example": {
+          "cfn_config": {
+            "max_connections": 100,
+            "memory_limit": "4GB"
+          },
+          "cfn_id": "cfn-persistent-id-123",
+          "cfn_name": "cfn-node-prod-1",
+          "cloud_config": {
+            "features": [
+              "reasoning",
+              "memory"
+            ],
+            "log_level": "INFO",
+            "workspace_id": "workspace-uuid"
+          },
+          "created_at": "2026-01-30T10:00:00Z",
+          "created_by": "user-id",
+          "enabled": true,
+          "last_seen": "2026-01-30T12:34:56Z",
+          "status": "online",
+          "updated_at": "2026-01-30T12:00:00Z",
+          "updated_by": "user-id",
+          "workspace_id": "workspace-uuid"
+        }
+      },
+      "CognitiveFabricNodeHeartbeatResponse": {
+        "properties": {
+          "status": {
+            "$ref": "#/components/schemas/CognitiveFabricNodeStatus",
+            "description": "Current node status"
+          },
+          "last_seen": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Last Seen",
+            "description": "Last heartbeat timestamp"
+          }
+        },
+        "type": "object",
+        "required": [
+          "status",
+          "last_seen"
+        ],
+        "title": "CognitiveFabricNodeHeartbeatResponse",
+        "description": "Schema for heartbeat response",
+        "example": {
+          "last_seen": "2026-01-30T12:34:56Z",
+          "status": "online"
+        }
+      },
+      "CognitiveFabricNodeList": {
+        "properties": {
+          "nodes": {
+            "items": {
+              "$ref": "#/components/schemas/CognitiveFabricNodeListItem"
+            },
+            "type": "array",
+            "title": "Nodes",
+            "description": "List of Cognitive Fabric Nodes"
+          },
+          "total": {
+            "type": "integer",
+            "title": "Total",
+            "description": "Total number of Cognitive Fabric Nodes"
+          }
+        },
+        "type": "object",
+        "required": [
+          "nodes",
+          "total"
+        ],
+        "title": "CognitiveFabricNodeList",
+        "description": "Schema for listing Cognitive Fabric Nodes",
+        "example": {
+          "nodes": [
+            {
+              "cfn_id": "cfn-persistent-id-123",
+              "cfn_name": "cfn-node-prod-1",
+              "created_at": "2026-01-30T10:00:00Z",
+              "enabled": true,
+              "last_seen": "2026-01-30T12:34:56Z",
+              "status": "online",
+              "workspace_id": "workspace-uuid"
+            }
+          ],
+          "total": 1
+        }
+      },
+      "CognitiveFabricNodeListItem": {
+        "properties": {
+          "cfn_id": {
+            "type": "string",
+            "title": "Cfn Id",
+            "description": "Cognitive Fabric Node identifier"
+          },
+          "workspace_id": {
+            "type": "string",
+            "title": "Workspace Id",
+            "description": "Workspace identifier"
+          },
+          "cfn_name": {
+            "type": "string",
+            "title": "Cfn Name",
+            "description": "Cognitive Fabric Node name"
+          },
+          "status": {
+            "$ref": "#/components/schemas/CognitiveFabricNodeStatus",
+            "description": "Current node status"
+          },
+          "last_seen": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Last Seen",
+            "description": "Last heartbeat timestamp"
+          },
+          "enabled": {
+            "type": "boolean",
+            "title": "Enabled",
+            "description": "Whether node is enabled"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At",
+            "description": "Creation timestamp"
+          }
+        },
+        "type": "object",
+        "required": [
+          "cfn_id",
+          "workspace_id",
+          "cfn_name",
+          "status",
+          "last_seen",
+          "enabled",
+          "created_at"
+        ],
+        "title": "CognitiveFabricNodeListItem",
+        "description": "Schema for Cognitive Fabric Node in list view",
+        "example": {
+          "cfn_id": "cfn-persistent-id-123",
+          "cfn_name": "cfn-node-prod-1",
+          "created_at": "2026-01-30T10:00:00Z",
+          "enabled": true,
+          "last_seen": "2026-01-30T12:34:56Z",
+          "status": "online",
+          "workspace_id": "workspace-uuid"
+        }
+      },
+      "CognitiveFabricNodeRegisterRequest": {
+        "properties": {
+          "cfn_id": {
+            "type": "string",
+            "maxLength": 255,
+            "minLength": 1,
+            "title": "Cfn Id",
+            "description": "Persistent CFN identifier (provided by CFN, immutable)"
+          },
+          "cfn_name": {
+            "type": "string",
+            "maxLength": 255,
+            "minLength": 1,
+            "title": "Cfn Name",
+            "description": "Human-readable CFN name (can be updated)"
+          },
+          "cfn_config": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cfn Config",
+            "description": "CFN configuration used by the node"
+          }
+        },
+        "type": "object",
+        "required": [
+          "cfn_id",
+          "cfn_name"
+        ],
+        "title": "CognitiveFabricNodeRegisterRequest",
+        "description": "Schema for Cognitive Fabric Node registration request",
+        "example": {
+          "cfn_config": {
+            "max_connections": 100,
+            "memory_limit": "4GB"
+          },
+          "cfn_id": "cfn-persistent-id-123",
+          "cfn_name": "cfn-node-prod-1"
+        }
+      },
+      "CognitiveFabricNodeRegisterResponse": {
+        "properties": {
+          "cfn_id": {
+            "type": "string",
+            "title": "Cfn Id",
+            "description": "Cognitive Fabric Node identifier"
+          },
+          "cfn_name": {
+            "type": "string",
+            "title": "Cfn Name",
+            "description": "Cognitive Fabric Node name"
+          },
+          "status": {
+            "$ref": "#/components/schemas/CognitiveFabricNodeStatus",
+            "description": "Current node status"
+          },
+          "cloud_config": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cloud Config",
+            "description": "Cloud configuration for node to apply"
+          }
+        },
+        "type": "object",
+        "required": [
+          "cfn_id",
+          "cfn_name",
+          "status"
+        ],
+        "title": "CognitiveFabricNodeRegisterResponse",
+        "description": "Schema for Cognitive Fabric Node registration response",
+        "example": {
+          "cfn_id": "cfn-persistent-id-123",
+          "cfn_name": "cfn-node-prod-1",
+          "cloud_config": {
+            "features": [
+              "reasoning",
+              "memory"
+            ],
+            "log_level": "INFO",
+            "max_connections": 200,
+            "memory_limit": "8GB",
+            "workspace_id": "workspace-uuid"
+          },
+          "status": "offline"
+        }
+      },
+      "CognitiveFabricNodeStatus": {
+        "type": "string",
+        "enum": [
+          "online",
+          "offline"
+        ],
+        "title": "CognitiveFabricNodeStatus",
+        "description": "Cognitive Fabric Node status enumeration"
+      },
+      "CognitiveFabricNodeUpdateRequest": {
+        "properties": {
+          "cfn_name": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 255,
+                "minLength": 1
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cfn Name",
+            "description": "Updated CFN name"
+          },
+          "cfn_config": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cfn Config",
+            "description": "Updated CFN configuration"
+          }
+        },
+        "type": "object",
+        "title": "CognitiveFabricNodeUpdateRequest",
+        "description": "Schema for updating Cognitive Fabric Node",
+        "example": {
+          "cfn_config": {
+            "max_connections": 200,
+            "memory_limit": "8GB"
+          },
+          "cfn_name": "cfn-node-prod-1-updated"
+        }
+      },
+      "HTTPValidationError": {
+        "properties": {
+          "detail": {
+            "items": {
+              "$ref": "#/components/schemas/ValidationError"
+            },
+            "type": "array",
+            "title": "Detail"
+          }
+        },
+        "type": "object",
+        "title": "HTTPValidationError"
+      },
+      "InvitationStatus": {
+        "type": "string",
+        "enum": [
+          "pending",
+          "accepted",
+          "declined",
+          "expired"
+        ],
+        "title": "InvitationStatus",
+        "description": "Invitation status values"
+      },
+      "LoginRequest": {
+        "properties": {
+          "username": {
+            "type": "string",
+            "title": "Username",
+            "description": "Username"
+          },
+          "password": {
+            "type": "string",
+            "title": "Password",
+            "description": "Password"
+          }
+        },
+        "type": "object",
+        "required": [
+          "username",
+          "password"
+        ],
+        "title": "LoginRequest",
+        "description": "Schema for login request"
+      },
+      "MultiAgenticSystem": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "workspace_id": {
+            "type": "string",
+            "title": "Workspace Id"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "description": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Description"
+          },
+          "agents": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Agents"
+          },
+          "config": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Config"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          },
+          "updated_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Updated At"
+          },
+          "created_by": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Created By"
+          },
+          "updated_by": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Updated By"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "workspace_id",
+          "name",
+          "created_at"
+        ],
+        "title": "MultiAgenticSystem",
+        "description": "Schema for detailed multi-agentic system information",
+        "example": {
+          "agents": {
+            "agent1": {
+              "type": "planner"
+            },
+            "agent2": {
+              "type": "executor"
+            }
+          },
+          "config": {
+            "memory": {
+              "retention": "90d",
+              "type": "long-term"
+            }
+          },
+          "created_at": "2024-12-11T10:30:00Z",
+          "description": "A system for collaborative AI agents",
+          "id": "550e8400-e29b-41d4-a716-446655440000",
+          "name": "unique-name-within-a-workspace",
+          "updated_at": "2024-12-11T10:30:00Z",
+          "workspace_id": "660e8400-e29b-41d4-a716-446655440000"
+        }
+      },
+      "MultiAgenticSystemRequest": {
+        "properties": {
+          "name": {
+            "type": "string",
+            "maxLength": 255,
+            "minLength": 1,
+            "title": "Name",
+            "description": "Unique name within the workspace for the multi-agentic system"
+          },
+          "description": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Description",
+            "description": "Description of the multi-agentic system"
+          },
+          "agents": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Agents",
+            "description": "Configuration of agents in the system"
+          },
+          "config": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Config",
+            "description": "Configuration object"
+          }
+        },
+        "type": "object",
+        "required": [
+          "name"
+        ],
+        "title": "MultiAgenticSystemRequest",
+        "description": "Schema for creating a new Multi-Agentic System"
+      },
+      "MultiAgenticSystemResponse": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id",
+            "description": "Unique identifier for the multi-agentic system"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name",
+            "description": "Name of the multi-agentic system"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "name"
+        ],
+        "title": "MultiAgenticSystemResponse",
+        "description": "Schema for multi-agentic system creation response",
+        "example": {
+          "id": "550e8400-e29b-41d4-a716-446655440000",
+          "name": "unique-name-within-a-workspace"
+        }
+      },
+      "MultiAgenticSystemUpdate": {
+        "properties": {
+          "name": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 255,
+                "minLength": 1
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Name",
+            "description": "Updated name for the multi-agentic system"
+          },
+          "description": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Description",
+            "description": "Updated description of the multi-agentic system"
+          },
+          "agents": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Agents",
+            "description": "Updated configuration of agents in the system"
+          },
+          "config": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Config",
+            "description": "Updated configuration object"
+          }
+        },
+        "type": "object",
+        "title": "MultiAgenticSystemUpdate",
+        "description": "Schema for updating a Multi-Agentic System"
+      },
+      "MultiAgenticSystems": {
+        "properties": {
+          "systems": {
+            "items": {
+              "$ref": "#/components/schemas/MultiAgenticSystem"
+            },
+            "type": "array",
+            "title": "Systems",
+            "description": "List of multi-agentic systems in the workspace"
+          }
+        },
+        "type": "object",
+        "required": [
+          "systems"
+        ],
+        "title": "MultiAgenticSystems",
+        "description": "Schema for listing multi-agentic systems"
+      },
+      "RefreshTokenRequest": {
+        "properties": {
+          "refresh_token": {
+            "type": "string",
+            "title": "Refresh Token",
+            "description": "Refresh token"
+          }
+        },
+        "type": "object",
+        "required": [
+          "refresh_token"
+        ],
+        "title": "RefreshTokenRequest",
+        "description": "Schema for token refresh request"
+      },
+      "SignupRequest": {
+        "properties": {
+          "username": {
+            "type": "string",
+            "maxLength": 100,
+            "minLength": 3,
+            "title": "Username",
+            "description": "Desired username"
+          },
+          "email": {
+            "type": "string",
+            "format": "email",
+            "title": "Email",
+            "description": "Email address"
+          },
+          "password": {
+            "type": "string",
+            "minLength": 8,
+            "title": "Password",
+            "description": "Password (minimum 8 characters)"
+          },
+          "domain": {
+            "type": "string",
+            "title": "Domain",
+            "description": "User domain",
+            "default": "ioc.local"
+          },
+          "role": {
+            "type": "string",
+            "title": "Role",
+            "description": "User role",
+            "default": "admin"
+          }
+        },
+        "type": "object",
+        "required": [
+          "username",
+          "email",
+          "password"
+        ],
+        "title": "SignupRequest",
+        "description": "Schema for user sign-up request"
+      },
+      "TokenRefreshResponse": {
+        "properties": {
+          "access_token": {
+            "type": "string",
+            "title": "Access Token",
+            "description": "New JWT access token"
+          },
+          "token_type": {
+            "type": "string",
+            "title": "Token Type",
+            "description": "Token type",
+            "default": "bearer"
+          }
+        },
+        "type": "object",
+        "required": [
+          "access_token"
+        ],
+        "title": "TokenRefreshResponse",
+        "description": "Schema for token refresh response"
+      },
+      "TokenResponse": {
+        "properties": {
+          "access_token": {
+            "type": "string",
+            "title": "Access Token",
+            "description": "JWT access token"
+          },
+          "refresh_token": {
+            "type": "string",
+            "title": "Refresh Token",
+            "description": "JWT refresh token"
+          },
+          "token_type": {
+            "type": "string",
+            "title": "Token Type",
+            "description": "Token type",
+            "default": "bearer"
+          },
+          "user": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "User",
+            "description": "User information"
+          }
+        },
+        "type": "object",
+        "required": [
+          "access_token",
+          "refresh_token",
+          "user"
+        ],
+        "title": "TokenResponse",
+        "description": "Schema for token response"
+      },
+      "User": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "username": {
+            "type": "string",
+            "title": "Username"
+          },
+          "domain": {
+            "type": "string",
+            "title": "Domain"
+          },
+          "role": {
+            "type": "string",
+            "title": "Role"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          },
+          "updated_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Updated At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "username",
+          "domain",
+          "role",
+          "created_at"
+        ],
+        "title": "User",
+        "example": {
+          "created_at": "2024-11-14T10:30:00Z",
+          "domain": "ioc.local",
+          "id": "550e8400-e29b-41d4-a716-446655440000",
+          "role": "admin",
+          "updated_at": "2024-11-14T11:15:00Z",
+          "username": "admin"
+        }
+      },
+      "Users": {
+        "properties": {
+          "users": {
+            "items": {
+              "$ref": "#/components/schemas/User"
+            },
+            "type": "array",
+            "title": "Users"
+          },
+          "total": {
+            "type": "integer",
+            "title": "Total"
+          }
+        },
+        "type": "object",
+        "required": [
+          "users",
+          "total"
+        ],
+        "title": "Users",
+        "example": {
+          "total": 1,
+          "users": [
+            {
+              "created_at": "2024-11-14T10:30:00Z",
+              "domain": "ioc.local",
+              "id": "550e8400-e29b-41d4-a716-446655440000",
+              "role": "admin",
+              "updated_at": "2024-11-14T11:15:00Z",
+              "username": "admin"
+            }
+          ]
+        }
+      },
+      "ValidationError": {
+        "properties": {
+          "loc": {
+            "items": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "integer"
+                }
+              ]
+            },
+            "type": "array",
+            "title": "Location"
+          },
+          "msg": {
+            "type": "string",
+            "title": "Message"
+          },
+          "type": {
+            "type": "string",
+            "title": "Error Type"
+          }
+        },
+        "type": "object",
+        "required": [
+          "loc",
+          "msg",
+          "type"
+        ],
+        "title": "ValidationError"
+      },
+      "WorkspaceCreate": {
+        "properties": {
+          "name": {
+            "type": "string",
+            "maxLength": 100,
+            "minLength": 1,
+            "title": "Name",
+            "description": "Name of the workspace"
+          },
+          "config": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Config",
+            "description": "Workspace configuration settings"
+          }
+        },
+        "type": "object",
+        "required": [
+          "name"
+        ],
+        "title": "WorkspaceCreate"
+      },
+      "WorkspaceDetail": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          },
+          "updated_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Updated At"
+          },
+          "created_by": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Created By"
+          },
+          "created_by_username": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Created By Username",
+            "description": "Username of the workspace creator"
+          },
+          "updated_by": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Updated By"
+          },
+          "members": {
+            "items": {
+              "$ref": "#/components/schemas/WorkspaceMemberDetail"
+            },
+            "type": "array",
+            "title": "Members",
+            "description": "List of workspace members"
+          },
+          "config": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Config"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "name",
+          "created_at"
+        ],
+        "title": "WorkspaceDetail",
+        "example": {
+          "config": {},
+          "created_at": "2024-11-14T10:30:00Z",
+          "created_by": "user-123",
+          "id": "550e8400-e29b-41d4-a716-446655440000",
+          "members": [],
+          "name": "My Workspace",
+          "updated_at": "2024-11-14T11:15:00Z",
+          "updated_by": "user-456"
+        }
+      },
+      "WorkspaceInvitationAcceptResponse": {
+        "properties": {
+          "message": {
+            "type": "string",
+            "title": "Message"
+          },
+          "workspace_id": {
+            "type": "string",
+            "title": "Workspace Id"
+          },
+          "workspace_name": {
+            "type": "string",
+            "title": "Workspace Name"
+          },
+          "assigned_role": {
+            "type": "string",
+            "title": "Assigned Role"
+          }
+        },
+        "type": "object",
+        "required": [
+          "message",
+          "workspace_id",
+          "workspace_name",
+          "assigned_role"
+        ],
+        "title": "WorkspaceInvitationAcceptResponse",
+        "description": "Schema for invitation acceptance response"
+      },
+      "WorkspaceInvitationCreate": {
+        "properties": {
+          "invitee_username": {
+            "type": "string",
+            "title": "Invitee Username",
+            "description": "Username of user to invite"
+          },
+          "role": {
+            "type": "string",
+            "title": "Role",
+            "description": "Role to assign (admin/viewer/guest)"
+          }
+        },
+        "type": "object",
+        "required": [
+          "invitee_username",
+          "role"
+        ],
+        "title": "WorkspaceInvitationCreate",
+        "description": "Schema for creating a workspace invitation"
+      },
+      "WorkspaceInvitationDetail": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "workspace_id": {
+            "type": "string",
+            "title": "Workspace Id"
+          },
+          "workspace_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Workspace Name",
+            "description": "Workspace name joined from workspace table"
+          },
+          "inviter_id": {
+            "type": "string",
+            "title": "Inviter Id"
+          },
+          "inviter_username": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Inviter Username",
+            "description": "Inviter username joined from user table"
+          },
+          "invitee_username": {
+            "type": "string",
+            "title": "Invitee Username"
+          },
+          "role": {
+            "type": "string",
+            "title": "Role"
+          },
+          "status": {
+            "$ref": "#/components/schemas/InvitationStatus"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          },
+          "expires_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Expires At"
+          },
+          "responded_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Responded At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "workspace_id",
+          "inviter_id",
+          "invitee_username",
+          "role",
+          "status",
+          "created_at",
+          "expires_at"
+        ],
+        "title": "WorkspaceInvitationDetail",
+        "description": "Schema for workspace invitation details"
+      },
+      "WorkspaceInvitationList": {
+        "properties": {
+          "invitations": {
+            "items": {
+              "$ref": "#/components/schemas/WorkspaceInvitationDetail"
+            },
+            "type": "array",
+            "title": "Invitations"
+          },
+          "total": {
+            "type": "integer",
+            "title": "Total"
+          }
+        },
+        "type": "object",
+        "required": [
+          "invitations",
+          "total"
+        ],
+        "title": "WorkspaceInvitationList",
+        "description": "Schema for list of workspace invitations"
+      },
+      "WorkspaceInvitationResponse": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id"
+        ],
+        "title": "WorkspaceInvitationResponse",
+        "description": "Schema for invitation creation response"
+      },
+      "WorkspaceList": {
+        "properties": {
+          "workspaces": {
+            "items": {
+              "$ref": "#/components/schemas/WorkspaceDetail"
+            },
+            "type": "array",
+            "title": "Workspaces"
+          },
+          "total": {
+            "type": "integer",
+            "title": "Total"
+          }
+        },
+        "type": "object",
+        "required": [
+          "workspaces",
+          "total"
+        ],
+        "title": "WorkspaceList",
+        "example": {
+          "total": 1,
+          "workspaces": [
+            {
+              "config": {},
+              "created_at": "2024-11-14T10:30:00Z",
+              "created_by": "user-123",
+              "id": "550e8400-e29b-41d4-a716-446655440000",
+              "members": [],
+              "name": "My Workspace",
+              "updated_at": "2024-11-14T11:15:00Z",
+              "updated_by": "user-456"
+            }
+          ]
+        }
+      },
+      "WorkspaceMemberDetail": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "workspace_id": {
+            "type": "string",
+            "title": "Workspace Id"
+          },
+          "user_id": {
+            "type": "string",
+            "title": "User Id"
+          },
+          "username": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Username",
+            "description": "Username joined from user table"
+          },
+          "role": {
+            "$ref": "#/components/schemas/WorkspaceRole"
+          },
+          "joined_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Joined At"
+          },
+          "is_creator": {
+            "type": "boolean",
+            "title": "Is Creator",
+            "description": "True if this member created the workspace",
+            "default": false
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "workspace_id",
+          "user_id",
+          "role",
+          "joined_at"
+        ],
+        "title": "WorkspaceMemberDetail",
+        "description": "Schema for workspace member details"
+      },
+      "WorkspaceMemberList": {
+        "properties": {
+          "members": {
+            "items": {
+              "$ref": "#/components/schemas/WorkspaceMemberDetail"
+            },
+            "type": "array",
+            "title": "Members"
+          },
+          "total": {
+            "type": "integer",
+            "title": "Total"
+          }
+        },
+        "type": "object",
+        "required": [
+          "members",
+          "total"
+        ],
+        "title": "WorkspaceMemberList",
+        "description": "Schema for list of workspace members"
+      },
+      "WorkspaceMemberRoleUpdate": {
+        "properties": {
+          "role": {
+            "$ref": "#/components/schemas/WorkspaceRole",
+            "description": "New role to assign"
+          }
+        },
+        "type": "object",
+        "required": [
+          "role"
+        ],
+        "title": "WorkspaceMemberRoleUpdate",
+        "description": "Schema for updating a member's role"
+      },
+      "WorkspaceResponse": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id",
+            "description": "Unique identifier for the workspace"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id"
+        ],
+        "title": "WorkspaceResponse",
+        "example": {
+          "id": "550e8400-e29b-41d4-a716-446655440000"
+        }
+      },
+      "WorkspaceRole": {
+        "type": "string",
+        "enum": [
+          "admin",
+          "viewer",
+          "guest"
+        ],
+        "title": "WorkspaceRole",
+        "description": "Workspace-level roles"
+      },
+      "WorkspaceUpdate": {
+        "properties": {
+          "name": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 100,
+                "minLength": 1
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Name",
+            "description": "Updated name of the workspace"
+          }
+        },
+        "type": "object",
+        "title": "WorkspaceUpdate"
+      }
+    },
+    "securitySchemes": {
+      "HTTPBearer": {
+        "type": "http",
+        "scheme": "bearer"
+      }
+    }
+  }
+}

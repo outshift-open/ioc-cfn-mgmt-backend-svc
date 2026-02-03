@@ -12,7 +12,7 @@ from server.schemas.multi_agentic_system import (
     MultiAgenticSystem as MultiAgenticSystemSchema,
     MultiAgenticSystems,
 )
-from server.database.relational_db.models.mas import MultiAgenticSystem as MultiAgenticSystemModel
+from server.database.relational_db.models.multi_agentic_system import MultiAgenticSystem as MultiAgenticSystemModel
 from server.database.relational_db.db import RelationalDB
 from server.services.workspace import workspace_service
 from server.services.audit import AuditEventType, ResourceType, audit_service, AuditRequest
@@ -21,11 +21,9 @@ from server.services.audit import AuditEventType, ResourceType, audit_service, A
 class MultiAgenticSystemService:
     """Service layer for MAS business logic"""
 
-    def create_multi_agentic_system(
-        self, workspace_id: str, mas_data: MultiAgenticSystemRequest
-    ) -> MultiAgenticSystemResponse:
+    def create(self, workspace_id: str, mas_data: MultiAgenticSystemRequest) -> MultiAgenticSystemResponse:
         # Validate workspace exists
-        if not workspace_service.workspace_exists(workspace_id):
+        if not workspace_service.exists(workspace_id):
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail="Workspace not found",
@@ -116,9 +114,9 @@ class MultiAgenticSystemService:
                 detail=f"Failed to create multi-agentic system: {str(e)}",
             )
 
-    def list_multi_agentic_systems(self, workspace_id: str) -> MultiAgenticSystems:
+    def list(self, workspace_id: str) -> MultiAgenticSystems:
         # Validate workspace exists
-        if not workspace_service.workspace_exists(workspace_id):
+        if not workspace_service.exists(workspace_id):
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail="Workspace not found",
@@ -165,7 +163,7 @@ class MultiAgenticSystemService:
                 detail=f"Failed to retrieve multi-agentic systems: {str(e)}",
             )
 
-    def get_multi_agentic_system(self, workspace_id: str, mas_id: str) -> MultiAgenticSystemSchema:
+    def get(self, workspace_id: str, mas_id: str) -> MultiAgenticSystemSchema:
         try:
             db = RelationalDB()
             session = db.get_session()
@@ -211,9 +209,7 @@ class MultiAgenticSystemService:
                 detail=f"Failed to retrieve multi-agentic system: {str(e)}",
             )
 
-    def update_multi_agentic_system(
-        self, workspace_id: str, mas_id: str, mas_data: MultiAgenticSystemUpdate
-    ) -> MultiAgenticSystemSchema:
+    def update(self, workspace_id: str, mas_id: str, mas_data: MultiAgenticSystemUpdate) -> MultiAgenticSystemSchema:
         """Update a multi-agentic system"""
         try:
             db = RelationalDB()
@@ -321,7 +317,7 @@ class MultiAgenticSystemService:
                 detail=f"Failed to update multi-agentic system: {str(e)}",
             )
 
-    def delete_multi_agentic_system(self, workspace_id: str, mas_id: str, _purge: bool = False) -> dict:
+    def delete(self, workspace_id: str, mas_id: str, _purge: bool = False) -> dict:
         try:
             db = RelationalDB()
             session = db.get_session()
@@ -381,4 +377,4 @@ class MultiAgenticSystemService:
 
 
 # Global service instance
-mas_service = MultiAgenticSystemService()
+multi_agentic_system_service = MultiAgenticSystemService()

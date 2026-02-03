@@ -1,5 +1,5 @@
--- Initial Database Schema
--- Consolidated migration containing all necessary tables
+-- Consolidated Database Schema Migration
+-- Combined from multiple migrations for cleaner schema management
 
 -- ====================
 -- Table: workspace
@@ -92,7 +92,7 @@ CREATE TABLE "audit" (
   "created_by" character varying(360) NULL,
   "updated_by" character varying(360) NULL,
   "created_at" timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  "updated_at" timestamp NULL DEFAULT CURRENT_TIMESTAMP,
+  "updated_at" timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
   "deleted_at" timestamp NULL,
   "deleted_by" character varying(360) NULL,
   "audit_information" json NULL,
@@ -107,7 +107,6 @@ CREATE INDEX "idx_audit_request_id" ON "audit" ("request_id");
 -- ====================
 -- Table: workspace_member
 -- ====================
--- Tracks actual workspace membership with roles
 CREATE TABLE "workspace_member" (
   "id" character varying(36) NOT NULL DEFAULT (gen_random_uuid())::text,
   "workspace_id" character varying(36) NOT NULL,
@@ -121,7 +120,6 @@ CREATE TABLE "workspace_member" (
   CONSTRAINT "fk_workspace_member_user" FOREIGN KEY ("user_id") REFERENCES "user" ("id")
 );
 
--- Unique constraint: one user can only be a member once per workspace
 CREATE UNIQUE INDEX "idx_workspace_member_unique" ON "workspace_member" ("workspace_id", "user_id") WHERE "deleted_at" IS NULL;
 CREATE INDEX "idx_workspace_member_workspace_id" ON "workspace_member" ("workspace_id");
 CREATE INDEX "idx_workspace_member_user_id" ON "workspace_member" ("user_id");
@@ -130,7 +128,6 @@ CREATE INDEX "idx_workspace_member_deleted_at" ON "workspace_member" ("deleted_a
 -- ====================
 -- Table: workspace_invitation
 -- ====================
--- Tracks pending invitations with expiration
 CREATE TABLE "workspace_invitation" (
   "id" character varying(36) NOT NULL DEFAULT (gen_random_uuid())::text,
   "workspace_id" character varying(36) NOT NULL,
@@ -152,3 +149,31 @@ CREATE INDEX "idx_workspace_invitation_invitee_username" ON "workspace_invitatio
 CREATE INDEX "idx_workspace_invitation_status" ON "workspace_invitation" ("status");
 CREATE INDEX "idx_workspace_invitation_expires_at" ON "workspace_invitation" ("expires_at");
 CREATE INDEX "idx_workspace_invitation_deleted_at" ON "workspace_invitation" ("deleted_at");
+
+-- ====================
+-- Table: cognitive_fabric_node
+-- ====================
+CREATE TABLE "cognitive_fabric_node" (
+  "cfn_id" character varying(255) NOT NULL,
+  "workspace_id" character varying(36) NOT NULL,
+  "cfn_name" character varying(255) NOT NULL,
+  "cfn_config" jsonb NULL,
+  "cloud_config" jsonb NULL,
+  "status" character varying(50) NOT NULL DEFAULT 'online',
+  "last_seen" timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  "enabled" boolean NOT NULL DEFAULT true,
+  "created_at" timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  "updated_at" timestamp NULL DEFAULT CURRENT_TIMESTAMP,
+  "created_by" character varying(255) NULL,
+  "updated_by" character varying(255) NULL,
+  "deleted_at" timestamp NULL,
+  PRIMARY KEY ("cfn_id"),
+  CONSTRAINT "cognitive_fabric_node_workspace_id_fkey" FOREIGN KEY ("workspace_id") REFERENCES "workspace" ("id") ON UPDATE NO ACTION ON DELETE NO ACTION
+);
+
+CREATE INDEX "idx_cfn_enabled" ON "cognitive_fabric_node" ("enabled");
+CREATE INDEX "idx_cfn_deleted_at" ON "cognitive_fabric_node" ("deleted_at");
+CREATE INDEX "idx_cfn_last_seen" ON "cognitive_fabric_node" ("last_seen");
+CREATE INDEX "idx_cfn_status" ON "cognitive_fabric_node" ("status");
+CREATE INDEX "idx_cfn_workspace_id" ON "cognitive_fabric_node" ("workspace_id");
+CREATE UNIQUE INDEX "idx_cfn_workspace_name_unique" ON "cognitive_fabric_node" ("workspace_id", "cfn_name") WHERE (deleted_at IS NULL);

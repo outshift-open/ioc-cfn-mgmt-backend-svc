@@ -11,7 +11,8 @@ from fastapi.testclient import TestClient
 from server.database.relational_db.db import RelationalDB
 from server.database.relational_db.models import Base
 from server.database.relational_db.models.api_key import ApiKey
-from server.database.relational_db.models.mas import MultiAgenticSystem
+from server.database.relational_db.models.cognitive_fabric_node import CognitiveFabricNode
+from server.database.relational_db.models.multi_agentic_system import MultiAgenticSystem
 from server.database.relational_db.models.user import User
 from server.database.relational_db.models.workspace import Workspace
 from server.database.relational_db.models.workspace_invitation import (
@@ -184,6 +185,7 @@ def setup_test_environment():
             session.query(WorkspaceMember).delete()
             session.query(ApiKey).delete()
             session.query(User).delete()
+            session.query(CognitiveFabricNode).delete()
             session.query(MultiAgenticSystem).delete()
             session.query(Workspace).delete()
             session.commit()

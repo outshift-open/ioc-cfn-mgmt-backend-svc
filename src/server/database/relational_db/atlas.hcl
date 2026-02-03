@@ -2,7 +2,7 @@
 
 data "external_schema" "sqlalchemy" {
     program = [
-        "atlas-provider-sqlalchemy",
+        "poetry", "run", "atlas-provider-sqlalchemy",
         "--path", "./models",
         "--dialect", "postgresql"
     ]

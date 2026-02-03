@@ -180,7 +180,7 @@ class AuthService:
 
                 # Create default workspace for the new user
                 try:
-                    workspace_service.create_workspace(
+                    workspace_service.create(
                         WorkspaceCreate(name="Default Workspace", config={}),
                         creator_user_id=user_id,
                     )

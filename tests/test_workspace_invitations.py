@@ -1,8 +1,9 @@
 """
 Tests for workspace invitation and member management endpoints.
 """
+from datetime import datetime, timedelta, timezone
+
 import pytest
-from datetime import datetime, timezone, timedelta
 
 
 class TestWorkspaceInvitationFlow:
@@ -23,7 +24,7 @@ class TestWorkspaceInvitationFlow:
         assert data["total"] == 1
         assert len(data["members"]) == 1
         member = data["members"][0]
-        assert member["user_id"] == "dev-user"  # Default dev user from get_current_user
+        assert member["user_id"] == "dev-user"  # Default dev user from get_auth_user
         assert member["role"] == "admin"
         assert member["workspace_id"] == workspace_id
 
@@ -192,11 +193,13 @@ class TestWorkspaceInvitationFlow:
 
     def test_accept_invitation_returns_assigned_role(self, client, admin_user, test_user):
         """Test that accepting an invitation returns workspace details and assigned role."""
+        import hashlib
+
         from fastapi.testclient import TestClient
-        from server.main import app
+
         from server.database.relational_db.db import RelationalDB
         from server.database.relational_db.models.api_key import ApiKey as ApiKeyModel
-        import hashlib
+        from server.main import app
 
         # Create an API key for test_user
         db = RelationalDB()
@@ -347,7 +350,9 @@ class TestWorkspaceMemberManagement:
     def test_is_creator_flag_in_member_list(self, client, test_user):
         """Test that is_creator flag correctly identifies workspace creator."""
         from server.database.relational_db.db import RelationalDB
-        from server.database.relational_db.models.workspace_member import WorkspaceMember
+        from server.database.relational_db.models.workspace_member import (
+            WorkspaceMember,
+        )
 
         # Create workspace as dev-user
         response = client.post("/api/workspaces/", json={"name": "Test Workspace"})

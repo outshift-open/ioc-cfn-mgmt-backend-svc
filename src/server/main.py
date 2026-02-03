@@ -1,17 +1,21 @@
+import asyncio
 import logging
 import os
-import uvicorn
 from contextlib import asynccontextmanager
+
+import uvicorn
 from dotenv import load_dotenv
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from prometheus_fastapi_instrumentator import Instrumentator
-from server.api.api import api_router
-from server.database.relational_db.db import RelationalDB
 
-from server.common import service_name
-from server.services.user import UserService
 from app_logging.logger import setup_logging
+from server.api.api import api_router
+from server.common import service_name
+from server.database.relational_db.db import RelationalDB
+from server.services.cognitive_fabric_node_monitor import cognitive_fabric_node_monitor
+from server.services.user import UserService
+from server.utils.version import get_app_version
 
 # Load environment variables from .env file in current or parent directories
 load_dotenv(override=True)
@@ -51,9 +55,22 @@ async def lifespan(app: FastAPI):
         logger.error(f"Admin user creation failed: {str(e)}")
         raise
 
+    # Start Cognitive Fabric Node monitor background task
+    cognitive_fabric_node_monitor_task = asyncio.create_task(cognitive_fabric_node_monitor.start())
+    logger.info("Cognitive Fabric Node monitor started")
+
     yield
 
     # Shutdown
+    logger.info("Stopping Cognitive Fabric Node monitor...")
+    cognitive_fabric_node_monitor.stop()
+    try:
+        await asyncio.wait_for(cognitive_fabric_node_monitor_task, timeout=5.0)
+    except asyncio.TimeoutError:
+        logger.warning("Cognitive Fabric Node monitor task did not stop gracefully, cancelling...")
+        cognitive_fabric_node_monitor_task.cancel()
+    logger.info("Cognitive Fabric Node monitor stopped")
+
     logger.info("Closing database connection...")
     db.close()
     # await graph_db.close()
@@ -63,7 +80,10 @@ async def lifespan(app: FastAPI):
 # Create FastAPI app
 app = FastAPI(
     title=f"{service_name} API",
-    version=os.environ.get("APPLICATION_VERSION", "NOT_FOUND"),
+    version=get_app_version(),
+    description="IOC CFN Management Backend Service API",
+    docs_url="/api/docs",
+    openapi_url="/api/openapi.json",
     lifespan=lifespan,
 )
 
@@ -112,7 +132,7 @@ if __name__ == "__main__":
 
     logger = logging.getLogger(__name__)
 
-    version = os.environ.get("APPLICATION_VERSION")
+    version = get_app_version()
     logger.info(f"Starting up the '{service_name}' FastAPI app! Version: '{version}'")
 
     port = int(os.environ.get("PORT", 8000))

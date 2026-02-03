@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Depends, status
 
-from server.auth.auth import get_current_user
+from server.auth.auth import get_auth_user
 from server.authz.authz_service import authz_service
 from server.schemas.workspace import (
     WorkspaceCreate,
@@ -22,7 +22,7 @@ internal_router = APIRouter()
 )
 def create_workspace(
     workspace_data: WorkspaceCreate,
-    current_user: dict = Depends(get_current_user),
+    auth_user: dict = Depends(get_auth_user),
 ):
     """
     Create a new workspace
@@ -33,25 +33,25 @@ def create_workspace(
 
     Returns the UUID of the created workspace
     """
-    authz_service.require_permission(current_user, "create", "workspace")
-    return workspace_service.create_workspace(workspace_data, creator_user_id=current_user["id"])
+    authz_service.require_permission(auth_user, "create", "workspace")
+    return workspace_service.create(workspace_data, creator_user_id=auth_user["id"])
 
 
 @router.get("/", response_model=WorkspaceList)
-def list_workspaces(current_user: dict = Depends(get_current_user)):
+def list_workspaces(auth_user: dict = Depends(get_auth_user)):
     """
     List workspaces accessible to the user
 
     Users see only workspaces they are members of. Super admins (future) see all workspaces.
     """
-    authz_service.require_permission(current_user, "get", "workspace")
-    return workspace_service.list_workspaces(user_id=current_user["id"], user_role=current_user["role"])
+    authz_service.require_permission(auth_user, "get", "workspace")
+    return workspace_service.list(user_id=auth_user["id"], user_role=auth_user["role"])
 
 
 @router.get("/{workspace_id}", response_model=WorkspaceDetail)
 def get_workspace(
     workspace_id: str,
-    current_user: dict = Depends(get_current_user),
+    auth_user: dict = Depends(get_auth_user),
 ):
     """
     Get a specific workspace by ID
@@ -60,15 +60,15 @@ def get_workspace(
 
     Returns detailed workspace information if user has access
     """
-    authz_service.require_permission(current_user, "get", "workspace")
-    return workspace_service.get_workspace(workspace_id, user_id=current_user["id"], user_role=current_user["role"])
+    authz_service.require_permission(auth_user, "get", "workspace")
+    return workspace_service.get(workspace_id, user_id=auth_user["id"], user_role=auth_user["role"])
 
 
 @router.put("/{workspace_id}", response_model=WorkspaceDetail)
 def update_workspace(
     workspace_id: str,
     workspace_data: WorkspaceUpdate,
-    current_user: dict = Depends(get_current_user),
+    auth_user: dict = Depends(get_auth_user),
 ):
     """
     Update a workspace
@@ -78,17 +78,15 @@ def update_workspace(
 
     Returns the updated workspace details if user has access
     """
-    authz_service.require_permission(current_user, "update", "workspace")
-    return workspace_service.update_workspace(
-        workspace_id, workspace_data, user_id=current_user["id"], user_role=current_user["role"]
-    )
+    authz_service.require_permission(auth_user, "update", "workspace")
+    return workspace_service.update(workspace_id, workspace_data, user_id=auth_user["id"], user_role=auth_user["role"])
 
 
 @router.delete("/{workspace_id}", status_code=status.HTTP_204_NO_CONTENT)
 def delete_workspace(
     workspace_id: str,
     _purge: bool = False,
-    current_user: dict = Depends(get_current_user),
+    auth_user: dict = Depends(get_auth_user),
 ):
     """
     Delete a workspace
@@ -99,9 +97,9 @@ def delete_workspace(
 
     Returns success message if user has access
     """
-    authz_service.require_permission(current_user, "delete", "workspace")
-    workspace_service.delete_workspace(
-        workspace_id, _purge, allow_default_delete=False, user_id=current_user["id"], user_role=current_user["role"]
+    authz_service.require_permission(auth_user, "delete", "workspace")
+    workspace_service.delete(
+        workspace_id, _purge, allow_default_delete=False, user_id=auth_user["id"], user_role=auth_user["role"]
     )
     return None
 
@@ -112,4 +110,4 @@ def delete_workspace_internal(workspace_id: str, _purge: bool = False):
     Internal delete for workspaces. Allows deleting the Default Workspace,
     still enforces dependency checks.
     """
-    return workspace_service.delete_workspace(workspace_id, _purge, allow_default_delete=True)
+    return workspace_service.delete(workspace_id, _purge, allow_default_delete=True)

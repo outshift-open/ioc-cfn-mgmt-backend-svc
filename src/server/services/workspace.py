@@ -7,7 +7,7 @@ from sqlalchemy import and_, exists
 from sqlalchemy.exc import IntegrityError
 
 from server.database.relational_db.db import RelationalDB
-from server.database.relational_db.models.mas import MultiAgenticSystem as MASModel
+from server.database.relational_db.models.multi_agentic_system import MultiAgenticSystem as MASModel
 from server.database.relational_db.models.workspace import Workspace as WorkspaceModel
 from server.database.relational_db.models.workspace_member import WorkspaceMember as WorkspaceMemberModel
 from server.database.relational_db.models.workspace_invitation import (
@@ -120,7 +120,7 @@ class WorkspaceService:
         # Delete multi-agentic systems
         session.query(MASModel).filter(MASModel.workspace_id == workspace_id).delete(synchronize_session=False)
 
-    def create_workspace(self, workspace_data: WorkspaceCreate, creator_user_id: str) -> WorkspaceResponse:
+    def create(self, workspace_data: WorkspaceCreate, creator_user_id: str) -> WorkspaceResponse:
         """Create a new workspace"""
         try:
             db = RelationalDB()
@@ -181,7 +181,7 @@ class WorkspaceService:
                 detail=f"Failed to create workspace: {str(e)}",
             )
 
-    def list_workspaces(self, user_id: str, user_role: str) -> WorkspaceList:
+    def list(self, user_id: str, user_role: str) -> WorkspaceList:
         """List workspaces accessible to the user.
 
         Super admins see all workspaces. Regular users see workspaces where they are:
@@ -273,7 +273,7 @@ class WorkspaceService:
                 detail=f"Failed to list workspaces: {str(e)}",
             )
 
-    def get_workspace(self, workspace_id: str, user_id: str = None, user_role: str = None) -> WorkspaceDetail:
+    def get(self, workspace_id: str, user_id: str = None, user_role: str = None) -> WorkspaceDetail:
         """Get a specific workspace by ID.
 
         If user_id and user_role are provided, verifies the user has access to the workspace.
@@ -358,7 +358,7 @@ class WorkspaceService:
                 detail=f"Failed to get workspace: {str(e)}",
             )
 
-    def update_workspace(
+    def update(
         self, workspace_id: str, workspace_data: WorkspaceUpdate, user_id: str = None, user_role: str = None
     ) -> WorkspaceDetail:
         """Update a workspace.
@@ -475,7 +475,7 @@ class WorkspaceService:
                 detail=f"Failed to update workspace: {str(e)}",
             )
 
-    def delete_workspace(
+    def delete(
         self,
         workspace_id: str,
         _purge: bool = False,
@@ -592,7 +592,7 @@ class WorkspaceService:
                 detail=f"Failed to delete workspace: {str(e)}",
             )
 
-    def workspace_exists(self, workspace_id: str) -> bool:
+    def exists(self, workspace_id: str) -> bool:
         """Check if a workspace exists"""
         try:
             db = RelationalDB()

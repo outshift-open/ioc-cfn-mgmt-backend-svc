@@ -1,2 +1,3 @@
-h1:BwHRNNgP6mx6w5IRrrse3O4Dl93hp9E2jJZSvECf3XY=
-20260128000001_initial_schema.sql h1:68xw3TZweCyGppM2MSxv6IF0VrqR8vuWi0sREyVsET4=
+h1:ftcIhDb4LLcrTAuB2tAR0UNbHlkftLOPKq4UkO4reCo=
+20260128000001_consolidated_schema.sql h1:iKGssbixFjlxlufVx8ogYPRM3xgC8Wg6MKcIxvt4Nc4=
+20260130200000_rename_blocked_to_enabled.sql h1:Fqiep8i/bE+3QOED9Y1585yyaK1Kdg+I2iaODH9WAsE=

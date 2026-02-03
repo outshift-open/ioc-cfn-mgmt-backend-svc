@@ -128,7 +128,7 @@ class UserService:
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"Error creating admin user: {str(e)}"
             )
 
-    def list_users(self) -> Users:
+    def list(self) -> Users:
         """
         Get all users from the database
 
@@ -170,7 +170,7 @@ class UserService:
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"Error retrieving users: {str(e)}"
             )
 
-    def get_user_by_id(self, user_id: str) -> User:
+    def get(self, user_id: str) -> User:
         """
         Get a specific user by ID
 

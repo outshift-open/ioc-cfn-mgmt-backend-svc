@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 
-from server.auth.auth import get_current_user
+from server.auth.auth import get_auth_user
 from server.authz.authz_service import authz_service
 from server.schemas.multi_agentic_system import (
     MultiAgenticSystem,
@@ -9,31 +9,31 @@ from server.schemas.multi_agentic_system import (
     MultiAgenticSystems,
     MultiAgenticSystemUpdate,
 )
-from server.services import mas_service
+from server.services import multi_agentic_system_service
 from server.services.workspace_member import workspace_member_service
 
 router = APIRouter()
 
 
-def require_workspace_read_access(workspace_id: str, current_user: dict) -> None:
+def require_workspace_read_access(workspace_id: str, auth_user: dict) -> None:
     """Check if user has read access to workspace (admin or viewer)"""
     from server.services.workspace import workspace_service
 
     # Check if workspace exists first
-    if not workspace_service.workspace_exists(workspace_id):
+    if not workspace_service.exists(workspace_id):
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Workspace not found",
         )
 
-    user_role = current_user.get("role")
+    user_role = auth_user.get("role")
 
     # Super admins have access to all workspaces
     if user_role == "super_admin":
         return
 
     # Check workspace membership - must be admin or viewer
-    member_role = workspace_member_service.get_member_role(workspace_id, current_user["id"])
+    member_role = workspace_member_service.get_member_role(workspace_id, auth_user["id"])
     if member_role not in ["admin", "viewer"]:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
@@ -41,25 +41,25 @@ def require_workspace_read_access(workspace_id: str, current_user: dict) -> None
         )
 
 
-def require_workspace_write_access(workspace_id: str, current_user: dict) -> None:
+def require_workspace_write_access(workspace_id: str, auth_user: dict) -> None:
     """Check if user has write access to workspace (admin only)"""
     from server.services.workspace import workspace_service
 
     # Check if workspace exists first
-    if not workspace_service.workspace_exists(workspace_id):
+    if not workspace_service.exists(workspace_id):
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Workspace not found",
         )
 
-    user_role = current_user.get("role")
+    user_role = auth_user.get("role")
 
     # Super admins have access to all workspaces
     if user_role == "super_admin":
         return
 
     # Check workspace membership - must be admin
-    member_role = workspace_member_service.get_member_role(workspace_id, current_user["id"])
+    member_role = workspace_member_service.get_member_role(workspace_id, auth_user["id"])
     if member_role != "admin":
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
@@ -75,7 +75,7 @@ def require_workspace_write_access(workspace_id: str, current_user: dict) -> Non
 def create_multi_agentic_system(
     workspace_id: str,
     mas_data: MultiAgenticSystemRequest,
-    current_user: dict = Depends(get_current_user),
+    auth_user: dict = Depends(get_auth_user),
 ):
     """
     Create a new Multi-Agentic System (MAS) within a workspace
@@ -88,8 +88,8 @@ def create_multi_agentic_system(
 
     Returns the UUID and name of the created MAS
     """
-    require_workspace_write_access(workspace_id, current_user)
-    return mas_service.create_multi_agentic_system(workspace_id, mas_data)
+    require_workspace_write_access(workspace_id, auth_user)
+    return multi_agentic_system_service.create(workspace_id, mas_data)
 
 
 @router.get(
@@ -98,7 +98,7 @@ def create_multi_agentic_system(
 )
 def list_multi_agentic_systems(
     workspace_id: str,
-    current_user: dict = Depends(get_current_user),
+    auth_user: dict = Depends(get_auth_user),
 ):
     """
     List all Multi-Agentic Systems in a workspace
@@ -107,8 +107,8 @@ def list_multi_agentic_systems(
 
     Returns list of MAS in the workspace
     """
-    require_workspace_read_access(workspace_id, current_user)
-    return mas_service.list_multi_agentic_systems(workspace_id)
+    require_workspace_read_access(workspace_id, auth_user)
+    return multi_agentic_system_service.list(workspace_id)
 
 
 @router.get(
@@ -118,7 +118,7 @@ def list_multi_agentic_systems(
 def get_multi_agentic_system(
     workspace_id: str,
     mas_id: str,
-    current_user: dict = Depends(get_current_user),
+    auth_user: dict = Depends(get_auth_user),
 ):
     """
     Get a specific Multi-Agentic System by ID
@@ -128,8 +128,8 @@ def get_multi_agentic_system(
 
     Returns detailed MAS information
     """
-    require_workspace_read_access(workspace_id, current_user)
-    return mas_service.get_multi_agentic_system(workspace_id, mas_id)
+    require_workspace_read_access(workspace_id, auth_user)
+    return multi_agentic_system_service.get(workspace_id, mas_id)
 
 
 @router.put(
@@ -140,7 +140,7 @@ def update_multi_agentic_system(
     workspace_id: str,
     mas_id: str,
     mas_data: MultiAgenticSystemUpdate,
-    current_user: dict = Depends(get_current_user),
+    auth_user: dict = Depends(get_auth_user),
 ):
     """
     Update a Multi-Agentic System
@@ -154,8 +154,8 @@ def update_multi_agentic_system(
 
     Returns the updated MAS details
     """
-    require_workspace_write_access(workspace_id, current_user)
-    return mas_service.update_multi_agentic_system(workspace_id, mas_id, mas_data)
+    require_workspace_write_access(workspace_id, auth_user)
+    return multi_agentic_system_service.update(workspace_id, mas_id, mas_data)
 
 
 @router.delete(
@@ -166,7 +166,7 @@ def delete_multi_agentic_system(
     workspace_id: str,
     mas_id: str,
     _purge: bool = False,
-    current_user: dict = Depends(get_current_user),
+    auth_user: dict = Depends(get_auth_user),
 ):
     """
     Delete a Multi-Agentic System
@@ -177,6 +177,6 @@ def delete_multi_agentic_system(
 
     Returns success message
     """
-    require_workspace_write_access(workspace_id, current_user)
-    mas_service.delete_multi_agentic_system(workspace_id, mas_id, _purge)
+    require_workspace_write_access(workspace_id, auth_user)
+    multi_agentic_system_service.delete(workspace_id, mas_id, _purge)
     return None

@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 
-from server.auth.auth import get_current_user
+from server.auth.auth import get_auth_user
 from server.schemas.workspace_invitation import (
     WorkspaceInvitationAcceptResponse,
     WorkspaceInvitationCreate,
@@ -13,14 +13,14 @@ from server.services.workspace_member import workspace_member_service
 router = APIRouter()
 
 
-def require_workspace_admin(workspace_id: str, current_user: dict) -> None:
+def require_workspace_admin(workspace_id: str, auth_user: dict) -> None:
     """Check if user is an admin of the workspace"""
     # Global admin has access to all workspaces
-    if current_user["role"] == "admin":
+    if auth_user["role"] == "admin":
         return
 
     # Check workspace membership and role
-    member_role = workspace_member_service.get_member_role(workspace_id, current_user["id"])
+    member_role = workspace_member_service.get_member_role(workspace_id, auth_user["id"])
     if member_role != "admin":
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
@@ -36,7 +36,7 @@ def require_workspace_admin(workspace_id: str, current_user: dict) -> None:
 def create_invitation(
     workspace_id: str,
     invitation_data: WorkspaceInvitationCreate,
-    current_user: dict = Depends(get_current_user),
+    auth_user: dict = Depends(get_auth_user),
 ):
     """
     Create a workspace invitation (admin only)
@@ -47,11 +47,11 @@ def create_invitation(
 
     Returns the UUID of the created invitation
     """
-    require_workspace_admin(workspace_id, current_user)
+    require_workspace_admin(workspace_id, auth_user)
 
     return workspace_invitation_service.create_invitation(
         workspace_id=workspace_id,
-        inviter_id=current_user["id"],
+        inviter_id=auth_user["id"],
         invitee_username=invitation_data.invitee_username,
         role=invitation_data.role,
     )
@@ -63,7 +63,7 @@ def create_invitation(
 )
 def list_workspace_invitations(
     workspace_id: str,
-    current_user: dict = Depends(get_current_user),
+    auth_user: dict = Depends(get_auth_user),
 ):
     """
     List all invitations for a workspace (admin only)
@@ -72,7 +72,7 @@ def list_workspace_invitations(
 
     Returns a list of all invitations (pending, accepted, declined, expired)
     """
-    require_workspace_admin(workspace_id, current_user)
+    require_workspace_admin(workspace_id, auth_user)
 
     return workspace_invitation_service.list_workspace_invitations(workspace_id)
 
@@ -84,7 +84,7 @@ def list_workspace_invitations(
 def cancel_invitation(
     workspace_id: str,
     invitation_id: str,
-    current_user: dict = Depends(get_current_user),
+    auth_user: dict = Depends(get_auth_user),
 ):
     """
     Cancel a pending invitation (admin only)
@@ -94,9 +94,9 @@ def cancel_invitation(
 
     Returns success message
     """
-    require_workspace_admin(workspace_id, current_user)
+    require_workspace_admin(workspace_id, auth_user)
 
-    workspace_invitation_service.cancel_invitation(invitation_id, current_user["id"])
+    workspace_invitation_service.cancel_invitation(invitation_id, auth_user["id"])
     return None
 
 
@@ -105,14 +105,14 @@ def cancel_invitation(
     response_model=WorkspaceInvitationList,
 )
 def get_pending_invitations(
-    current_user: dict = Depends(get_current_user),
+    auth_user: dict = Depends(get_auth_user),
 ):
     """
     Get all pending invitations for the current user
 
     Returns a list of pending invitations
     """
-    return workspace_invitation_service.list_pending_invitations(current_user["username"])
+    return workspace_invitation_service.list_pending_invitations(auth_user["username"])
 
 
 @router.post(
@@ -122,7 +122,7 @@ def get_pending_invitations(
 )
 def accept_invitation(
     invitation_id: str,
-    current_user: dict = Depends(get_current_user),
+    auth_user: dict = Depends(get_auth_user),
 ):
     """
     Accept a workspace invitation
@@ -131,7 +131,7 @@ def accept_invitation(
 
     Returns success message with workspace details and assigned role
     """
-    return workspace_invitation_service.accept_invitation(invitation_id, current_user["id"])
+    return workspace_invitation_service.accept_invitation(invitation_id, auth_user["id"])
 
 
 @router.post(
@@ -140,7 +140,7 @@ def accept_invitation(
 )
 def decline_invitation(
     invitation_id: str,
-    current_user: dict = Depends(get_current_user),
+    auth_user: dict = Depends(get_auth_user),
 ):
     """
     Decline a workspace invitation
@@ -149,4 +149,4 @@ def decline_invitation(
 
     Returns success message
     """
-    return workspace_invitation_service.decline_invitation(invitation_id, current_user["id"])
+    return workspace_invitation_service.decline_invitation(invitation_id, auth_user["id"])

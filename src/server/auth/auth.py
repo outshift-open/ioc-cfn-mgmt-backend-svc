@@ -13,7 +13,7 @@ from server.auth.jwt import decode_token, verify_token_type
 bearer_scheme = HTTPBearer(auto_error=False)
 
 
-async def get_current_user(
+async def get_auth_user(
     authorization: Optional[HTTPAuthorizationCredentials] = Depends(bearer_scheme),
     x_api_key: Optional[str] = Header(None, alias="X-API-Key"),
 ) -> dict:
