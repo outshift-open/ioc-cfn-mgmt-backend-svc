@@ -96,15 +96,6 @@ tasks:
     cmds:
       - poetry run pytest tests/test_api_keys.py -v
 
-  test-tkf:
-    desc: Run only tkf GraphDB related tests
-    cmds:
-      - poetry run pytest src/server/schemas/test_tkf.py -v
-      - poetry run pytest src/server/adapters/test_adapter_graphdb_neo4j.py -v
-      - poetry run pytest src/server/database/graph_db/neo4j/models/test_node.py -v
-      - poetry run pytest src/server/database/graph_db/neo4j/models/test_edge.py -v
-      - poetry run pytest src/server/api/endpoints/test_tkf.py -v
-
   lint-check:
     desc: Run linting checks
     cmds:
@@ -192,7 +183,7 @@ tasks:
   db-seed:
     desc: Seed the database with initial data
     cmds:
-      - poetry run psql postgresql://$POSTGRES_USER:$POSTGRES_PASSWORD@localhost:$POSTGRES_PORT/tkf -f scripts/populate_software.sql
+      - poetry run psql postgresql://$POSTGRES_USER:$POSTGRES_PASSWORD@localhost:$POSTGRES_PORT/cfn_mgmt -f scripts/populate_software.sql
     dir: "{{.SRC_DIR}}/server/database/relational_db"
 
   help:

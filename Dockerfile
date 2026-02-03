@@ -1,9 +1,7 @@
 FROM ghcr.io/cisco-eti/sre-python-docker:v3.11.9-hardened-debian-12
 
-# OCI image labels for package metadata and repository linking
-LABEL org.opencontainers.image.source="https://github.com/cisco-eti/ioc-cfn-mgmt-backend"
-LABEL org.opencontainers.image.description="IOC CFN Management Backend - FastAPI service for TKF platform workspace and resource management"
-LABEL org.opencontainers.image.licenses="Proprietary"
+# Link this container image to the GitHub repository
+LABEL org.opencontainers.image.source=https://github.com/cisco-eti/ioc-cfn-mgmt-backend-svc
 
 # Install curl for health checks, wget for atlas installation, postgresql-client for database seeding, and build essentials for regopy
 # libatomic1 is required for regopy on some architectures

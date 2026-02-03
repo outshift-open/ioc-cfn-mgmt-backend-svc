@@ -40,10 +40,10 @@ jobs:
       #   password: ${{ secrets.GHCR_TOKEN }}
 
     services:
-      tkf-relational-db:
+      ioc-mgmt-relational-db:
         image: postgres:17-alpine
         env:
-          POSTGRES_DB: tkf
+          POSTGRES_DB: cfn_mgmt
           POSTGRES_USER: postgresUser
           POSTGRES_PASSWORD: postgresPW
         ports:
@@ -119,13 +119,19 @@ jobs:
       ################################## Unit Test ##################################
       ###############################################################################
 
+      - name: Load environment variables from env.conf
+        run: |
+          set -a
+          . $GITHUB_WORKSPACE/env.conf
+          set +a
+          echo "POSTGRES_DB=$POSTGRES_DB" >> $GITHUB_ENV
+          echo "POSTGRES_USER=$POSTGRES_USER" >> $GITHUB_ENV
+          echo "POSTGRES_PASSWORD=$POSTGRES_PASSWORD" >> $GITHUB_ENV
+          echo "POSTGRES_PORT=$POSTGRES_PORT" >> $GITHUB_ENV
+
       - name: Wait for PostgreSQL
         env:
-          POSTGRES_DB: tkf
-          POSTGRES_USER: postgresUser
-          POSTGRES_PASSWORD: postgresPW
-          POSTGRES_HOST: tkf-relational-db
-          POSTGRES_PORT: 5432
+          POSTGRES_HOST: ioc-mgmt-relational-db
         run: |
           apt-get update && apt-get install -y postgresql-client
           until pg_isready -h $POSTGRES_HOST -p $POSTGRES_PORT -U $POSTGRES_USER; do
@@ -136,11 +142,7 @@ jobs:
 
       - name: Run Unit Tests
         env:
-          POSTGRES_DB: tkf
-          POSTGRES_USER: postgresUser
-          POSTGRES_PASSWORD: postgresPW
-          POSTGRES_HOST: tkf-relational-db
-          POSTGRES_PORT: 5432
+          POSTGRES_HOST: ioc-mgmt-relational-db
         run: |
           bash scripts/unit-test.sh
 

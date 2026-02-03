@@ -401,7 +401,7 @@ class TestUserData:
 
         assert response.json()["user"]["role"] == "admin"
 
-    def test_default_domain_is_tkf_local(self, unauthenticated_client):
+    def test_default_domain_is_ioc_local(self, unauthenticated_client):
         """Test that default domain is 'ioc.local' when not specified."""
         response = unauthenticated_client.post("/api/auth/signup", json={
             "username": "defaultdomainuser",

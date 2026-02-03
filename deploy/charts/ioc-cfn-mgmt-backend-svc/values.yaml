@@ -27,7 +27,7 @@ ingress:
     cert-manager.io/cluster-issuer: letsencrypt
 
 serviceName: ioc-cfn-mgmt-backend
-namespace: ci-tkf
+namespace: ioc-cfn
 dockerPreamable: 626007623524.dkr.ecr.us-east-2.amazonaws.com
 servicePort: "5000"
 metricsPort: "5001"

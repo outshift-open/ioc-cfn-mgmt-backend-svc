@@ -13,7 +13,7 @@ locals {
   postgres_password = getenv("POSTGRES_PASSWORD") != "" ? getenv("POSTGRES_PASSWORD") : "postgresPW"
   postgres_host = getenv("POSTGRES_HOST") != "" ? getenv("POSTGRES_HOST") : "localhost"
   postgres_port = getenv("POSTGRES_PORT") != "" ? getenv("POSTGRES_PORT") : "5432"
-  postgres_db = getenv("POSTGRES_DB") != "" ? getenv("POSTGRES_DB") : "tkf"
+  postgres_db = getenv("POSTGRES_DB") != "" ? getenv("POSTGRES_DB") : "cfn_mgmt"
 }
 
 env "local" {
@@ -38,12 +38,12 @@ lint {
   destructive {
     error = true
   }
-  
+
   // Data dependent changes
   data_depend {
     error = true
   }
-  
+
   // Naming conventions
   naming {
     error   = true

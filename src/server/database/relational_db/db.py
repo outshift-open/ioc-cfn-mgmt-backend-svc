@@ -1,13 +1,13 @@
-import os
 import logging
-from sqlalchemy import create_engine
+import os
+
+from sqlalchemy import create_engine, text
 from sqlalchemy.exc import SQLAlchemyError
-from sqlalchemy.orm import sessionmaker, Session
+from sqlalchemy.orm import Session, sessionmaker
 from sqlalchemy.pool import QueuePool
-from sqlalchemy import text
 
 # Used when environment variables are not configured
-POSTGRES_DB_DEFAULT = "tkf"
+POSTGRES_DB_DEFAULT = "cfn_mgmt"
 POSTGRES_USER_DEFAULT = "postgresUser"
 POSTGRES_PASSWORD_DEFAULT = "postgresPW"
 POSTGRES_HOST_DEFAULT = "localhost"
@@ -43,7 +43,7 @@ class RelationalDB:
         """Initialize the database connection and sessionmaker.
 
         Args:
-            db_name: Database name (default: from POSTGRES_DB or 'tkf')
+            db_name: Database name (default: from POSTGRES_DB or 'cfn_mgmt')
             user: Database user (default: from POSTGRES_USER or 'postgresUser')
             password: Database password (default: from POSTGRES_PASSWORD or 'postgresPW')
             host: Database host (default: from POSTGRES_HOST or 'localhost')

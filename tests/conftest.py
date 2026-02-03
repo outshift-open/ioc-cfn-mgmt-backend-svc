@@ -11,7 +11,9 @@ from fastapi.testclient import TestClient
 from server.database.relational_db.db import RelationalDB
 from server.database.relational_db.models import Base
 from server.database.relational_db.models.api_key import ApiKey
-from server.database.relational_db.models.cognitive_fabric_node import CognitiveFabricNode
+from server.database.relational_db.models.cognitive_fabric_node import (
+    CognitiveFabricNode,
+)
 from server.database.relational_db.models.multi_agentic_system import MultiAgenticSystem
 from server.database.relational_db.models.user import User
 from server.database.relational_db.models.workspace import Workspace
@@ -32,12 +34,12 @@ os.environ.setdefault("POSTGRES_HOST", "localhost")
 def _ensure_test_database_exists(max_wait_seconds: int = 20) -> None:
     """Ensure the test database exists on the configured host.
 
-    - Respects POSTGRES_HOST (e.g., 'tkf-relational-db' in CI)
+    - Respects POSTGRES_HOST (e.g., 'ioc-mgmt-relational-db' in CI)
     - Tries candidate ports: POSTGRES_PORT, 5432, 5455
-    - Tries bootstrap DBs: 'postgres', 'tkf', 'template1'
+    - Tries bootstrap DBs: 'postgres', 'cfn_mgmt', 'template1'
     - Retries until max_wait_seconds for containers to become ready
     """
-    db_name = os.environ.get("POSTGRES_DB", "tkf_test")
+    db_name = os.environ.get("POSTGRES_DB", "ioc_test")
     user = os.environ.get("POSTGRES_USER", "postgresUser")
     password = os.environ.get("POSTGRES_PASSWORD", "postgresPW")
     host = os.environ.get("POSTGRES_HOST", "localhost")
@@ -49,7 +51,7 @@ def _ensure_test_database_exists(max_wait_seconds: int = 20) -> None:
         if p not in candidate_ports:
             candidate_ports.append(p)
 
-    bootstrap_dbs = ("postgres", "tkf", "template1")
+    bootstrap_dbs = ("postgres", "cfn_mgmt", "template1")
 
     deadline = time.time() + max_wait_seconds
     last_error = None
@@ -128,7 +130,7 @@ def client(setup_test_environment, dev_api_key):
 @pytest.fixture(autouse=True)
 def setup_test_environment():
     """Set up clean database per test session."""
-    os.environ["POSTGRES_DB"] = "tkf_test"
+    os.environ["POSTGRES_DB"] = "ioc_test"
     os.environ.setdefault("POSTGRES_USER", "postgresUser")
     os.environ.setdefault("POSTGRES_PASSWORD", "postgresPW")
     os.environ.setdefault("POSTGRES_HOST", "localhost")

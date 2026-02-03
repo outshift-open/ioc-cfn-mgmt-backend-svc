@@ -1,4 +1,4 @@
-"""Diagnostic API endpoints for TKF standard diagnostics."""
+"""Diagnostic API endpoints for IOC Management Backend standard diagnostics."""
 
 import datetime
 import os
@@ -33,12 +33,11 @@ class LogLevelUpdate(BaseModel):
 
 
 ################################################
-# TKF Standard Diagnostic API Endpoints
+# IOC Management Backend Standard Diagnostic API Endpoints
 ################################################
 @app.get("/api/internal/diagnostics/health")
-async def tkf_health():
-    """TKF standard health endpoint for liveness probe.
-
+async def ioc_health():
+    """IOC standard health endpoint for liveness probe.
     Returns a simple status for k8s liveness probe and also includes
     detailed service state information.
 
@@ -65,8 +64,8 @@ async def tkf_health():
 
 
 @app.get("/api/internal/diagnostics/info")
-async def tkf_info():
-    """TKF standard info endpoint with git commit information.
+async def ioc_info():
+    """IOC Management Backend standard info endpoint with git commit information.
 
     Returns:
         Dictionary with git commit information

@@ -5,14 +5,13 @@ Provides functions for initializing logging, querying logger states,
 and updating log levels dynamically at runtime.
 """
 
-
 import logging
 import os
 import tomllib
 from typing import Any, Dict, Optional, Tuple
 
 
-# Valid log levels for TKF services
+# Valid log levels for IOC CFN Management Backend Service
 VALID_LOG_LEVELS = [
     "DEBUG",
     "INFO",
@@ -23,7 +22,7 @@ VALID_LOG_LEVELS = [
     "TRACE",
 ]
 
-# Mapping of TKF log levels to Python logging levels
+# Mapping of IOC CFN Management Backend Service log levels to Python logging levels
 LOG_LEVEL_MAP = {
     "TRACE": "DEBUG",  # Map TRACE to DEBUG for Python logging
     "WARN": "WARNING",  # Map WARN to WARNING for consistency
@@ -120,7 +119,7 @@ def validate_log_level(log_level: str) -> Tuple[bool, Optional[str], Optional[st
     """
     log_level_upper = log_level.upper()
 
-    # Check if it's a valid TKF log level
+    # Check if it's a valid IOC CFN Management Backend Service log level
     if log_level_upper not in VALID_LOG_LEVELS:
         return False, None, f"Invalid log level: {log_level}"
 

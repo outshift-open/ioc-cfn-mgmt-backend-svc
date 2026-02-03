@@ -13,7 +13,7 @@ class ApiKey(Base):
 
     # Required fields
     key_hash = Column(String(256), nullable=False)  # Store hashed key using SHA-256
-    key_preview = Column(String(20), nullable=False)  # First few chars for display (e.g., "tkf_abc123...")
+    key_preview = Column(String(20), nullable=False)  # First few chars for display (e.g., "ioc_abc123...")
     name = Column(String(200), nullable=False)  # Human-readable name for the key
 
     # Timestamp fields - auto-generated in database

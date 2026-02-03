@@ -1,7 +1,7 @@
 [project]
 name = "ioc-cfn-mgmt-backend"
 version = "0.1.0"
-description = "TKF Data Logic Service"
+description = "IOC CFN Management Backend Service"
 readme = "README.md"
 requires-python = ">=3.10,<4.0.0"
 dependencies = [
@@ -21,13 +21,6 @@ dependencies = [
     "tomli (>=1.1.0,<3.0.0); python_version < '3.11'",
 ]
 
-[project.optional-dependencies]
-dev = [
-    "black==23.11.0",
-    "flake8==6.1.0",
-    "httpx==0.24.1",
-]
-
 [tool.poetry]
 packages = [{include = "server", from = "src"}]
 
@@ -44,7 +37,7 @@ regopy = "1.0.0"
 
 [tool.poetry.group.dev.dependencies]
 pytest-cov = "4.1.0"
-black = "23.11.0"
+black = "24.10.0"
 flake8 = "6.1.0"
 httpx = "0.24.1"
 

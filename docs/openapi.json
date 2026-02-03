@@ -2443,7 +2443,7 @@
             {
               "created_at": "2024-11-14T10:30:00Z",
               "id": "550e8400-e29b-41d4-a716-446655440000",
-              "key_preview": "tkf_abc123...",
+              "key_preview": "ioc_abc123...",
               "name": "Production API Key",
               "user_id": "550e8400-e29b-41d4-a716-446655440002"
             }
@@ -2492,7 +2492,7 @@
         "example": {
           "created_at": "2024-11-14T10:30:00Z",
           "id": "550e8400-e29b-41d4-a716-446655440000",
-          "key_preview": "tkf_abc123...",
+          "key_preview": "ioc_abc123...",
           "name": "Production API Key",
           "user_id": "550e8400-e29b-41d4-a716-446655440002"
         }
@@ -2544,8 +2544,8 @@
         "example": {
           "created_at": "2024-11-14T10:30:00Z",
           "id": "550e8400-e29b-41d4-a716-446655440000",
-          "key": "tkf_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
-          "key_preview": "tkf_xxx...",
+          "key": "ioc_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+          "key_preview": "ioc_xxx...",
           "name": "Production API Key",
           "user_id": "550e8400-e29b-41d4-a716-446655440002"
         }

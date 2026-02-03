@@ -1,6 +1,8 @@
 # ioc-cfn-mgmt-backend
 
-TKF Data Logic Service - FastAPI workspace, user, and API key management
+[![Docker](https://img.shields.io/badge/docker-ghcr.io-blue?logo=docker)](https://github.com/orgs/cisco-eti/packages/container/package/ioc-cfn-mgmt-backend-svc)
+
+IOC CFN Management Backend Service - FastAPI workspace, user, and API key management
 
 ## Prerequisites
 

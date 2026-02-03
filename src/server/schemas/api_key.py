@@ -1,6 +1,7 @@
-from pydantic import BaseModel, Field, ConfigDict
 from datetime import datetime
 from typing import List, Optional
+
+from pydantic import BaseModel, ConfigDict, Field
 
 
 class ApiKeyCreate(BaseModel):
@@ -17,8 +18,8 @@ class ApiKeyResponse(BaseModel):
         json_schema_extra={
             "example": {
                 "id": "550e8400-e29b-41d4-a716-446655440000",
-                "key": "tkf_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
-                "key_preview": "tkf_xxx...",
+                "key": "ioc_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+                "key_preview": "ioc_xxx...",
                 "name": "Production API Key",
                 "user_id": "550e8400-e29b-41d4-a716-446655440002",
                 "created_at": "2024-11-14T10:30:00Z",
@@ -39,7 +40,7 @@ class ApiKeyListItem(BaseModel):
         json_schema_extra={
             "example": {
                 "id": "550e8400-e29b-41d4-a716-446655440000",
-                "key_preview": "tkf_abc123...",
+                "key_preview": "ioc_abc123...",
                 "name": "Production API Key",
                 "user_id": "550e8400-e29b-41d4-a716-446655440002",
                 "created_at": "2024-11-14T10:30:00Z",
@@ -61,7 +62,7 @@ class ApiKeyList(BaseModel):
                 "api_keys": [
                     {
                         "id": "550e8400-e29b-41d4-a716-446655440000",
-                        "key_preview": "tkf_abc123...",
+                        "key_preview": "ioc_abc123...",
                         "name": "Production API Key",
                         "user_id": "550e8400-e29b-41d4-a716-446655440002",
                         "created_at": "2024-11-14T10:30:00Z",

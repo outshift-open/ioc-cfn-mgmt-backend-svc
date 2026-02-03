@@ -6,10 +6,10 @@ https://hub.docker.com/_/postgres
 #### Database Setup
 ```
 docker compose -f docker/db.yaml up -d
-``` 
+```
 Optionally - Set the below env variables in a .env file at the repo root (If using non-default values).
 ```
-'POSTGRES_DB', 'tkf'
+'POSTGRES_DB', 'cfn_mgmt'
 'POSTGRES_USER', 'postgresUser'
 'POSTGRES_PASSWORD', 'postgresPW'
 'POSTGRES_HOST', 'localhost'
@@ -27,10 +27,10 @@ To perform migration related tasks, run the following commands from the project 
 1. To apply an existing atlas migration
 Migrations as indicated by the existing migration scripts will be applied to the database.
 ```
-task db-migrate-apply 
+task db-migrate-apply
 ```
 
-2. To generate a new atlas migration 
+2. To generate a new atlas migration
 If any new schema changes are added in relational_db/models, the below command will transform the models to .sql migration files in the migration folder.
 ```
 task db-migrate-new -- "descriptive_msg_for_the_migration"
@@ -48,8 +48,8 @@ task db-migrate-status
 brew install postgresql
 
 # Using environment variables (recommended)
-poetry run psql "postgresql://${POSTGRES_USER:-postgresUser}:${POSTGRES_PASSWORD:-postgresPW}@${POSTGRES_HOST:-localhost}:${POSTGRES_PORT:-5455}/${POSTGRES_DB:-tkf}" -f scripts/populate_software.sql
+poetry run psql "postgresql://${POSTGRES_USER:-postgresUser}:${POSTGRES_PASSWORD:-postgresPW}@${POSTGRES_HOST:-localhost}:${POSTGRES_PORT:-5455}/${POSTGRES_DB:-cfn_mgmt}" -f scripts/populate_software.sql
 
 # Or with explicit values
-poetry run psql postgresql://postgresUser:postgresPW@localhost:5455/tkf -f scripts/populate_software.sql
+poetry run psql postgresql://postgresUser:postgresPW@localhost:5455/cfn_mgmt -f scripts/populate_software.sql
 ```
