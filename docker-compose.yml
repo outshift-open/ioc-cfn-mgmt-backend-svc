@@ -23,6 +23,11 @@ services:
 
   ### Application Services ###
   ioc-cfn-mgmt-backend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      platforms:
+        - ${DOCKER_DEFAULT_PLATFORM}
     image: ghcr.io/cisco-eti/ioc-cfn-mgmt-backend:latest
     profiles:
       - full-stack

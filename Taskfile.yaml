@@ -86,37 +86,36 @@ tasks:
       - find . -type d -name "__pycache__" -delete
       - find . -name "*.pyc" -delete
 
-## Docker and Docker-Compose Tasks ##
+  ## Docker and Docker-Compose Tasks ##
   docker-build:
-    desc: Build Docker image
+    desc: Build Docker image with docker-compose
     cmds:
-      - |
-        docker build \
-          --build-arg GIT_COMMIT_SHA=$(git rev-parse HEAD) \
-          --build-arg GIT_COMMIT_TIME=$(git log -1 --format=%cI) \
-          --build-arg GIT_BRANCH=$(git rev-parse --abbrev-ref HEAD) \
-          --no-cache \
-          -t ioc-cfn-mgmt-backend:latest .
+      - docker compose --env-file env.conf build --no-cache ioc-cfn-mgmt-backend
 
   docker-run:
-    desc: Run Docker container
+    desc: Run Docker container with docker-compose
     cmds:
-      - docker run -p 8000:8000 ioc-cfn-mgmt-backend:latest
+      - docker compose --env-file env.conf up --build --pull always ioc-cfn-mgmt-backend
 
   docker-compose-full-stack-up:
     desc: Start all services with docker-compose
     cmds:
-      - docker compose --env-file env.conf --profile full-stack up
+      - docker compose --env-file env.conf --profile full-stack up --pull always
 
   docker-compose-full-stack-down:
     desc: Stop all services with docker-compose
     cmds:
       - docker compose --env-file env.conf --profile full-stack down
 
+  docker-compose-full-stack-down-with-volumes:
+    desc: Stop all services and remove volumes with docker-compose
+    cmds:
+      - docker compose --env-file env.conf --profile full-stack down -v
+
   docker-compose-db-up:
     desc: Start only databases (PostgreSQL) with db-only profile
     cmds:
-      - docker compose --env-file env.conf --profile db-only up -d
+      - docker compose --env-file env.conf --profile db-only up -d --pull always
 
   docker-compose-db-down:
     desc: Stop only databases with db-only profile

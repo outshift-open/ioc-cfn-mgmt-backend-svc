@@ -1,3 +1,0 @@
--- Migration: Placeholder for future schema changes
--- The enabled column already exists in cognitive_fabric_node table
--- This migration is reserved for future schema modifications if needed
