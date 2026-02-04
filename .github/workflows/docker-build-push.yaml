@@ -45,11 +45,12 @@ jobs:
                   echo "Tag: ${{ steps.get_tag.outputs.tag_name }}"
 
             - name: Log in to GitHub Container Registry
-              uses: docker/login-action@5e57cd118135c172c3672efd75eb46360885c0ef # v3.6.0
+              uses: docker/login-action@c94ce9fb468520275223c153574b00df6fe4bcc9 # v3.7.0
               with:
                   registry: ghcr.io
                   username: ${{ secrets.GHCR_USERNAME }}
                   password: ${{ secrets.GHCR_TOKEN }}
+                  logout: false
 
             - name: Build and push Docker image (PR)
               if: github.event_name == 'pull_request'
