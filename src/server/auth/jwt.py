@@ -4,7 +4,8 @@ import os
 from datetime import datetime, timedelta, timezone
 from typing import Optional, Dict, Any
 
-from jose import JWTError, jwt
+import jwt
+from jwt import PyJWTError
 from fastapi import HTTPException, status
 
 # JWT Configuration
@@ -73,7 +74,7 @@ def decode_token(token: str) -> Dict[str, Any]:
     try:
         payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
         return payload
-    except JWTError as e:
+    except PyJWTError as e:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail=f"Could not validate credentials: {str(e)}",
