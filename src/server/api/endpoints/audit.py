@@ -2,7 +2,6 @@ from fastapi import APIRouter, HTTPException, Query
 from server.services.audit import audit_service
 from server.schemas.audit import AuditResponse, AuditListResponse
 
-
 router = APIRouter()
 
 

@@ -7,7 +7,7 @@ from datetime import datetime
 
 from fastapi import HTTPException, status
 
-from server.common import encrypt_data, get_global_encryption_key
+from server.common import hash_password
 from server.database.relational_db.db import RelationalDB
 from server.database.relational_db.models.user import User as UserModel
 from server.schemas.user import User, UserResponse, Users
@@ -66,13 +66,12 @@ class UserService:
                 # Create new admin user
                 user_id = str(uuid.uuid4())
                 password = os.getenv("ADMIN_USER_PASSWORD", ADMIN_USER_PASSWORD_DEFAULT)
-                key = get_global_encryption_key()
-                encrypted_password = encrypt_data(password, key)
+                hashed_password = hash_password(password)
 
                 admin_user = UserModel(
                     id=user_id,
                     username=ADMIN_USER_USERNAME_DEFAULT,
-                    password=encrypted_password,
+                    password=hashed_password,
                     domain=ADMIN_USER_DOMAIN_DEFAULT,
                     role=ADMIN_USER_ROLE_DEFAULT,
                 )

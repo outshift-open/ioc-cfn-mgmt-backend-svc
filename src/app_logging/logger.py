@@ -10,7 +10,6 @@ import os
 import tomllib
 from typing import Any, Dict, Optional, Tuple
 
-
 # Valid log levels for IOC CFN Management Backend Service
 VALID_LOG_LEVELS = [
     "DEBUG",

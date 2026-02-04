@@ -15,8 +15,8 @@ tasks:
     desc: Install all dependencies (Python and Atlas)
     cmds:
       - task: install-atlas
-      - task: install-poetry
-      - task: poetry-lock
+      - task: install-update-poetry
+      - task: poetry-check
     silent: false
 
   install-atlas:
@@ -28,25 +28,15 @@ tasks:
     status:
       - '[ -f "{{.BIN_DIR}}/atlasgo" ]'
 
-  install-poetry:
-    desc: Install Python dependencies using Poetry
-    cmds:
-      - poetry install
-
-  poetry-update:
-    desc: Update Poetry dependencies
+  install-update-poetry:
+    desc: Install and update Python dependencies using Poetry
     cmds:
       - poetry update
 
-  poetry-lock:
-    desc: Generate or update poetry.lock file
+  poetry-check:
+    desc: Validate poetry configuration
     cmds:
-      - poetry lock
-
-  generate-dek:
-    desc: Generate Data Encryption Key (DEK) and save to config.json
-    cmds:
-      - poetry run python scripts/generate_DEK.py
+      - poetry check
 
   generate-openapi-spec:
     desc: Generate OpenAPI specification and save to docs/openapi.json
@@ -61,12 +51,11 @@ tasks:
     dir: "{{.SRC_DIR}}"
 
   run:
-    desc: Start production server (installs deps, applies db migrations, generates DEK, then runs)
+    desc: Start production server (installs deps, applies db migrations, then runs)
     cmds:
       - task: deps
       - task: db-migrate-apply
       # - task: db-seed
-      - task: generate-dek
       - task: generate-openapi-spec
       - poetry run python -m server.main
     dir: "{{.SRC_DIR}}"
@@ -80,21 +69,6 @@ tasks:
     desc: Run tests with coverage report
     cmds:
       - poetry run pytest tests/ --cov=server --cov-report=term-missing
-
-  test-workspaces:
-    desc: Run only workspace tests
-    cmds:
-      - poetry run pytest tests/test_workspaces.py -v
-
-  test-users:
-    desc: Run only user tests
-    cmds:
-      - poetry run pytest tests/test_users.py -v
-
-  test-api-keys:
-    desc: Run only API key tests
-    cmds:
-      - poetry run pytest tests/test_api_keys.py -v
 
   lint-check:
     desc: Run linting checks
@@ -140,7 +114,7 @@ tasks:
       - docker compose --env-file env.conf --profile full-stack down
 
   docker-compose-db-up:
-    desc: Start only databases (PostgreSQL and Neo4j) with db-only profile
+    desc: Start only databases (PostgreSQL) with db-only profile
     cmds:
       - docker compose --env-file env.conf --profile db-only up -d
 

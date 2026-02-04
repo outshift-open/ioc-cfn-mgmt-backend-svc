@@ -1,7 +1,6 @@
 import os
-import json
 import logging
-from cryptography.fernet import Fernet
+import bcrypt
 
 # Get logger instance (logging is setup in main.py)
 logger = logging.getLogger(__name__)
@@ -9,50 +8,64 @@ logger = logging.getLogger(__name__)
 service_name = os.environ.get("SERVICE_NAME", "ioc-cfn-mgmt-backend")
 
 
-def get_global_encryption_key() -> bytes:
-    """Load and decode the base64-encoded DEK from config file"""
+def hash_password(password: str) -> str:
+    """
+    Hash a password using bcrypt.
+
+    Args:
+        password: Plain text password to hash
+
+    Returns:
+        Hashed password string
+
+    Raises:
+        Exception: If hashing fails
+
+    Note:
+        bcrypt has a maximum password length of 72 bytes. Passwords longer than
+        72 bytes are automatically truncated.
+    """
     try:
-        # Look for config.json in the same directory as this file (src/server/)
-        current_dir = os.path.dirname(os.path.abspath(__file__))
-        config_path = os.path.join(current_dir, "config.json")
+        # bcrypt has a 72-byte limit. Manually truncate to avoid errors with newer bcrypt versions
+        # Encode to bytes first to count actual bytes, not characters
+        password_bytes = password.encode("utf-8")
+        if len(password_bytes) > 72:
+            # Truncate to 72 bytes
+            password_bytes = password_bytes[:72]
 
-        with open(config_path) as f:
-            config = json.load(f)
-
-        dek = config.get("DEK", "")
-        if not dek:
-            raise ValueError("DEK not found in config file")
-
-        # The key should be a URL-safe base64-encoded string
-        # Pad with '=' to make the length a multiple of 4 if needed
-        key = dek
-        key += "=" * (-len(key) % 4)
-
-        # Convert to bytes and return
-        return key.encode("utf-8")
-
+        # Generate salt and hash the password
+        salt = bcrypt.gensalt()
+        hashed = bcrypt.hashpw(password_bytes, salt)
+        return hashed.decode("utf-8")
     except Exception as e:
-        logger.error(f"Reading Data encryption key failed: {e}")
+        logger.error(f"Password hashing failed: {e}")
         raise
 
 
-def encrypt_data(data: str, key: bytes) -> str:
-    """Encrypt data using the provided key"""
-    try:
-        f = Fernet(key)
-        encrypted = f.encrypt(data.encode())
-        return encrypted.decode()
-    except Exception as e:
-        logger.error(f"Data encryption failed: {e}")
-        raise
+def verify_password(plain_password: str, hashed_password: str) -> bool:
+    """
+    Verify a password against a hashed password.
 
+    Args:
+        plain_password: Plain text password to verify
+        hashed_password: Hashed password to verify against
 
-def decrypt_data(encrypted_data: str, key: bytes) -> str:
-    """Decrypt data using the provided key"""
+    Returns:
+        True if password matches, False otherwise
+
+    Raises:
+        Exception: If verification fails
+    """
     try:
-        f = Fernet(key)
-        decrypted = f.decrypt(encrypted_data.encode())
-        return decrypted.decode()
+        # Encode password to bytes
+        password_bytes = plain_password.encode("utf-8")
+        if len(password_bytes) > 72:
+            # Truncate to 72 bytes (same as during hashing)
+            password_bytes = password_bytes[:72]
+
+        # Verify password
+        hashed_bytes = hashed_password.encode("utf-8")
+        return bcrypt.checkpw(password_bytes, hashed_bytes)
     except Exception as e:
-        logger.error(f"Data decryption failed: {e}")
+        logger.error(f"Password verification failed: {e}")
         raise

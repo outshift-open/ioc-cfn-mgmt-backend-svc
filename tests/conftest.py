@@ -144,14 +144,13 @@ def setup_test_environment():
         session = db.session_factory()
 
         # Create dev-user for testing
-        from server.common import encrypt_data, get_global_encryption_key
-        key = get_global_encryption_key()
-        encrypted_password = encrypt_data("dev", key)
+        from server.common import hash_password
+        hashed_password = hash_password("dev")
 
         dev_user = User(
             id="dev-user",
             username="dev-user",
-            password=encrypted_password,
+            password=hashed_password,
             domain="test.local",
             role="admin",
         )
@@ -218,20 +217,19 @@ def test_user():
     """Create a test user in the database and return user data."""
     import uuid
 
-    from server.common import encrypt_data, get_global_encryption_key
+    from server.common import hash_password
 
     db = RelationalDB()
     session = db.session_factory()
     try:
         user_id = str(uuid.uuid4())
         password = "testpassword"
-        key = get_global_encryption_key()
-        encrypted_password = encrypt_data(password, key)
+        hashed_password = hash_password(password)
 
         user = User(
             id=user_id,
             username="testuser",
-            password=encrypted_password,
+            password=hashed_password,
             domain="test.local",
             role="viewer",  # Non-admin role
         )
@@ -254,20 +252,19 @@ def admin_user():
     """Create an admin user in the database and return user data."""
     import uuid
 
-    from server.common import encrypt_data, get_global_encryption_key
+    from server.common import hash_password
 
     db = RelationalDB()
     session = db.session_factory()
     try:
         user_id = str(uuid.uuid4())
         password = "adminpassword"
-        key = get_global_encryption_key()
-        encrypted_password = encrypt_data(password, key)
+        hashed_password = hash_password(password)
 
         user = User(
             id=user_id,
             username="adminuser",
-            password=encrypted_password,
+            password=hashed_password,
             domain="test.local",
             role="admin",  # Admin role
         )

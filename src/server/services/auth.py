@@ -8,7 +8,7 @@ from fastapi import HTTPException, status
 from sqlalchemy import and_
 
 from server.auth.jwt import create_access_token, create_refresh_token
-from server.common import decrypt_data, encrypt_data, get_global_encryption_key
+from server.common import hash_password, verify_password
 from server.database.relational_db.db import RelationalDB
 from server.database.relational_db.models.user import User as UserModel
 from server.schemas.workspace import WorkspaceCreate
@@ -52,11 +52,8 @@ class AuthService:
                     logger.warning(f"Authentication failed: User '{username}' not found")
                     return None
 
-                # Decrypt stored password and compare
-                key = get_global_encryption_key()
-                stored_password = decrypt_data(user.password, key)  # type: ignore[arg-type]
-
-                if stored_password != password:
+                # Verify password against stored hash
+                if not verify_password(password, user.password):  # type: ignore[arg-type]
                     logger.warning(f"Authentication failed: Invalid password for user '{username}'")
                     return None
 
@@ -162,13 +159,12 @@ class AuthService:
 
                 # Create new user
                 user_id = str(uuid.uuid4())
-                key = get_global_encryption_key()
-                encrypted_password = encrypt_data(password, key)
+                hashed_password = hash_password(password)
 
                 new_user = UserModel(
                     id=user_id,
                     username=username,
-                    password=encrypted_password,
+                    password=hashed_password,
                     domain=domain,
                     role=role,
                 )

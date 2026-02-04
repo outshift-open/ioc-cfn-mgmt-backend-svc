@@ -48,5 +48,5 @@ USER app
 ENV PYTHONPATH="/home/app/src"
 ENV PATH="/home/app/bin:/home/app/.local/bin:$PATH"
 
-# Use entrypoint script to run migrations, generate DEK, then start server
+# Use entrypoint script to run migrations then start server
 ENTRYPOINT ["/home/app/docker-entrypoint.sh"]

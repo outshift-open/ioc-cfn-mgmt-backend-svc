@@ -191,18 +191,17 @@ class TestWorkspaceEndpoints:
         Note: 'admin' is the default user role, not a super admin role. All users including
         those with 'admin' role should only see workspaces they created or are members of.
         """
-        from server.common import encrypt_data, get_global_encryption_key
+        from server.common import hash_password
 
         # Create two additional admin users (admin is the default role)
         db = RelationalDB()
         session = db.session_factory()
-        key = get_global_encryption_key()
 
         user1_id = str(uuid.uuid4())
         user1 = User(
             id=user1_id,
             username="user1",
-            password=encrypt_data("password1", key),
+            password=hash_password("password1"),
             domain="test.local",
             role="admin",  # admin is the default role for all users
         )
@@ -212,7 +211,7 @@ class TestWorkspaceEndpoints:
         user2 = User(
             id=user2_id,
             username="user2",
-            password=encrypt_data("password2", key),
+            password=hash_password("password2"),
             domain="test.local",
             role="admin",  # admin is the default role for all users
         )
@@ -308,18 +307,17 @@ class TestWorkspaceEndpoints:
 
     def test_workspace_isolation_with_admin_membership(self, client, setup_test_environment):
         """Test that users can access workspaces when added as workspace admins."""
-        from server.common import encrypt_data, get_global_encryption_key
+        from server.common import hash_password
 
         # Create a user
         db = RelationalDB()
         session = db.session_factory()
-        key = get_global_encryption_key()
 
         user_id = str(uuid.uuid4())
         user = User(
             id=user_id,
             username="member_user",
-            password=encrypt_data("password", key),
+            password=hash_password("password"),
             domain="test.local",
             role="admin",
         )
@@ -395,18 +393,17 @@ class TestWorkspaceEndpoints:
 
     def test_workspace_creator_always_has_access(self, client, setup_test_environment):
         """Test that workspace creators always have access, even if not in workspace_member table."""
-        from server.common import encrypt_data, get_global_encryption_key
+        from server.common import hash_password
 
         # Create a user
         db = RelationalDB()
         session = db.session_factory()
-        key = get_global_encryption_key()
 
         user_id = str(uuid.uuid4())
         user = User(
             id=user_id,
             username="creator_user",
-            password=encrypt_data("password", key),
+            password=hash_password("password"),
             domain="test.local",
             role="admin",
         )
@@ -457,18 +454,17 @@ class TestWorkspaceEndpoints:
 
     def test_super_admin_can_see_all_workspaces(self, setup_test_environment):
         """Test that super_admin role can see all workspaces (future feature)."""
-        from server.common import encrypt_data, get_global_encryption_key
+        from server.common import hash_password
 
         db = RelationalDB()
         session = db.session_factory()
-        key = get_global_encryption_key()
 
         # Create a super_admin user
         super_admin_id = str(uuid.uuid4())
         super_admin = User(
             id=super_admin_id,
             username="superadmin",
-            password=encrypt_data("password", key),
+            password=hash_password("password"),
             domain="test.local",
             role="super_admin",
         )
@@ -496,7 +492,7 @@ class TestWorkspaceEndpoints:
         user1 = User(
             id=user1_id,
             username="user1",
-            password=encrypt_data("password1", key),
+            password=hash_password("password1"),
             domain="test.local",
             role="admin",
         )
@@ -506,7 +502,7 @@ class TestWorkspaceEndpoints:
         user2 = User(
             id=user2_id,
             username="user2",
-            password=encrypt_data("password2", key),
+            password=hash_password("password2"),
             domain="test.local",
             role="admin",
         )
@@ -571,18 +567,17 @@ class TestWorkspaceEndpoints:
 
     def test_multiple_users_can_create_workspaces_with_same_name(self, setup_test_environment):
         """Test that different users can create workspaces with the same name (e.g., 'Default Workspace')."""
-        from server.common import encrypt_data, get_global_encryption_key
+        from server.common import hash_password
 
         db = RelationalDB()
         session = db.session_factory()
-        key = get_global_encryption_key()
 
         # Create two different users
         user1_id = str(uuid.uuid4())
         user1 = User(
             id=user1_id,
             username="user_a",
-            password=encrypt_data("password1", key),
+            password=hash_password("password1"),
             domain="test.local",
             role="admin",
         )
@@ -592,7 +587,7 @@ class TestWorkspaceEndpoints:
         user2 = User(
             id=user2_id,
             username="user_b",
-            password=encrypt_data("password2", key),
+            password=hash_password("password2"),
             domain="test.local",
             role="admin",
         )

@@ -2,11 +2,11 @@
 
 [![Docker](https://img.shields.io/badge/docker-ghcr.io-blue?logo=docker)](https://github.com/orgs/cisco-eti/packages/container/package/ioc-cfn-mgmt-backend-svc)
 
-IOC CFN Management Backend Service - FastAPI workspace, user, and API key management
+IOC CFN Management Backend Service - FastAPI backend for workspaces, users, API keys, Cognitive Fabric Nodes, and Multi-Agentic Systems
 
 ## Prerequisites
 
-- Python 3.8+
+- Python 3.10+
 - Poetry: `curl -sSL https://install.python-poetry.org | python3 -`
 - Task:
   - **macOS**: `brew install go-task`
@@ -14,7 +14,6 @@ IOC CFN Management Backend Service - FastAPI workspace, user, and API key manage
   - **Cross-platform**: `npm install -g @go-task/cli`
   - **Go users**: `go install github.com/go-task/task/v3/cmd/task@latest`
   - **Manual install**: `sh -c "$(curl --location https://taskfile.dev/install.sh)" -- -d -b ~/.local/bin`
-  - **All-in-one setup**: `./install.sh` (installs Poetry and Task globally, and dependencies)
 
 #### Dependencies for the Relational DB
 For details please refer to the [README](src/server/database/relational_db/README.md)
@@ -25,33 +24,26 @@ For details please refer to the [README](src/server/database/relational_db/READM
 
 ### Deployment Options
 
-**Option 1: I have deployed neo4j and sql DB locally**
+**Option 1: I have deployed sql DB locally**
 
 ```bash
-task run    # installs deps, applies db migrations, generates DEK, then runs
+task run    # installs deps, applies db migrations, then runs
 ```
 
 **Option 2: I don't have any db**
 
 ```bash
-task docker-compose-db-up    # Start only databases (PostgreSQL and Neo4j) with db-only profile
-task run                     # installs deps, applies db migrations, generates DEK, then runs
+task docker-compose-db-up    # Start only databases (PostgreSQL) with db-only profile
+task run                     # installs deps, applies db migrations, then runs
 ```
 
 **Option 3: Full stack deployment**
 
 ```bash
-task docker-compose-up       # Start complete stack (application + databases)
+task docker-compose-full-stack-up    # Start complete stack (application + databases)
 ```
 
 ### Alternative Quick Start Methods
-
-**Dev setup (installs Poetry and Task globally)**
-
-```bash
-./install.sh
-task dev
-```
 
 **Manual setup (if you have Poetry/Task already)**
 
@@ -76,18 +68,34 @@ task docker-run       # Run Docker container
 **Using Poetry directly**
 
 ```bash
-cd src/server
-poetry run python main.py
+cd src
+poetry run python -m server.main
 ```
 
 **Using Docker**
 
 ```bash
-docker-compose up --build
+task docker-compose-full-stack-up    # Full stack
+task docker-compose-db-up            # Databases only
 ```
 
 ## API Endpoints
 
-- **Workspaces:** `GET|POST|PUT|DELETE /api/workspaces`
-- **Users:** `GET|POST|DELETE /api/workspaces/{workspace_id}/users`
-- **API Keys:** `GET|POST|DELETE /api/workspaces/{workspace_id}/api-keys`
+**API Documentation:** http://localhost:8000/docs
+
+**IAM (Identity and Access Management):**
+- API Keys: `GET|POST|DELETE /api/iam/api-keys`
+- Users: `GET /api/iam/users`
+- Roles: `GET /api/iam/roles`
+
+**Workspaces:**
+- Workspaces: `GET|POST|PUT|DELETE /api/workspaces`
+- Workspace Members: `GET|POST|DELETE /api/workspaces/{workspace_id}/members`
+- Workspace Invitations: `GET|POST|DELETE /api/workspaces/{workspace_id}/invitations`
+
+**Workspace Resources:**
+- Multi-Agentic Systems: `GET|POST|DELETE /api/workspaces/{workspace_id}/multi-agentic-systems`
+- Cognitive Fabric Nodes: `GET|POST|PUT|DELETE /api/workspaces/{workspace_id}/cognitive-fabric-node`
+
+**Other:**
+- Audit Logs: `GET /api/audits`
