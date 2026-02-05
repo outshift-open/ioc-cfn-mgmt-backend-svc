@@ -22,7 +22,7 @@ services:
   ### End Database Services ###
 
   ### Application Services ###
-  ioc-cfn-mgmt-backend:
+  ioc-cfn-mgmt-backend-svc:
     build:
       context: .
       dockerfile: Dockerfile
@@ -37,6 +37,7 @@ services:
       - SERVICE_NAME=ioc-cfn-mgmt-backend-svc
       - APPLICATION_VERSION=dev
       - LOG_LEVEL=${LOG_LEVEL:-INFO}
+      - ADMIN_USER_PASSWORD=${ADMIN_USER_PASSWORD}
       - POSTGRES_HOST=ioc-mgmt-relational-db
       - POSTGRES_PORT=5432
       - POSTGRES_DB=${POSTGRES_DB:-ioc}
@@ -47,7 +48,7 @@ services:
       ioc-mgmt-relational-db:
         condition: service_healthy
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      test: ["CMD", "curl", "-f", "http://ioc-cfn-mgmt-backend-svc:8000/health"]
       interval: 30s
       timeout: 10s
       retries: 3
@@ -61,12 +62,12 @@ services:
       - "3000:3000"
     environment:
       - NODE_ENV=production
-      - CSP_UI_API_BASE_URL=ioc-cfn-mgmt-backend:8000
+      - CFN_UI_API_BASE_URL=http://ioc-cfn-mgmt-backend-svc:8000
       - NEXTAUTH_URL=${NEXTAUTH_URL}
       - NEXTAUTH_SECRET=${NEXTAUTH_SECRET}
     restart: unless-stopped
     depends_on:
-      ioc-cfn-mgmt-backend:
+      ioc-cfn-mgmt-backend-svc:
         condition: service_healthy
   ### End Application Services ###
 
