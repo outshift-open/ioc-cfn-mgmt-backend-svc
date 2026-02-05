@@ -63,6 +63,7 @@ services:
     environment:
       - NODE_ENV=production
       - CFN_UI_API_BASE_URL=http://ioc-cfn-mgmt-backend-svc:8000
+      - NEXT_PUBLIC_CFN_UI_API_BASE_URL=http://localhost:8000
       - NEXTAUTH_URL=${NEXTAUTH_URL}
       - NEXTAUTH_SECRET=${NEXTAUTH_SECRET}
     restart: unless-stopped
