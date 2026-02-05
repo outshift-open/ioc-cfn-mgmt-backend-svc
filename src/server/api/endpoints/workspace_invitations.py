@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 
-from server.auth.auth import get_auth_user
+from server.authn.auth import get_auth_user
 from server.schemas.workspace_invitation import (
     WorkspaceInvitationAcceptResponse,
     WorkspaceInvitationCreate,
@@ -15,8 +15,8 @@ router = APIRouter()
 
 def require_workspace_admin(workspace_id: str, auth_user: dict) -> None:
     """Check if user is an admin of the workspace"""
-    # Global admin has access to all workspaces
-    if auth_user["role"] == "admin":
+    # Super admin has access to all workspaces
+    if auth_user["role"] == "super_admin":
         return
 
     # Check workspace membership and role

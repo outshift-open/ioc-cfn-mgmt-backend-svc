@@ -4,7 +4,7 @@ from typing import List
 
 from fastapi import APIRouter, Depends, status
 
-from server.auth.auth import get_auth_user
+from server.authn.auth import get_auth_user
 from server.authz.authz_service import authz_service
 from server.schemas.api_key import ApiKeyCreate, ApiKeyList, ApiKeyResponse
 from server.schemas.user import Users

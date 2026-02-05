@@ -33,7 +33,7 @@ class UserService:
 
     def create_admin_user(self) -> UserResponse:
         """
-        Create a new admin user
+        Create a new admin user and their default workspace
         Kept as a separate function for future expansion to the admin user functionality
         Returns:
             UserResponse with the created user ID
@@ -56,57 +56,92 @@ class UserService:
                     .first()
                 )
 
+                user_id = None
+
                 if existing_user:
                     logger.info(
                         f"Admin user '{ADMIN_USER_USERNAME_DEFAULT}' already exists with ID: {existing_user.id}"
                     )
-                    # Return without API key since user already exists
-                    return UserResponse(id=str(existing_user.id), api_key=None, api_key_preview=None)
+                    user_id = str(existing_user.id)
+                else:
+                    # Create new admin user
+                    user_id = str(uuid.uuid4())
+                    password = os.getenv("ADMIN_USER_PASSWORD", ADMIN_USER_PASSWORD_DEFAULT)
+                    hashed_password = hash_password(password)
 
-                # Create new admin user
-                user_id = str(uuid.uuid4())
-                password = os.getenv("ADMIN_USER_PASSWORD", ADMIN_USER_PASSWORD_DEFAULT)
-                hashed_password = hash_password(password)
+                    admin_user = UserModel(
+                        id=user_id,
+                        username=ADMIN_USER_USERNAME_DEFAULT,
+                        password=hashed_password,
+                        domain=ADMIN_USER_DOMAIN_DEFAULT,
+                        role=ADMIN_USER_ROLE_DEFAULT,
+                    )
 
-                admin_user = UserModel(
-                    id=user_id,
-                    username=ADMIN_USER_USERNAME_DEFAULT,
-                    password=hashed_password,
-                    domain=ADMIN_USER_DOMAIN_DEFAULT,
-                    role=ADMIN_USER_ROLE_DEFAULT,
+                    # Add to database
+                    session.add(admin_user)
+                    session.commit()
+
+                    logger.info(
+                        f"Successfully created admin user - "
+                        f"Username: {ADMIN_USER_USERNAME_DEFAULT}, "
+                        f"Domain: {ADMIN_USER_DOMAIN_DEFAULT}, "
+                        f"Role: {ADMIN_USER_ROLE_DEFAULT} "
+                        f"with ID: {user_id}"
+                    )
+
+                    # add to audits table
+                    audit_service.create_audit(
+                        AuditRequest(
+                            resource_type=ResourceType.USER,
+                            audit_type=AuditEventType.RESOURCE_CREATED,
+                            audit_resource_id=user_id,
+                            created_by="",  # TODO: get user from apikey
+                            audit_information={
+                                "username": ADMIN_USER_USERNAME_DEFAULT,
+                                "domain": ADMIN_USER_DOMAIN_DEFAULT,
+                                "role": ADMIN_USER_ROLE_DEFAULT,
+                            },
+                            audit_extra_information="success",
+                            created_at=datetime.utcnow(),
+                        )
+                    )
+
+                # Create default workspace for admin user if it doesn't exist
+                from server.database.relational_db.models.workspace import Workspace as WorkspaceModel
+                from server.schemas.workspace import WorkspaceCreate
+                from server.services.workspace import workspace_service
+
+                # Check if admin user already has a default workspace
+                existing_workspace = (
+                    session.query(WorkspaceModel)
+                    .filter(
+                        WorkspaceModel.name == workspace_service.DEFAULT_WORKSPACE_NAME,
+                        WorkspaceModel.created_by == user_id,
+                        WorkspaceModel.deleted_at.is_(None),
+                    )
+                    .first()
                 )
 
-                # Add to database
-                session.add(admin_user)
-                session.commit()
-
-                logger.info(
-                    f"Successfully created admin user - "
-                    f"Username: {ADMIN_USER_USERNAME_DEFAULT}, "
-                    f"Domain: {ADMIN_USER_DOMAIN_DEFAULT}, "
-                    f"Role: {ADMIN_USER_ROLE_DEFAULT} "
-                    f"with ID: {user_id}"
-                )
+                if existing_workspace:
+                    logger.info(
+                        f"Default workspace already exists for admin user with ID: {existing_workspace.id}"
+                    )
+                else:
+                    # Create default workspace for admin user
+                    logger.info("Creating default workspace for admin user")
+                    workspace_data = WorkspaceCreate(
+                        name=workspace_service.DEFAULT_WORKSPACE_NAME,
+                        config={},
+                    )
+                    workspace_response = workspace_service.create(
+                        workspace_data=workspace_data,
+                        creator_user_id=user_id,
+                    )
+                    logger.info(
+                        f"Successfully created default workspace for admin user with ID: {workspace_response.id}"
+                    )
 
                 response = UserResponse(id=user_id, api_key=None, api_key_preview=None)
-
-                # add to audits table
-                audit_service.create_audit(
-                    AuditRequest(
-                        resource_type=ResourceType.USER,
-                        audit_type=AuditEventType.RESOURCE_CREATED,
-                        audit_resource_id=user_id,
-                        created_by="",  # TODO: get user from apikey
-                        audit_information={
-                            "username": ADMIN_USER_USERNAME_DEFAULT,
-                            "domain": ADMIN_USER_DOMAIN_DEFAULT,
-                            "role": ADMIN_USER_ROLE_DEFAULT,
-                        },
-                        audit_extra_information="success",
-                        created_at=datetime.utcnow(),
-                    )
-                )
-
                 return response
 
             except Exception as e:

@@ -3,7 +3,7 @@ Tests for API key endpoints in ioc-cfn-mgmt-backend.
 """
 import pytest
 
-from server.auth.auth import get_auth_user
+from server.authn.auth import get_auth_user
 from server.main import app
 
 

@@ -392,6 +392,116 @@ class TestWorkspaceMemberManagement:
         assert dev_user_member["is_creator"] is True
         assert test_user_member["is_creator"] is False
 
+    def test_cannot_remove_workspace_creator(self, client, test_user):
+        """Test that workspace creator cannot be removed by another admin."""
+        import hashlib
+        from fastapi.testclient import TestClient
+        from server.database.relational_db.db import RelationalDB
+        from server.database.relational_db.models.api_key import ApiKey as ApiKeyModel
+        from server.main import app
+
+        # Create workspace as dev-user (creator)
+        response = client.post("/api/workspaces/", json={"name": "Test Workspace"})
+        assert response.status_code == 201
+        workspace_id = response.json()["id"]
+
+        # Create an API key for test_user
+        db = RelationalDB()
+        session = db.session_factory()
+        try:
+            raw_api_key = "ioc_test_user_api_key_12345678901234567890123456"
+            hashed_key = hashlib.sha256(raw_api_key.encode()).hexdigest()
+            key_preview = raw_api_key[:20]
+
+            api_key = ApiKeyModel(
+                user_id=test_user["id"],
+                name="Test API Key",
+                key_hash=hashed_key,
+                key_preview=key_preview,
+            )
+            session.add(api_key)
+            session.commit()
+        finally:
+            session.close()
+
+        # Invite test_user as admin
+        invitation_data = {
+            "invitee_username": test_user["username"],
+            "role": "admin"
+        }
+        response = client.post(
+            f"/api/workspaces/{workspace_id}/invitations",
+            json=invitation_data
+        )
+        assert response.status_code == 201
+        invitation_id = response.json()["id"]
+
+        # Accept invitation as test_user
+        test_user_client = TestClient(app)
+        test_user_client.headers = {"X-API-Key": raw_api_key}
+        response = test_user_client.post(f"/api/invitations/{invitation_id}/accept")
+        assert response.status_code == 200
+
+        # Try to remove creator (dev-user) as test_user (should fail)
+        response = test_user_client.delete(
+            f"/api/workspaces/{workspace_id}/members/dev-user"
+        )
+        assert response.status_code == 403
+        assert "cannot remove the workspace creator" in response.json()["detail"].lower()
+
+    def test_non_member_cannot_access_workspace(self, client, test_user):
+        """Test that regular admin user cannot access workspace they're not a member of."""
+        import hashlib
+        from fastapi.testclient import TestClient
+        from server.database.relational_db.db import RelationalDB
+        from server.database.relational_db.models.api_key import ApiKey as ApiKeyModel
+        from server.main import app
+
+        # Create workspace as dev-user
+        response = client.post("/api/workspaces/", json={"name": "Test Workspace"})
+        assert response.status_code == 201
+        workspace_id = response.json()["id"]
+
+        # Create an API key for test_user
+        db = RelationalDB()
+        session = db.session_factory()
+        try:
+            raw_api_key = "ioc_test_user_api_key_12345678901234567890123456"
+            hashed_key = hashlib.sha256(raw_api_key.encode()).hexdigest()
+            key_preview = raw_api_key[:20]
+
+            api_key = ApiKeyModel(
+                user_id=test_user["id"],
+                name="Test API Key",
+                key_hash=hashed_key,
+                key_preview=key_preview,
+            )
+            session.add(api_key)
+            session.commit()
+        finally:
+            session.close()
+
+        # Try to access workspace as test_user (should fail)
+        test_user_client = TestClient(app)
+        test_user_client.headers = {"X-API-Key": raw_api_key}
+
+        # Try to list members
+        response = test_user_client.get(f"/api/workspaces/{workspace_id}/members")
+        assert response.status_code == 403
+        assert "must be a member of this workspace" in response.json()["detail"].lower()
+
+        # Try to create invitation
+        invitation_data = {
+            "invitee_username": "someone",
+            "role": "viewer"
+        }
+        response = test_user_client.post(
+            f"/api/workspaces/{workspace_id}/invitations",
+            json=invitation_data
+        )
+        assert response.status_code == 403
+        assert "only workspace admins" in response.json()["detail"].lower()
+
 
 class TestWorkspaceInvitationExpiration:
     """Test cases for invitation expiration."""

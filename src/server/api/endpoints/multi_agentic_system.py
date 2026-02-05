@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 
-from server.auth.auth import get_auth_user
+from server.authn.auth import get_auth_user
 from server.authz.authz_service import authz_service
 from server.schemas.multi_agentic_system import (
     MultiAgenticSystem,

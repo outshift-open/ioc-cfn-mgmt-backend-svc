@@ -15,6 +15,7 @@ from server.common import service_name
 from server.database.relational_db.db import RelationalDB
 from server.services.cognitive_fabric_node_monitor import cognitive_fabric_node_monitor
 from server.services.user import UserService
+from server.services.workspace import WorkspaceService
 from server.utils.version import get_app_version
 
 # Load environment variables from .env file in current or parent directories
@@ -39,16 +40,9 @@ async def lifespan(app: FastAPI):
         logger.error(f"Relational Database initialization failed: {str(e)}")
         raise
 
-    # try:
-    #     graph_db = GraphDB()
-    #     await graph_db.init()
-    # except Exception as e:
-    #     logger.error(f"Graph Database initialization failed: {str(e)}")
-    #     raise
-
     logger.info("Database connections initialized")
 
-    # Application Setup
+    # Create admin user if not exists
     try:
         UserService().create_admin_user()
     except Exception as e:

@@ -4,7 +4,7 @@ from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 
-from server.auth.auth import get_auth_user
+from server.authn.auth import get_auth_user
 from server.schemas.cognitive_fabric_node import (
     CognitiveFabricNodeDetail,
     CognitiveFabricNodeHeartbeatResponse,

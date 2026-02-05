@@ -7,7 +7,7 @@ from typing import Any, Dict, Optional
 from fastapi import HTTPException, status
 from sqlalchemy import and_
 
-from server.auth.jwt import create_access_token, create_refresh_token
+from server.authn.jwt import create_access_token, create_refresh_token
 from server.common import hash_password, verify_password
 from server.database.relational_db.db import RelationalDB
 from server.database.relational_db.models.user import User as UserModel

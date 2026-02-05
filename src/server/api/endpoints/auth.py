@@ -3,7 +3,7 @@
 from fastapi import APIRouter, HTTPException, status
 from sqlalchemy import and_
 
-from server.auth.jwt import create_access_token, decode_token, verify_token_type
+from server.authn.jwt import create_access_token, decode_token, verify_token_type
 from server.database.relational_db.db import RelationalDB
 from server.database.relational_db.models.user import User as UserModel
 from server.schemas.auth import (

@@ -1,17 +1,10 @@
-name: ioc-cfn-mgmt-backend CI workflow
+name: CI - Lint and Unit Test
 
 on:
   # we want pull requests so we can build(test) but not push to image registry
   push:
     branches:
       - "main"
-
-    # only build when important files change
-    #paths:
-    #  - 'app/**'
-    #  - '.github/workflows/ci.yaml'
-    #tags:
-    #  - "[0-9]+.[0-9]+.[0-9]+"
   pull_request:
     branches:
       - "main"
@@ -19,9 +12,7 @@ on:
 
 # Grant read access for GITHUB_TOKEN on all jobs
 permissions:
-  id-token: write # This is required for requesting the JWT
   contents: read # This is required for actions/checkout
-  packages: write # needed to push docker image to gar or ecr
 
 jobs:
   ################################## Code Checkout ##############################

@@ -7,7 +7,7 @@ from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from fastapi import Depends
 
 from server.services.api_key import api_key_service
-from server.auth.jwt import decode_token, verify_token_type
+from server.authn.jwt import decode_token, verify_token_type
 
 # HTTP Bearer scheme for JWT tokens
 bearer_scheme = HTTPBearer(auto_error=False)

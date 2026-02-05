@@ -2,6 +2,7 @@ services:
   ### Database Services ###
   ioc-mgmt-relational-db:
     image: postgres:17-alpine
+    platform: ${DOCKER_DEFAULT_PLATFORM}
     profiles:
       - db-only
       - full-stack
@@ -26,9 +27,8 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
-      platforms:
-        - ${DOCKER_DEFAULT_PLATFORM}
     image: ghcr.io/cisco-eti/ioc-cfn-mgmt-backend-svc:latest
+    platform: ${DOCKER_DEFAULT_PLATFORM}
     profiles:
       - full-stack
     ports:
@@ -56,6 +56,7 @@ services:
 
   ioc-cfn-mgmt-ui-svc:
     image: ghcr.io/cisco-eti/ioc-cfn-mgmt-ui-svc:latest
+    platform: ${DOCKER_DEFAULT_PLATFORM}
     profiles:
       - full-stack
     ports:

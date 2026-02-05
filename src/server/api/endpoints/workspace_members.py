@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 
-from server.auth.auth import get_auth_user
+from server.authn.auth import get_auth_user
 from server.schemas.workspace_member import (
     WorkspaceMemberDetail,
     WorkspaceMemberList,
@@ -13,8 +13,8 @@ router = APIRouter()
 
 def require_workspace_admin(workspace_id: str, auth_user: dict) -> None:
     """Check if user is an admin of the workspace"""
-    # Global admin has access to all workspaces
-    if auth_user["role"] == "admin":
+    # Super admin has access to all workspaces
+    if auth_user["role"] == "super_admin":
         return
 
     # Check workspace membership and role
@@ -42,7 +42,7 @@ def list_members(
     Returns a list of all workspace members with their roles
     """
     # Any member can view other members (consider tightening this if needed)
-    if auth_user["role"] != "admin":
+    if auth_user["role"] != "super_admin":
         if not workspace_member_service.is_member(workspace_id, auth_user["id"]):
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
@@ -62,7 +62,7 @@ def remove_member(
     auth_user: dict = Depends(get_auth_user),
 ):
     """
-    Remove a member from a workspace (admin only, cannot remove self)
+    Remove a member from a workspace (admin only, cannot remove self or creator)
 
     - **workspace_id**: UUID of the workspace
     - **user_id**: UUID of the user to remove
@@ -76,6 +76,15 @@ def remove_member(
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="You cannot remove yourself from the workspace",
+        )
+
+    # Prevent removing the workspace creator
+    from server.services.workspace import workspace_service
+    workspace = workspace_service.get(workspace_id)
+    if workspace.created_by == user_id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Cannot remove the workspace creator from the workspace",
         )
 
     workspace_member_service.remove_member(workspace_id, user_id, removed_by=auth_user["id"])

@@ -2258,7 +2258,7 @@
           "workspace-members"
         ],
         "summary": "Remove Member",
-        "description": "Remove a member from a workspace (admin only, cannot remove self)\n\n- **workspace_id**: UUID of the workspace\n- **user_id**: UUID of the user to remove\n\nReturns success message",
+        "description": "Remove a member from a workspace (admin only, cannot remove self or creator)\n\n- **workspace_id**: UUID of the workspace\n- **user_id**: UUID of the user to remove\n\nReturns success message",
         "operationId": "remove_member_api_workspaces__workspace_id__members__user_id__delete",
         "security": [
           {

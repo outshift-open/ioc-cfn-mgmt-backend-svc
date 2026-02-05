@@ -47,6 +47,9 @@ tasks:
   dev:
     desc: Start development server with hot reload
     cmds:
+      - task: deps
+      - task: db-migrate-apply
+      - task: generate-openapi-spec
       - poetry run uvicorn server.main:app --host 0.0.0.0 --port 8000 --reload
     dir: "{{.SRC_DIR}}"
 
@@ -55,7 +58,6 @@ tasks:
     cmds:
       - task: deps
       - task: db-migrate-apply
-      # - task: db-seed
       - task: generate-openapi-spec
       - poetry run python -m server.main
     dir: "{{.SRC_DIR}}"
@@ -90,12 +92,12 @@ tasks:
   docker-build:
     desc: Build Docker image with docker-compose
     cmds:
-      - docker compose --env-file env.conf build --no-cache ioc-cfn-mgmt-backend
+      - docker compose --env-file env.conf build --no-cache ioc-cfn-mgmt-backend-svc
 
   docker-run:
     desc: Run Docker container with docker-compose
     cmds:
-      - docker compose --env-file env.conf up --build --pull always ioc-cfn-mgmt-backend
+      - docker compose --env-file env.conf up --build --pull always ioc-cfn-mgmt-backend-svc
 
   docker-compose-full-stack-up:
     desc: Start all services with docker-compose
