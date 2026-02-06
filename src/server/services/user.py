@@ -22,10 +22,12 @@ from server.services.audit import (
 logger = logging.getLogger(__name__)
 
 # Admin user constants
+ADMIN_USER_ID_DEFAULT = "00000000-0000-0000-0000-000000000000"  # Hardcoded for dev/testing
 ADMIN_USER_USERNAME_DEFAULT = "admin"
 ADMIN_USER_PASSWORD_DEFAULT = "admin"
 ADMIN_USER_DOMAIN_DEFAULT = "ioc.local"
 ADMIN_USER_ROLE_DEFAULT = "admin"
+ADMIN_WORKSPACE_ID_DEFAULT = "00000000-0000-0000-0000-000000000001"  # Hardcoded for dev/testing
 
 
 class UserService:
@@ -64,8 +66,8 @@ class UserService:
                     )
                     user_id = str(existing_user.id)
                 else:
-                    # Create new admin user
-                    user_id = str(uuid.uuid4())
+                    # Create new admin user with hardcoded ID for dev/testing
+                    user_id = ADMIN_USER_ID_DEFAULT
                     password = os.getenv("ADMIN_USER_PASSWORD", ADMIN_USER_PASSWORD_DEFAULT)
                     hashed_password = hash_password(password)
 
@@ -127,7 +129,7 @@ class UserService:
                         f"Default workspace already exists for admin user with ID: {existing_workspace.id}"
                     )
                 else:
-                    # Create default workspace for admin user
+                    # Create default workspace for admin user with hardcoded ID for dev/testing
                     logger.info("Creating default workspace for admin user")
                     workspace_data = WorkspaceCreate(
                         name=workspace_service.DEFAULT_WORKSPACE_NAME,
@@ -136,6 +138,7 @@ class UserService:
                     workspace_response = workspace_service.create(
                         workspace_data=workspace_data,
                         creator_user_id=user_id,
+                        workspace_id=ADMIN_WORKSPACE_ID_DEFAULT,
                     )
                     logger.info(
                         f"Successfully created default workspace for admin user with ID: {workspace_response.id}"

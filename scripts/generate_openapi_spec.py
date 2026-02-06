@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Generate OpenAPI spec from FastAPI app and save to docs/openapi.json
+Generate OpenAPI spec from FastAPI app and save to docs/openapi/openapi.json
 """
 
 import json
@@ -15,20 +15,20 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'src'))
 
 
 def generate_openapi_spec():
-    """Generate OpenAPI spec and save to docs/openapi.json"""
+    """Generate OpenAPI spec and save to docs/openapi/openapi.json"""
 
-    # Get the docs directory path
+    # Get the openapi docs directory path
     repo_root = Path(__file__).parent.parent
-    docs_dir = repo_root / "docs"
+    openapi_dir = repo_root / "docs" / "openapi"
 
-    # Create docs directory if it doesn't exist
-    docs_dir.mkdir(exist_ok=True)
+    # Create openapi directory if it doesn't exist
+    openapi_dir.mkdir(parents=True, exist_ok=True)
 
     # Generate OpenAPI spec
     openapi_spec = app.openapi()
 
     # Save to file
-    spec_file = docs_dir / "openapi.json"
+    spec_file = openapi_dir / "openapi.json"
 
     with open(spec_file, 'w') as f:
         json.dump(openapi_spec, f, indent=2)

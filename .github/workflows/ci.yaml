@@ -19,16 +19,7 @@ jobs:
   ###############################################################################
   checkout-unit-tests:
     name: checkout & unit test
-    runs-on:
-      group: ${{ vars.DEFAULT_ARC_RUNNERS }}
-    container:
-      # TODO: Replace with hardened sre-python image
-      image: python:3.11-slim
-      # image: ${{ vars.DEFAULT_CONTAINER_RUNNER }}
-      options: --user root
-      # credentials:
-      #   username: ${{ secrets.GHCR_USERNAME }}
-      #   password: ${{ secrets.GHCR_TOKEN }}
+    runs-on: ubuntu-latest
 
     services:
       ioc-mgmt-relational-db:
@@ -38,7 +29,7 @@ jobs:
           POSTGRES_USER: postgresUser
           POSTGRES_PASSWORD: postgresPW
         ports:
-          - 5455:5432
+          - 5432:5432
         options: >-
           --health-cmd pg_isready
           --health-interval 10s
@@ -73,8 +64,7 @@ jobs:
 
       - name: Install Poetry
         run: |
-          python3 -m pip install --upgrade pip || python -m pip install --upgrade pip
-          python3 -m pip install poetry || python -m pip install poetry
+          python3 -m pip install --break-system-packages --ignore-installed poetry || python -m pip install --break-system-packages --ignore-installed poetry
           poetry --version
 
       ################################## Install Dependencies #######################
@@ -87,14 +77,13 @@ jobs:
 
       - name: Install system dependencies (needed to build psycopg2)
         run: |
-          apt-get update
-          apt-get install -y --no-install-recommends \
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
             build-essential \
             libpq-dev \
             gcc \
             python3-dev \
             pkg-config
-          rm -rf /var/lib/apt/lists/*
 
       - name: Install Dependencies
         run: |
@@ -122,9 +111,9 @@ jobs:
 
       - name: Wait for PostgreSQL
         env:
-          POSTGRES_HOST: ioc-mgmt-relational-db
+          POSTGRES_HOST: localhost
         run: |
-          apt-get update && apt-get install -y postgresql-client
+          sudo apt-get update && sudo apt-get install -y postgresql-client
           until pg_isready -h $POSTGRES_HOST -p $POSTGRES_PORT -U $POSTGRES_USER; do
             echo "Waiting for PostgreSQL..."
             sleep 2
@@ -133,7 +122,7 @@ jobs:
 
       - name: Run Unit Tests
         env:
-          POSTGRES_HOST: ioc-mgmt-relational-db
+          POSTGRES_HOST: localhost
         run: |
           bash scripts/unit-test.sh
 
@@ -145,8 +134,7 @@ jobs:
     # This should be an array of ALL active jobs that are used/run
     needs: [checkout-unit-tests]
     if: always()
-    runs-on:
-      group: ${{ vars.DEFAULT_ARC_RUNNERS }}
+    runs-on: ubuntu-latest
     steps:
       - name: report failure
         if: ${{ cancelled() || contains(needs.*.result, 'cancelled') || contains(needs.*.result, 'failure') }}

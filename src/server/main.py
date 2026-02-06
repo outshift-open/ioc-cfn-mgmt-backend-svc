@@ -15,11 +15,14 @@ from server.common import service_name
 from server.database.relational_db.db import RelationalDB
 from server.services.cognitive_fabric_node_monitor import cognitive_fabric_node_monitor
 from server.services.user import UserService
-from server.services.workspace import WorkspaceService
 from server.utils.version import get_app_version
+from server.utils.repo_root import REPO_ROOT
 
-# Load environment variables from .env file in current or parent directories
-load_dotenv(override=True)
+# Load environment variables
+load_dotenv(
+    dotenv_path=REPO_ROOT + "/env.conf",  # Load from repo root
+    override=True
+)
 
 # Setup logging once for the entire application
 setup_logging(service_name)
@@ -44,10 +47,46 @@ async def lifespan(app: FastAPI):
 
     # Create admin user if not exists
     try:
-        UserService().create_admin_user()
+        from server.services.user import ADMIN_USER_ID_DEFAULT, ADMIN_WORKSPACE_ID_DEFAULT
+
+        admin_response = UserService().create_admin_user()
+        admin_user_id = admin_response.id
     except Exception as e:
         logger.error(f"Admin user creation failed: {str(e)}")
         raise
+
+    # Create dev API key for admin user if CFN_DEV_MODE is enabled
+    cfn_dev_mode = os.getenv("CFN_DEV_MODE", "false").lower() == "true"
+    if cfn_dev_mode:
+        try:
+            from server.services.api_key import api_key_service
+
+            dev_api_key = api_key_service.create_or_get_dev_api_key(admin_user_id)
+            logger.warning(
+                "\n"
+                + "=" * 80
+                + "\n"
+                + "CFN DEV MODE ENABLED - Hardcoded IDs for Testing\n"
+                + "=" * 80
+                + "\n"
+                + f"Admin User ID:  {ADMIN_USER_ID_DEFAULT}\n"
+                + f"Workspace ID:   {ADMIN_WORKSPACE_ID_DEFAULT}\n"
+                + f"Dev API Key:    {dev_api_key}\n"
+                + "\n"
+                + "Example CFN Registration:\n"
+                + f"curl -X POST http://localhost:8000/api/workspaces/{ADMIN_WORKSPACE_ID_DEFAULT}/"
+                + "cognitive-fabric-node/register \\\n"
+                + f'  -H "X-API-Key: {dev_api_key}" \\\n'
+                + '  -H "Content-Type: application/json" \\\n'
+                + '  -d \'{"cfn_id": "cfn-001", "cfn_name": "test-node"}\'\n'
+                + "\n"
+                + "WARNING: This is for DEVELOPMENT/TESTING ONLY! Never use in production!\n"
+                + "=" * 80
+                + "\n"
+            )
+        except Exception as e:
+            logger.error(f"Failed to create dev API key: {str(e)}")
+            raise
 
     # Start Cognitive Fabric Node monitor background task
     cognitive_fabric_node_monitor_task = asyncio.create_task(cognitive_fabric_node_monitor.start())

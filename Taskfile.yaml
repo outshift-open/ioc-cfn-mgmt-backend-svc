@@ -39,7 +39,7 @@ tasks:
       - poetry check
 
   generate-openapi-spec:
-    desc: Generate OpenAPI specification and save to docs/openapi.json
+    desc: Generate OpenAPI specification and save to docs/openapi/openapi.json
     cmds:
       - poetry run python scripts/generate_openapi_spec.py
     dir: "{{.PWD}}"

@@ -18,3 +18,6 @@ src/server/schemas/api_key.py
 
 # Test files
 tests/**
+
+# CI workflow
+.github/workflows/ci.yaml

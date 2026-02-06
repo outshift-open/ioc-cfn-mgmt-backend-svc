@@ -13,7 +13,7 @@ Optionally - Set the below env variables in a .env file at the repo root (If usi
 'POSTGRES_USER', 'postgresUser'
 'POSTGRES_PASSWORD', 'postgresPW'
 'POSTGRES_HOST', 'localhost'
-'POSTGRES_PORT', '5455'
+'POSTGRES_PORT', '5432'
 ```
 - Use the correct env variables in the docker compose file.
 
@@ -48,8 +48,8 @@ task db-migrate-status
 brew install postgresql
 
 # Using environment variables (recommended)
-poetry run psql "postgresql://${POSTGRES_USER:-postgresUser}:${POSTGRES_PASSWORD:-postgresPW}@${POSTGRES_HOST:-localhost}:${POSTGRES_PORT:-5455}/${POSTGRES_DB:-cfn_mgmt}" -f scripts/populate_software.sql
+poetry run psql "postgresql://${POSTGRES_USER:-postgresUser}:${POSTGRES_PASSWORD:-postgresPW}@${POSTGRES_HOST:-localhost}:${POSTGRES_PORT:-5432}/${POSTGRES_DB:-cfn_mgmt}" -f scripts/populate_software.sql
 
 # Or with explicit values
-poetry run psql postgresql://postgresUser:postgresPW@localhost:5455/cfn_mgmt -f scripts/populate_software.sql
+poetry run psql postgresql://postgresUser:postgresPW@localhost:5432/cfn_mgmt -f scripts/populate_software.sql
 ```

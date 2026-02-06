@@ -20,6 +20,11 @@ dependencies = [
 ]
 
 [tool.poetry]
+name = "ioc-cfn-mgmt-backend"
+version = "0.1.0"
+description = "IOC CFN Management Backend Service"
+authors = ["IOC Team"]
+readme = "README.md"
 packages = [{include = "server", from = "src"}]
 
 [tool.poetry.dependencies]

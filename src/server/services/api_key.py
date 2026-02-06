@@ -26,6 +26,7 @@ class ApiKeyService:
     KEY_PREFIX = "ioc_"
     KEY_LENGTH = 48  # Length of the random part (excluding prefix)
     PREVIEW_LENGTH = 15  # Number of characters to show in preview
+    DEV_API_KEY = "ioc_dev_testing_key_do_not_use_in_production_12345"  # Hardcoded dev key
 
     def _generate_api_key(self) -> str:
         """Generate a secure random API key with prefix"""
@@ -186,6 +187,59 @@ class ApiKeyService:
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
                 detail=f"Failed to delete API key: {str(e)}",
             )
+
+    def create_or_get_dev_api_key(self, user_id: str) -> str:
+        """Create or get the hardcoded dev API key for a user (dev mode only).
+
+        WARNING: This should only be used in development/testing environments!
+
+        Args:
+            user_id: ID of the user to create the dev key for
+
+        Returns:
+            The dev API key (plain text)
+        """
+        db = RelationalDB()
+        session = db.get_session()
+
+        try:
+            key_hash = self._hash_api_key(self.DEV_API_KEY)
+            key_preview = self._create_key_preview(self.DEV_API_KEY)
+
+            # Check if dev key already exists for this user
+            existing_key = (
+                session.query(ApiKeyModel)
+                .filter(
+                    and_(
+                        ApiKeyModel.user_id == user_id,
+                        ApiKeyModel.key_hash == key_hash,
+                        ApiKeyModel.deleted_at.is_(None),
+                    )
+                )
+                .first()
+            )
+
+            if existing_key:
+                return self.DEV_API_KEY
+
+            # Create new dev API key record
+            new_api_key = ApiKeyModel(
+                user_id=user_id,
+                key_hash=key_hash,
+                key_preview=key_preview,
+                name="dev-testing-key",
+            )
+
+            session.add(new_api_key)
+            session.commit()
+
+            return self.DEV_API_KEY
+
+        except Exception as e:
+            session.rollback()
+            raise Exception(f"Failed to create dev API key: {str(e)}")
+        finally:
+            session.close()
 
     def validate_api_key(self, api_key: str) -> Optional[Dict[str, Any]]:
         """Validate an API key and return associated user information.

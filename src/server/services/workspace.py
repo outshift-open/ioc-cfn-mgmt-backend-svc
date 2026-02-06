@@ -120,19 +120,31 @@ class WorkspaceService:
         # Delete multi-agentic systems
         session.query(MASModel).filter(MASModel.workspace_id == workspace_id).delete(synchronize_session=False)
 
-    def create(self, workspace_data: WorkspaceCreate, creator_user_id: str) -> WorkspaceResponse:
-        """Create a new workspace"""
+    def create(self, workspace_data: WorkspaceCreate, creator_user_id: str, workspace_id: str = None) -> WorkspaceResponse:
+        """Create a new workspace
+
+        Args:
+            workspace_data: Workspace creation data
+            creator_user_id: ID of the user creating the workspace
+            workspace_id: Optional hardcoded workspace ID (for admin default workspace only)
+        """
         try:
             db = RelationalDB()
             session = db.get_session()
 
             try:
-                new_workspace = WorkspaceModel(
-                    name=workspace_data.name,
-                    users=[],  # Legacy field, kept for backwards compatibility
-                    config=workspace_data.config,
-                    created_by=creator_user_id,
-                )
+                workspace_kwargs = {
+                    "name": workspace_data.name,
+                    "users": [],  # Legacy field, kept for backwards compatibility
+                    "config": workspace_data.config,
+                    "created_by": creator_user_id,
+                }
+
+                # Only use hardcoded ID if provided (for admin default workspace)
+                if workspace_id:
+                    workspace_kwargs["id"] = workspace_id
+
+                new_workspace = WorkspaceModel(**workspace_kwargs)
 
                 session.add(new_workspace)
                 session.commit()
