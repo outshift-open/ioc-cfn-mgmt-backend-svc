@@ -48,6 +48,7 @@ jobs:
           echo "Tag: ${{ steps.get_tag.outputs.tag_name }}"
 
       - name: Log in to GitHub Container Registry
+        if: github.event_name != 'pull_request' || github.event.pull_request.user.login != 'dependabot[bot]'
         uses: docker/login-action@c94ce9fb468520275223c153574b00df6fe4bcc9 # v3.7.0
         with:
           registry: ghcr.io
@@ -56,7 +57,7 @@ jobs:
           logout: false
 
       - name: Build and push Docker image (PR)
-        if: github.event_name == 'pull_request'
+        if: github.event_name == 'pull_request' && github.event.pull_request.user.login != 'dependabot[bot]'
         uses: docker/build-push-action@263435318d21b8e681c14492fe198d362a7d2c83 # v6.18.0
         with:
           context: .
@@ -64,6 +65,18 @@ jobs:
           push: true
           platforms: linux/amd64, linux/arm64
           tags: ghcr.io/${{ github.repository_owner }}/ioc-cfn-mgmt-backend-svc:pr-${{ github.event.pull_request.number }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+          provenance: false
+
+      - name: Build only Docker image (Dependabot PR - validation only)
+        if: github.event_name == 'pull_request' && github.event.pull_request.user.login == 'dependabot[bot]'
+        uses: docker/build-push-action@263435318d21b8e681c14492fe198d362a7d2c83 # v6.18.0
+        with:
+          context: .
+          file: Dockerfile
+          push: false
+          platforms: linux/amd64, linux/arm64
           cache-from: type=gha
           cache-to: type=gha,mode=max
           provenance: false

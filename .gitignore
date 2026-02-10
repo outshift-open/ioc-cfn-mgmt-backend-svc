@@ -148,7 +148,6 @@ uv.lock.bak
 
 # Claude code
 .claude
-CLAUDE.md
 
 # copilot
 .github/.copilot-instructions.md
