@@ -5,6 +5,7 @@ from typing import Optional
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 
 from server.authn.auth import get_auth_user
+from server.authz.authz_service import authz_service
 from server.schemas.cognitive_fabric_node import (
     CognitiveFabricNodeDetail,
     CognitiveFabricNodeHeartbeatResponse,
@@ -14,84 +15,60 @@ from server.schemas.cognitive_fabric_node import (
     CognitiveFabricNodeUpdateRequest,
 )
 from server.services import cognitive_fabric_node_service
-from server.services.workspace_member import workspace_member_service
 
 router = APIRouter()
 
 
-def require_workspace_read_access(workspace_id: str, auth_user: dict) -> None:
-    """Check if user has read access to workspace (admin or viewer)"""
+def check_workspace_exists(workspace_id: str) -> None:
+    """Check if workspace exists, raise 404 if not"""
     from server.services.workspace import workspace_service
 
-    # Check if workspace exists first
     if not workspace_service.exists(workspace_id):
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Workspace not found",
-        )
-
-    user_role = auth_user.get("role")
-
-    # Super admins have access to all workspaces
-    if user_role == "super_admin":
-        return
-
-    # Check workspace membership - must be admin or viewer
-    member_role = workspace_member_service.get_member_role(workspace_id, auth_user["id"])
-    if member_role not in ["admin", "viewer"]:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Access denied: You must be a workspace admin or viewer",
-        )
-
-
-def require_workspace_write_access(workspace_id: str, auth_user: dict) -> None:
-    """Check if user has write access to workspace (admin only)"""
-    from server.services.workspace import workspace_service
-
-    # Check if workspace exists first
-    if not workspace_service.exists(workspace_id):
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Workspace not found",
-        )
-
-    user_role = auth_user.get("role")
-
-    # Super admins have access to all workspaces
-    if user_role == "super_admin":
-        return
-
-    # Check workspace membership - must be admin
-    member_role = workspace_member_service.get_member_role(workspace_id, auth_user["id"])
-    if member_role != "admin":
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Access denied: You must be a workspace admin",
         )
 
 
 @router.post(
-    "/{workspace_id}/cognitive-fabric-node/register",
+    "/{workspace_id}/cognitive-fabric-node",
     response_model=CognitiveFabricNodeRegisterResponse,
     status_code=status.HTTP_201_CREATED,
 )
-def register_cfn_node(
+def create_cfn_node(
     workspace_id: str,
     cfn_data: CognitiveFabricNodeRegisterRequest,
     auth_user: dict = Depends(get_auth_user),
 ):
     """
-    Register a new CFN node or re-enable a disabled one
+    Create a new CFN node or refresh an active one
 
     - **cfn_id**: Persistent CFN identifier (provided by CFN, immutable)
     - **cfn_name**: Human-readable CFN name (can be updated later)
     - **cfn_config**: Optional current CFN configuration
 
-    Returns the cfn_id, cfn_name, status (offline), and cloud_config for the CFN to apply
+    **Behavior by CFN State:**
+
+    1. **New CFN or Deleted CFN (ID reuse)**: Creates new entry
+       - Status: 201 Created
+       - Returns: offline status
+
+    2. **Active CFN (reboot/reconnection)**: Refreshes config
+       - Status: 201 Created
+       - Returns: offline status
+       - Allows CFN to reconnect after reboot
+
+    3. **Disabled CFN (ID locked)**: Rejects creation
+       - Status: 403 Forbidden
+       - CFN ID is locked and cannot be reused
+       - Admin must manually enable it first via PATCH /enable
+
+    Returns the cfn_id, cfn_name, status (offline), and cloud_config for the CFN to apply.
+    CFN must send heartbeat to change status from offline to online.
     """
-    require_workspace_write_access(workspace_id, auth_user)
-    return cognitive_fabric_node_service.register(workspace_id, cfn_data, auth_user["id"])
+    check_workspace_exists(workspace_id)
+    authz_service.require_permission(auth_user, "create", "cognitive_fabric_node")
+    return cognitive_fabric_node_service.create(workspace_id, cfn_data, auth_user["id"])
 
 
 @router.put(
@@ -114,33 +91,97 @@ def update_cfn_node(
 
     Returns full CFN details including updated cloud_config
     """
-    require_workspace_write_access(workspace_id, auth_user)
+    check_workspace_exists(workspace_id)
+    authz_service.require_permission(auth_user, "update", "cognitive_fabric_node")
     return cognitive_fabric_node_service.update(workspace_id, cfn_id, cfn_data, auth_user["id"])
+
+
+@router.patch(
+    "/{workspace_id}/cognitive-fabric-node/{cfn_id}/enable",
+    response_model=CognitiveFabricNodeDetail,
+)
+def enable_cfn_node(
+    workspace_id: str,
+    cfn_id: str,
+    auth_user: dict = Depends(get_auth_user),
+):
+    """
+    Enable a disabled CFN node
+
+    - **workspace_id**: UUID of the workspace
+    - **cfn_id**: CFN identifier
+
+    This is an admin operation to re-enable a disabled CFN.
+    After enabling, the CFN can call /register to reconnect and resume operations.
+
+    Returns full CFN details with enabled=True and status=offline (until heartbeat is sent).
+    """
+    check_workspace_exists(workspace_id)
+    authz_service.require_permission(auth_user, "enable", "cognitive_fabric_node")
+    return cognitive_fabric_node_service.enable(workspace_id, cfn_id, auth_user["id"])
+
+
+@router.patch(
+    "/{workspace_id}/cognitive-fabric-node/{cfn_id}/disable",
+    response_model=CognitiveFabricNodeDetail,
+)
+def disable_cfn_node(
+    workspace_id: str,
+    cfn_id: str,
+    auth_user: dict = Depends(get_auth_user),
+):
+    """
+    Disable CFN node (soft disable, prepares for deletion)
+
+    - **workspace_id**: UUID of the workspace
+    - **cfn_id**: CFN identifier
+
+    Disabling a CFN stops heartbeats and prepares it for deletion.
+    The CFN will no longer appear in listings and cannot send heartbeats.
+    The CFN ID is LOCKED and cannot be reused while in disabled state.
+
+    After disabling, the "Delete" button will appear in the UI.
+    The CFN can be re-enabled using the /enable endpoint, or permanently
+    deleted using the DELETE endpoint.
+
+    Returns full CFN details with enabled=False.
+    """
+    check_workspace_exists(workspace_id)
+    authz_service.require_permission(auth_user, "disable", "cognitive_fabric_node")
+    return cognitive_fabric_node_service.disable(workspace_id, cfn_id, auth_user["id"])
 
 
 @router.delete(
     "/{workspace_id}/cognitive-fabric-node/{cfn_id}",
     status_code=status.HTTP_204_NO_CONTENT,
 )
-def deregister_cfn_node(
+def delete_cfn_node(
     workspace_id: str,
     cfn_id: str,
     auth_user: dict = Depends(get_auth_user),
 ):
     """
-    De-register CFN node (soft delete/disable)
+    Delete CFN node (hard delete)
 
     - **workspace_id**: UUID of the workspace
     - **cfn_id**: CFN identifier
 
-    De-registering a CFN disables it by setting enabled=False and deleted_at timestamp.
-    The CFN will no longer appear in listings and cannot send heartbeats.
+    **IMPORTANT:** A CFN must be disabled first before it can be deleted.
 
-    To re-enable, the CFN should call POST /register again (IoT-style registration).
+    Deleting a CFN marks it as deleted in the database.
+    After deletion, the CFN ID can be reused to create a new CFN node.
+
+    **Flow:**
+    1. User clicks "Disable" in UI → CFN is disabled (PATCH /disable)
+    2. "Delete" button appears in UI
+    3. User clicks "Delete" → CFN is deleted (DELETE)
+    4. CFN ID is now available for reuse
+
     No response body (204 No Content).
     """
-    require_workspace_write_access(workspace_id, auth_user)
-    cognitive_fabric_node_service.deregister(workspace_id, cfn_id, auth_user["id"])
+    check_workspace_exists(workspace_id)
+    authz_service.require_permission(auth_user, "delete", "cognitive_fabric_node")
+    cognitive_fabric_node_service.delete(workspace_id, cfn_id, auth_user["id"])
     return None
 
 
@@ -165,7 +206,8 @@ def cfn_heartbeat(
     Note: This endpoint requires authentication but not write access.
     Disabled or de-registered nodes will receive 403 Forbidden.
     """
-    require_workspace_read_access(workspace_id, auth_user)
+    check_workspace_exists(workspace_id)
+    authz_service.require_permission(auth_user, "heartbeat", "cognitive_fabric_node")
     return cognitive_fabric_node_service.heartbeat(workspace_id, cfn_id)
 
 
@@ -186,7 +228,8 @@ def list_cfn_nodes(
 
     Returns a list of CFN nodes with summary information and total count.
     """
-    require_workspace_read_access(workspace_id, auth_user)
+    check_workspace_exists(workspace_id)
+    authz_service.require_permission(auth_user, "list", "cognitive_fabric_node")
     return cognitive_fabric_node_service.list(workspace_id, status)
 
 
@@ -207,5 +250,6 @@ def get_cfn_node(
 
     Returns full CFN details including configuration, status, and timestamps.
     """
-    require_workspace_read_access(workspace_id, auth_user)
+    check_workspace_exists(workspace_id)
+    authz_service.require_permission(auth_user, "get", "cognitive_fabric_node")
     return cognitive_fabric_node_service.get(workspace_id, cfn_id)

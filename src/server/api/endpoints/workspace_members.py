@@ -80,6 +80,7 @@ def remove_member(
 
     # Prevent removing the workspace creator
     from server.services.workspace import workspace_service
+
     workspace = workspace_service.get(workspace_id)
     if workspace.created_by == user_id:
         raise HTTPException(

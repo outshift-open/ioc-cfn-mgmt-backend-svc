@@ -10,60 +10,18 @@ from server.schemas.multi_agentic_system import (
     MultiAgenticSystemUpdate,
 )
 from server.services import multi_agentic_system_service
-from server.services.workspace_member import workspace_member_service
 
 router = APIRouter()
 
 
-def require_workspace_read_access(workspace_id: str, auth_user: dict) -> None:
-    """Check if user has read access to workspace (admin or viewer)"""
+def check_workspace_exists(workspace_id: str) -> None:
+    """Check if workspace exists, raise 404 if not"""
     from server.services.workspace import workspace_service
 
-    # Check if workspace exists first
     if not workspace_service.exists(workspace_id):
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Workspace not found",
-        )
-
-    user_role = auth_user.get("role")
-
-    # Super admins have access to all workspaces
-    if user_role == "super_admin":
-        return
-
-    # Check workspace membership - must be admin or viewer
-    member_role = workspace_member_service.get_member_role(workspace_id, auth_user["id"])
-    if member_role not in ["admin", "viewer"]:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Access denied: You must be a workspace admin or viewer",
-        )
-
-
-def require_workspace_write_access(workspace_id: str, auth_user: dict) -> None:
-    """Check if user has write access to workspace (admin only)"""
-    from server.services.workspace import workspace_service
-
-    # Check if workspace exists first
-    if not workspace_service.exists(workspace_id):
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Workspace not found",
-        )
-
-    user_role = auth_user.get("role")
-
-    # Super admins have access to all workspaces
-    if user_role == "super_admin":
-        return
-
-    # Check workspace membership - must be admin
-    member_role = workspace_member_service.get_member_role(workspace_id, auth_user["id"])
-    if member_role != "admin":
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Access denied: You must be a workspace admin",
         )
 
 
@@ -88,7 +46,8 @@ def create_multi_agentic_system(
 
     Returns the UUID and name of the created MAS
     """
-    require_workspace_write_access(workspace_id, auth_user)
+    check_workspace_exists(workspace_id)
+    authz_service.require_permission(auth_user, "create", "multi_agentic_system")
     return multi_agentic_system_service.create(workspace_id, mas_data)
 
 
@@ -107,7 +66,8 @@ def list_multi_agentic_systems(
 
     Returns list of MAS in the workspace
     """
-    require_workspace_read_access(workspace_id, auth_user)
+    check_workspace_exists(workspace_id)
+    authz_service.require_permission(auth_user, "list", "multi_agentic_system")
     return multi_agentic_system_service.list(workspace_id)
 
 
@@ -128,7 +88,8 @@ def get_multi_agentic_system(
 
     Returns detailed MAS information
     """
-    require_workspace_read_access(workspace_id, auth_user)
+    check_workspace_exists(workspace_id)
+    authz_service.require_permission(auth_user, "get", "multi_agentic_system")
     return multi_agentic_system_service.get(workspace_id, mas_id)
 
 
@@ -154,7 +115,8 @@ def update_multi_agentic_system(
 
     Returns the updated MAS details
     """
-    require_workspace_write_access(workspace_id, auth_user)
+    check_workspace_exists(workspace_id)
+    authz_service.require_permission(auth_user, "update", "multi_agentic_system")
     return multi_agentic_system_service.update(workspace_id, mas_id, mas_data)
 
 
@@ -177,6 +139,7 @@ def delete_multi_agentic_system(
 
     Returns success message
     """
-    require_workspace_write_access(workspace_id, auth_user)
+    check_workspace_exists(workspace_id)
+    authz_service.require_permission(auth_user, "delete", "multi_agentic_system")
     multi_agentic_system_service.delete(workspace_id, mas_id, _purge)
     return None

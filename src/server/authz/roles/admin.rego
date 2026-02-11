@@ -6,6 +6,8 @@ import data.authz.operations.users
 import data.authz.operations.api_keys
 import data.authz.operations.softwares
 import data.authz.operations.iam
+import data.authz.operations.cognitive_fabric_node
+import data.authz.operations.multi_agentic_system
 
 # Admin role permissions - full access to all operations
 allow if {
@@ -36,4 +38,16 @@ allow if {
 	input.user.role == "admin"
 	input.resource == "iam"
 	input.operation in iam.admin
+}
+
+allow if {
+	input.user.role == "admin"
+	input.resource == "cognitive_fabric_node"
+	input.operation in cognitive_fabric_node.admin
+}
+
+allow if {
+	input.user.role == "admin"
+	input.resource == "multi_agentic_system"
+	input.operation in multi_agentic_system.admin
 }

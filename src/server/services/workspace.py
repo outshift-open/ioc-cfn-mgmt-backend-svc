@@ -120,7 +120,9 @@ class WorkspaceService:
         # Delete multi-agentic systems
         session.query(MASModel).filter(MASModel.workspace_id == workspace_id).delete(synchronize_session=False)
 
-    def create(self, workspace_data: WorkspaceCreate, creator_user_id: str, workspace_id: str = None) -> WorkspaceResponse:
+    def create(
+        self, workspace_data: WorkspaceCreate, creator_user_id: str, workspace_id: str = None
+    ) -> WorkspaceResponse:
         """Create a new workspace
 
         Args:

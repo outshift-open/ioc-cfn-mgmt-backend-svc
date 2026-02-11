@@ -7,10 +7,10 @@ import pytest
 from fastapi.testclient import TestClient
 
 
-class TestCognitiveFabricNodeRegistration:
+class TestCognitiveFabricNodeCreate:
     """Test cases for Cognitive Fabric Node registration"""
 
-    def test_register_cfn_success(self, client):
+    def test_create_cfn_success(self, client):
         """Test successful CFN registration"""
         # First create a workspace
         ws_response = client.post("/api/workspaces", json={"name": "Test Workspace"})
@@ -24,7 +24,7 @@ class TestCognitiveFabricNodeRegistration:
             "cfn_config": {"memory": "4GB", "max_connections": 100},
         }
 
-        response = client.post(f"/api/workspaces/{workspace_id}/cognitive-fabric-node/register", json=cfn_data)
+        response = client.post(f"/api/workspaces/{workspace_id}/cognitive-fabric-node", json=cfn_data)
 
         assert response.status_code == 201
         data = response.json()
@@ -40,42 +40,43 @@ class TestCognitiveFabricNodeRegistration:
         assert heartbeat_response.status_code == 200
         assert heartbeat_response.json()["status"] == "online"
 
-    def test_register_cfn_duplicate_id(self, client):
-        """Test registering CFN with duplicate cfn_id"""
+    def test_create_cfn_duplicate_id(self, client):
+        """Test creating CFN with same cfn_id refreshes config (reboot scenario)"""
         ws_response = client.post("/api/workspaces", json={"name": "Test Workspace"})
         workspace_id = ws_response.json()["id"]
 
         cfn_data = {"cfn_id": "cfn-duplicate-123", "cfn_name": "test-cfn-1"}
 
-        # First registration
-        response1 = client.post(f"/api/workspaces/{workspace_id}/cognitive-fabric-node/register", json=cfn_data)
+        # First creation
+        response1 = client.post(f"/api/workspaces/{workspace_id}/cognitive-fabric-node", json=cfn_data)
         assert response1.status_code == 201
 
-        # Second registration with same cfn_id
-        response2 = client.post(f"/api/workspaces/{workspace_id}/cognitive-fabric-node/register", json=cfn_data)
-        assert response2.status_code == 409  # Conflict
+        # Second registration with same cfn_id (reboot scenario - refreshes config)
+        response2 = client.post(f"/api/workspaces/{workspace_id}/cognitive-fabric-node", json=cfn_data)
+        assert response2.status_code == 201  # Refresh succeeds
+        assert response2.json()["status"] == "offline"  # Back to offline after refresh
 
-    def test_register_cfn_duplicate_name_same_workspace(self, client):
-        """Test registering CFN with duplicate name in same workspace"""
+    def test_create_cfn_duplicate_name_same_workspace(self, client):
+        """Test creating CFN with duplicate name in same workspace"""
         ws_response = client.post("/api/workspaces", json={"name": "Test Workspace"})
         workspace_id = ws_response.json()["id"]
 
         # First CFN
         response1 = client.post(
-            f"/api/workspaces/{workspace_id}/cognitive-fabric-node/register",
+            f"/api/workspaces/{workspace_id}/cognitive-fabric-node",
             json={"cfn_id": "cfn-1", "cfn_name": "duplicate-name"},
         )
         assert response1.status_code == 201
 
         # Second CFN with different ID but same name
         response2 = client.post(
-            f"/api/workspaces/{workspace_id}/cognitive-fabric-node/register",
+            f"/api/workspaces/{workspace_id}/cognitive-fabric-node",
             json={"cfn_id": "cfn-2", "cfn_name": "duplicate-name"},
         )
         assert response2.status_code == 409  # Conflict
 
-    def test_register_cfn_same_name_different_workspaces(self, client):
-        """Test registering CFN with same name in different workspaces (should succeed)"""
+    def test_create_cfn_same_name_different_workspaces(self, client):
+        """Test creating CFN with same name in different workspaces (should succeed)"""
         # Create two workspaces
         ws1_response = client.post("/api/workspaces", json={"name": "Workspace 1"})
         ws2_response = client.post("/api/workspaces", json={"name": "Workspace 2"})
@@ -84,22 +85,22 @@ class TestCognitiveFabricNodeRegistration:
 
         # Register CFN in workspace 1
         response1 = client.post(
-            f"/api/workspaces/{ws1_id}/cognitive-fabric-node/register",
+            f"/api/workspaces/{ws1_id}/cognitive-fabric-node",
             json={"cfn_id": "cfn-ws1", "cfn_name": "shared-name"},
         )
         assert response1.status_code == 201
 
         # Register CFN with same name in workspace 2 (should succeed)
         response2 = client.post(
-            f"/api/workspaces/{ws2_id}/cognitive-fabric-node/register",
+            f"/api/workspaces/{ws2_id}/cognitive-fabric-node",
             json={"cfn_id": "cfn-ws2", "cfn_name": "shared-name"},
         )
         assert response2.status_code == 201
 
-    def test_register_cfn_nonexistent_workspace(self, client):
-        """Test registering CFN in non-existent workspace"""
+    def test_create_cfn_nonexistent_workspace(self, client):
+        """Test creating CFN in non-existent workspace"""
         response = client.post(
-            "/api/workspaces/nonexistent-workspace-id/cognitive-fabric-node/register",
+            "/api/workspaces/nonexistent-workspace-id/cognitive-fabric-node",
             json={"cfn_id": "cfn-test", "cfn_name": "test"},
         )
         assert response.status_code == 404
@@ -108,9 +109,9 @@ class TestCognitiveFabricNodeRegistration:
 class TestCognitiveFabricNodeHeartbeat:
     """Test cases for Cognitive Fabric Node heartbeat"""
 
-    def test_cfn_heartbeat_success(self, client, registered_cfn):
+    def test_cfn_heartbeat_success(self, client, created_cfn):
         """Test successful CFN heartbeat"""
-        workspace_id, cfn_id = registered_cfn
+        workspace_id, cfn_id = created_cfn
 
         response = client.put(f"/api/workspaces/{workspace_id}/cognitive-fabric-node/{cfn_id}/heartbeat")
 
@@ -119,17 +120,18 @@ class TestCognitiveFabricNodeHeartbeat:
         assert data["status"] == "online"
         assert "last_seen" in data
 
-    def test_cfn_heartbeat_after_deregistration(self, client, registered_cfn):
-        """Test heartbeat after CFN is de-registered (should fail)"""
-        workspace_id, cfn_id = registered_cfn
+    def test_cfn_heartbeat_after_disable(self, client, created_cfn):
+        """Test heartbeat after CFN is disabled (should fail)"""
+        workspace_id, cfn_id = created_cfn
 
-        # De-register CFN
-        delete_response = client.delete(f"/api/workspaces/{workspace_id}/cognitive-fabric-node/{cfn_id}")
-        assert delete_response.status_code == 204
+        # Disable CFN
+        disable_response = client.patch(f"/api/workspaces/{workspace_id}/cognitive-fabric-node/{cfn_id}/disable")
+        assert disable_response.status_code == 200
 
         # Try heartbeat (should fail)
         response = client.put(f"/api/workspaces/{workspace_id}/cognitive-fabric-node/{cfn_id}/heartbeat")
         assert response.status_code == 403
+        assert "disabled" in response.json()["detail"]
 
     def test_cfn_heartbeat_nonexistent_node(self, client):
         """Test heartbeat for non-existent CFN"""
@@ -177,9 +179,9 @@ class TestCognitiveFabricNodeList:
             assert "enabled" in node
             assert "created_at" in node
 
-    def test_list_cfn_nodes_with_status_filter(self, client, registered_cfn):
+    def test_list_cfn_nodes_with_status_filter(self, client, created_cfn):
         """Test listing CFN nodes with status filter"""
-        workspace_id, _ = registered_cfn
+        workspace_id, _ = created_cfn
 
         # List online nodes
         response = client.get(f"/api/workspaces/{workspace_id}/cognitive-fabric-node?status=online")
@@ -200,7 +202,7 @@ class TestCognitiveFabricNodeList:
 
         # Register CFN in ws1
         client.post(
-            f"/api/workspaces/{ws1_id}/cognitive-fabric-node/register",
+            f"/api/workspaces/{ws1_id}/cognitive-fabric-node",
             json={"cfn_id": "cfn-ws1", "cfn_name": "cfn-1"},
         )
 
@@ -213,9 +215,9 @@ class TestCognitiveFabricNodeList:
 class TestCognitiveFabricNodeGet:
     """Test cases for getting Cognitive Fabric Node details"""
 
-    def test_get_cfn_details(self, client, registered_cfn):
+    def test_get_cfn_details(self, client, created_cfn):
         """Test getting CFN node details"""
-        workspace_id, cfn_id = registered_cfn
+        workspace_id, cfn_id = created_cfn
 
         response = client.get(f"/api/workspaces/{workspace_id}/cognitive-fabric-node/{cfn_id}")
 
@@ -239,9 +241,9 @@ class TestCognitiveFabricNodeGet:
         response = client.get(f"/api/workspaces/{workspace_id}/cognitive-fabric-node/nonexistent-cfn")
         assert response.status_code == 404
 
-    def test_get_cfn_wrong_workspace(self, client, registered_cfn):
+    def test_get_cfn_wrong_workspace(self, client, created_cfn):
         """Test getting CFN from wrong workspace"""
-        _, cfn_id = registered_cfn
+        _, cfn_id = created_cfn
 
         # Create different workspace
         ws2_response = client.post("/api/workspaces", json={"name": "Workspace 2"})
@@ -255,9 +257,9 @@ class TestCognitiveFabricNodeGet:
 class TestCognitiveFabricNodeUpdate:
     """Test cases for updating Cognitive Fabric Node"""
 
-    def test_update_cfn_name(self, client, registered_cfn):
+    def test_update_cfn_name(self, client, created_cfn):
         """Test updating CFN name"""
-        workspace_id, cfn_id = registered_cfn
+        workspace_id, cfn_id = created_cfn
 
         update_data = {"cfn_name": "updated-cfn-name"}
 
@@ -270,9 +272,9 @@ class TestCognitiveFabricNodeUpdate:
         data = response.json()
         assert data["cfn_name"] == "updated-cfn-name"
 
-    def test_update_cfn_config(self, client, registered_cfn):
+    def test_update_cfn_config(self, client, created_cfn):
         """Test updating CFN config"""
-        workspace_id, cfn_id = registered_cfn
+        workspace_id, cfn_id = created_cfn
 
         update_data = {"cfn_config": {"memory": "8GB", "max_connections": 200}}
 
@@ -314,156 +316,279 @@ class TestCognitiveFabricNodeUpdate:
         assert response.status_code == 404
 
 
-class TestCognitiveFabricNodeDeregistration:
-    """Test cases for Cognitive Fabric Node de-registration"""
+class TestCognitiveFabricNodeDisable:
+    """Test cases for Cognitive Fabric Node disable operation"""
 
-    def test_deregister_cfn(self, client, registered_cfn):
-        """Test de-registering CFN node"""
-        workspace_id, cfn_id = registered_cfn
+    def test_disable_cfn(self, client, created_cfn):
+        """Test disabling CFN node"""
+        workspace_id, cfn_id = created_cfn
 
-        response = client.delete(f"/api/workspaces/{workspace_id}/cognitive-fabric-node/{cfn_id}")
+        response = client.patch(f"/api/workspaces/{workspace_id}/cognitive-fabric-node/{cfn_id}/disable")
 
-        assert response.status_code == 204
+        assert response.status_code == 200
+        data = response.json()
+        assert data["enabled"] is False
+        assert data["cfn_id"] == cfn_id
 
         # Verify CFN no longer appears in list
         list_response = client.get(f"/api/workspaces/{workspace_id}/cognitive-fabric-node")
         assert list_response.json()["total"] == 0
 
-    def test_deregister_cfn_twice(self, client, registered_cfn):
-        """Test de-registering CFN twice (should fail second time)"""
-        workspace_id, cfn_id = registered_cfn
+    def test_disable_cfn_twice(self, client, created_cfn):
+        """Test disabling CFN twice (should fail second time)"""
+        workspace_id, cfn_id = created_cfn
 
-        # First de-registration
+        # First disable
+        response1 = client.patch(f"/api/workspaces/{workspace_id}/cognitive-fabric-node/{cfn_id}/disable")
+        assert response1.status_code == 200
+
+        # Second disable (should fail - already disabled)
+        response2 = client.patch(f"/api/workspaces/{workspace_id}/cognitive-fabric-node/{cfn_id}/disable")
+        assert response2.status_code == 400
+        assert "already disabled" in response2.json()["detail"]
+
+    def test_disable_cfn_nonexistent(self, client):
+        """Test disabling non-existent CFN"""
+        ws_response = client.post("/api/workspaces", json={"name": "Test Workspace"})
+        workspace_id = ws_response.json()["id"]
+
+        response = client.patch(f"/api/workspaces/{workspace_id}/cognitive-fabric-node/nonexistent-cfn/disable")
+        assert response.status_code == 404
+
+
+class TestCognitiveFabricNodeDelete:
+    """Test cases for Cognitive Fabric Node deregistration (hard delete)"""
+
+    def test_delete_cfn(self, client, created_cfn):
+        """Test deregistering CFN node (must disable first)"""
+        workspace_id, cfn_id = created_cfn
+
+        # Try to deregister without disabling first (should fail)
+        response1 = client.delete(f"/api/workspaces/{workspace_id}/cognitive-fabric-node/{cfn_id}")
+        assert response1.status_code == 400
+        assert "must be disabled" in response1.json()["detail"]
+
+        # Disable first
+        client.patch(f"/api/workspaces/{workspace_id}/cognitive-fabric-node/{cfn_id}/disable")
+
+        # Now deregister (should succeed)
+        response2 = client.delete(f"/api/workspaces/{workspace_id}/cognitive-fabric-node/{cfn_id}")
+        assert response2.status_code == 204
+
+        # Verify CFN no longer appears in list
+        list_response = client.get(f"/api/workspaces/{workspace_id}/cognitive-fabric-node")
+        assert list_response.json()["total"] == 0
+
+    def test_delete_cfn_twice(self, client, created_cfn):
+        """Test deregistering CFN twice (should fail second time)"""
+        workspace_id, cfn_id = created_cfn
+
+        # Disable first
+        client.patch(f"/api/workspaces/{workspace_id}/cognitive-fabric-node/{cfn_id}/disable")
+
+        # First deregistration
         response1 = client.delete(f"/api/workspaces/{workspace_id}/cognitive-fabric-node/{cfn_id}")
         assert response1.status_code == 204
 
-        # Second de-registration (should fail)
+        # Second deregistration (should fail - not found)
         response2 = client.delete(f"/api/workspaces/{workspace_id}/cognitive-fabric-node/{cfn_id}")
         assert response2.status_code == 404
 
-    def test_deregister_cfn_nonexistent(self, client):
-        """Test de-registering non-existent CFN"""
+    def test_delete_cfn_nonexistent(self, client):
+        """Test deregistering non-existent CFN"""
         ws_response = client.post("/api/workspaces", json={"name": "Test Workspace"})
         workspace_id = ws_response.json()["id"]
 
         response = client.delete(f"/api/workspaces/{workspace_id}/cognitive-fabric-node/nonexistent-cfn")
         assert response.status_code == 404
 
+    def test_delete_allows_id_reuse(self, client):
+        """Test that deregistered CFN ID can be reused"""
+        ws_response = client.post("/api/workspaces", json={"name": "Test Workspace"})
+        workspace_id = ws_response.json()["id"]
 
-class TestCognitiveFabricNodeReregistration:
-    """Test cases for Cognitive Fabric Node re-registration"""
+        cfn_data = {"cfn_id": "cfn-reuse-test", "cfn_name": "test-node-1"}
 
-    def test_reregister_cfn_after_deregistration(self, client):
-        """Test re-registering a CFN after it was de-registered"""
+        # Register CFN
+        response1 = client.post(f"/api/workspaces/{workspace_id}/cognitive-fabric-node", json=cfn_data)
+        assert response1.status_code == 201
+
+        # Disable CFN
+        client.patch(f"/api/workspaces/{workspace_id}/cognitive-fabric-node/cfn-reuse-test/disable")
+
+        # Deregister CFN
+        client.delete(f"/api/workspaces/{workspace_id}/cognitive-fabric-node/cfn-reuse-test")
+
+        # Register new CFN with same ID (should succeed - ID can be reused)
+        new_cfn_data = {"cfn_id": "cfn-reuse-test", "cfn_name": "test-node-2"}
+        response2 = client.post(f"/api/workspaces/{workspace_id}/cognitive-fabric-node", json=new_cfn_data)
+        assert response2.status_code == 201
+        assert response2.json()["cfn_name"] == "test-node-2"
+
+
+class TestCognitiveFabricNodeEnableDisable:
+    """Test cases for Cognitive Fabric Node enable/disable operations"""
+
+    def test_disabled_cfn_cannot_auto_reenable(self, client):
+        """Test that disabled CFN CANNOT auto re-enable via /register"""
         # Create workspace
         ws_response = client.post("/api/workspaces", json={"name": "Test Workspace"})
         workspace_id = ws_response.json()["id"]
 
-        # Initial registration
+        # Initial creation
         cfn_data = {
-            "cfn_id": "cfn-reregister-test",
+            "cfn_id": "cfn-disable-test",
             "cfn_name": "test-node",
             "cfn_config": {"memory": "4GB"},
         }
-        response1 = client.post(f"/api/workspaces/{workspace_id}/cognitive-fabric-node/register", json=cfn_data)
+        response1 = client.post(f"/api/workspaces/{workspace_id}/cognitive-fabric-node", json=cfn_data)
         assert response1.status_code == 201
         assert response1.json()["status"] == "offline"  # Starts offline
 
-        # De-register
-        response2 = client.delete(f"/api/workspaces/{workspace_id}/cognitive-fabric-node/cfn-reregister-test")
-        assert response2.status_code == 204
+        # Disable
+        response2 = client.patch(f"/api/workspaces/{workspace_id}/cognitive-fabric-node/cfn-disable-test/disable")
+        assert response2.status_code == 200
 
         # Verify it's not in the list
         list_response = client.get(f"/api/workspaces/{workspace_id}/cognitive-fabric-node")
         assert list_response.json()["total"] == 0
 
-        # Re-register with updated config using the new endpoint
+        # Attempt to re-register (should fail - disabled CFN cannot auto re-enable)
         updated_cfn_data = {
-            "cfn_id": "cfn-reregister-test",
+            "cfn_id": "cfn-disable-test",
             "cfn_name": "test-node-updated",
             "cfn_config": {"memory": "8GB"},
         }
         response3 = client.post(
-            f"/api/workspaces/{workspace_id}/cognitive-fabric-node/register",
+            f"/api/workspaces/{workspace_id}/cognitive-fabric-node",
             json=updated_cfn_data,
         )
-        assert response3.status_code == 201
-        data = response3.json()
-        assert data["cfn_id"] == "cfn-reregister-test"
-        assert data["cfn_name"] == "test-node-updated"
-        assert data["status"] == "offline"  # Re-registration also starts offline
-        assert "cloud_config" in data
+        assert response3.status_code == 403
+        assert "disabled" in response3.json()["detail"].lower()
 
-        # Verify it's back in the list
+        # Verify it's still NOT in the list
         list_response = client.get(f"/api/workspaces/{workspace_id}/cognitive-fabric-node")
-        assert list_response.json()["total"] == 1
+        assert list_response.json()["total"] == 0
 
-        # Send heartbeat to make it online
-        heartbeat_response = client.put(f"/api/workspaces/{workspace_id}/cognitive-fabric-node/cfn-reregister-test/heartbeat")
-        assert heartbeat_response.status_code == 200
-        assert heartbeat_response.json()["status"] == "online"
-
-        # Verify updated details
-        detail_response = client.get(f"/api/workspaces/{workspace_id}/cognitive-fabric-node/cfn-reregister-test")
-        assert detail_response.status_code == 200
-        detail = detail_response.json()
-        assert detail["cfn_name"] == "test-node-updated"
-        assert detail["cfn_config"]["memory"] == "8GB"
-        assert detail["enabled"] is True
-        assert detail["status"] == "online"  # Now online after heartbeat
-
-    def test_reregister_cfn_with_same_config(self, client):
-        """Test re-registering a CFN with the same configuration"""
+    def test_enable_disabled_cfn(self, client):
+        """Test manually re-enabling a disabled CFN via /enable endpoint"""
+        # Create workspace
         ws_response = client.post("/api/workspaces", json={"name": "Test Workspace"})
         workspace_id = ws_response.json()["id"]
 
-        cfn_data = {"cfn_id": "cfn-same-config", "cfn_name": "same-config-node"}
-
-        # Register
-        response1 = client.post(f"/api/workspaces/{workspace_id}/cognitive-fabric-node/register", json=cfn_data)
+        # Initial creation
+        cfn_data = {
+            "cfn_id": "cfn-enable-test",
+            "cfn_name": "test-node",
+            "cfn_config": {"memory": "4GB"},
+        }
+        response1 = client.post(f"/api/workspaces/{workspace_id}/cognitive-fabric-node", json=cfn_data)
         assert response1.status_code == 201
 
-        # De-register
-        client.delete(f"/api/workspaces/{workspace_id}/cognitive-fabric-node/cfn-same-config")
+        # Disable
+        response2 = client.patch(f"/api/workspaces/{workspace_id}/cognitive-fabric-node/cfn-enable-test/disable")
+        assert response2.status_code == 200
 
-        # Re-register with same config using the reregister endpoint
-        response2 = client.post(
-            f"/api/workspaces/{workspace_id}/cognitive-fabric-node/register", json=cfn_data
+        # Manually re-enable via PATCH /enable
+        response3 = client.patch(f"/api/workspaces/{workspace_id}/cognitive-fabric-node/cfn-enable-test/enable")
+        assert response3.status_code == 200
+        data = response3.json()
+        assert data["enabled"] is True
+        assert data["status"] == "offline"  # Offline until heartbeat
+
+        # Now CFN can register and reconnect
+        updated_cfn_data = {
+            "cfn_id": "cfn-enable-test",
+            "cfn_name": "test-node-updated",
+            "cfn_config": {"memory": "8GB"},
+        }
+        response4 = client.post(
+            f"/api/workspaces/{workspace_id}/cognitive-fabric-node",
+            json=updated_cfn_data,
         )
-        assert response2.status_code == 201
-        assert response2.json()["cfn_id"] == "cfn-same-config"
-        assert response2.json()["status"] == "offline"  # Re-registration starts offline
+        assert response4.status_code == 201
+        assert response4.json()["cfn_name"] == "test-node-updated"
 
-    def test_reregister_cfn_name_conflict(self, client):
-        """Test re-registering a CFN when another CFN already has the desired name"""
+        # Send heartbeat to go online
+        heartbeat_response = client.put(f"/api/workspaces/{workspace_id}/cognitive-fabric-node/cfn-enable-test/heartbeat")
+        assert heartbeat_response.status_code == 200
+        assert heartbeat_response.json()["status"] == "online"
+
+    def test_active_cfn_reconnection(self, client):
+        """Test active CFN reconnecting (reboot scenario) - should refresh config"""
+        # Create workspace
+        ws_response = client.post("/api/workspaces", json={"name": "Test Workspace"})
+        workspace_id = ws_response.json()["id"]
+
+        # Initial creation
+        cfn_data = {
+            "cfn_id": "cfn-reboot-test",
+            "cfn_name": "test-node",
+            "cfn_config": {"memory": "4GB"},
+        }
+        response1 = client.post(f"/api/workspaces/{workspace_id}/cognitive-fabric-node", json=cfn_data)
+        assert response1.status_code == 201
+        assert response1.json()["status"] == "offline"
+
+        # Send heartbeat to go online
+        heartbeat1 = client.put(f"/api/workspaces/{workspace_id}/cognitive-fabric-node/cfn-reboot-test/heartbeat")
+        assert heartbeat1.status_code == 200
+        assert heartbeat1.json()["status"] == "online"
+
+        # Simulate reboot - CFN calls /register again (while still enabled=true, status=online)
+        updated_cfn_data = {
+            "cfn_id": "cfn-reboot-test",
+            "cfn_name": "test-node-rebooted",
+            "cfn_config": {"memory": "8GB"},
+        }
+        response2 = client.post(
+            f"/api/workspaces/{workspace_id}/cognitive-fabric-node",
+            json=updated_cfn_data,
+        )
+        # Should succeed with 200 OK (refresh), not 403 or 409
+        assert response2.status_code == 201  # Currently returns 201 for both new and refresh
+        assert response2.json()["cfn_name"] == "test-node-rebooted"
+        assert response2.json()["status"] == "offline"  # Back to offline after reboot
+
+        # Send heartbeat again to go back online
+        heartbeat2 = client.put(f"/api/workspaces/{workspace_id}/cognitive-fabric-node/cfn-reboot-test/heartbeat")
+        assert heartbeat2.status_code == 200
+        assert heartbeat2.json()["status"] == "online"
+
+        # Verify updated config
+        detail_response = client.get(f"/api/workspaces/{workspace_id}/cognitive-fabric-node/cfn-reboot-test")
+        assert detail_response.status_code == 200
+        detail = detail_response.json()
+        assert detail["cfn_name"] == "test-node-rebooted"
+        assert detail["cfn_config"]["memory"] == "8GB"
+
+    def test_active_cfn_name_conflict(self, client):
+        """Test active CFN trying to reconnect with a name that conflicts"""
         ws_response = client.post("/api/workspaces", json={"name": "Test Workspace"})
         workspace_id = ws_response.json()["id"]
 
         # Register first CFN
         client.post(
-            f"/api/workspaces/{workspace_id}/cognitive-fabric-node/register",
+            f"/api/workspaces/{workspace_id}/cognitive-fabric-node",
             json={"cfn_id": "cfn-first", "cfn_name": "first-node"},
         )
 
-        # Register second CFN
+        # Register second CFN (online and active)
         client.post(
-            f"/api/workspaces/{workspace_id}/cognitive-fabric-node/register",
+            f"/api/workspaces/{workspace_id}/cognitive-fabric-node",
             json={"cfn_id": "cfn-second", "cfn_name": "second-node"},
         )
 
-        # De-register second CFN
-        client.delete(f"/api/workspaces/{workspace_id}/cognitive-fabric-node/cfn-second")
-
-        # Try to re-register second CFN with first CFN's name (should fail)
+        # Second CFN tries to reconnect (reboot) with first CFN's name (should fail - name conflict)
         response = client.post(
-            f"/api/workspaces/{workspace_id}/cognitive-fabric-node/register",
+            f"/api/workspaces/{workspace_id}/cognitive-fabric-node",
             json={"cfn_id": "cfn-second", "cfn_name": "first-node"},
         )
         assert response.status_code == 409
         assert "already exists" in response.json()["detail"]
 
-    def test_reregister_cfn_different_workspace(self, client):
-        """Test re-registering a CFN in a different workspace (should fail)"""
+    def test_disabled_cfn_different_workspace(self, client):
+        """Test that disabled CFN cannot register in a different workspace"""
         # Create two workspaces
         ws1_response = client.post("/api/workspaces", json={"name": "Workspace 1"})
         ws2_response = client.post("/api/workspaces", json={"name": "Workspace 2"})
@@ -472,87 +597,100 @@ class TestCognitiveFabricNodeReregistration:
 
         # Register CFN in workspace 1
         cfn_data = {"cfn_id": "cfn-workspace-test", "cfn_name": "test-node"}
-        response1 = client.post(f"/api/workspaces/{ws1_id}/cognitive-fabric-node/register", json=cfn_data)
+        response1 = client.post(f"/api/workspaces/{ws1_id}/cognitive-fabric-node", json=cfn_data)
         assert response1.status_code == 201
 
-        # De-register from workspace 1
-        client.delete(f"/api/workspaces/{ws1_id}/cognitive-fabric-node/cfn-workspace-test")
+        # Disable CFN in workspace 1
+        client.patch(f"/api/workspaces/{ws1_id}/cognitive-fabric-node/cfn-workspace-test/disable")
 
-        # Try to re-register in workspace 2 (should fail)
+        # Try to register in workspace 2 (should fail - CFN is disabled)
+        # Note: Disabled check happens before workspace check
         response2 = client.post(
-            f"/api/workspaces/{ws2_id}/cognitive-fabric-node/register", json=cfn_data
+            f"/api/workspaces/{ws2_id}/cognitive-fabric-node", json=cfn_data
         )
         assert response2.status_code == 403
-        assert "different workspace" in response2.json()["detail"]
+        assert "disabled" in response2.json()["detail"].lower()
 
-    def test_reregister_cfn_heartbeat_works(self, client):
-        """Test that heartbeat works after re-registration"""
+    def test_full_enable_disable_cycle(self, client):
+        """Test full cycle: register → disable → enable → re-register → heartbeat"""
         ws_response = client.post("/api/workspaces", json={"name": "Test Workspace"})
         workspace_id = ws_response.json()["id"]
 
-        cfn_data = {"cfn_id": "cfn-heartbeat-test", "cfn_name": "heartbeat-node"}
+        cfn_data = {"cfn_id": "cfn-cycle-test", "cfn_name": "cycle-node"}
 
-        # Register
-        client.post(f"/api/workspaces/{workspace_id}/cognitive-fabric-node/register", json=cfn_data)
+        # Create
+        client.post(f"/api/workspaces/{workspace_id}/cognitive-fabric-node", json=cfn_data)
 
-        # De-register
-        client.delete(f"/api/workspaces/{workspace_id}/cognitive-fabric-node/cfn-heartbeat-test")
+        # Disable
+        client.patch(f"/api/workspaces/{workspace_id}/cognitive-fabric-node/cfn-cycle-test/disable")
 
-        # Re-register using the reregister endpoint
+        # Manually enable
+        client.patch(f"/api/workspaces/{workspace_id}/cognitive-fabric-node/cfn-cycle-test/enable")
+
+        # Re-register (CFN reconnects)
         client.post(
-            f"/api/workspaces/{workspace_id}/cognitive-fabric-node/register", json=cfn_data
+            f"/api/workspaces/{workspace_id}/cognitive-fabric-node", json=cfn_data
         )
 
-        # Send heartbeat (should work)
+        # Send heartbeat (should work now)
         heartbeat_response = client.put(
-            f"/api/workspaces/{workspace_id}/cognitive-fabric-node/cfn-heartbeat-test/heartbeat"
+            f"/api/workspaces/{workspace_id}/cognitive-fabric-node/cfn-cycle-test/heartbeat"
         )
         assert heartbeat_response.status_code == 200
         assert heartbeat_response.json()["status"] == "online"
 
-    def test_disabled_cfn_cannot_heartbeat_until_reregistered(self, client):
-        """Test that a de-registered (disabled) CFN cannot send heartbeats until re-registered"""
+    def test_disabled_cfn_cannot_heartbeat(self, client):
+        """Test that a deleted (disabled) CFN cannot send heartbeats"""
         ws_response = client.post("/api/workspaces", json={"name": "Test Workspace"})
         workspace_id = ws_response.json()["id"]
 
         cfn_data = {"cfn_id": "cfn-disabled-test", "cfn_name": "disabled-node"}
 
-        # Register
-        client.post(f"/api/workspaces/{workspace_id}/cognitive-fabric-node/register", json=cfn_data)
+        # Create
+        client.post(f"/api/workspaces/{workspace_id}/cognitive-fabric-node", json=cfn_data)
 
-        # De-register
-        client.delete(f"/api/workspaces/{workspace_id}/cognitive-fabric-node/cfn-disabled-test")
+        # Disable
+        client.patch(f"/api/workspaces/{workspace_id}/cognitive-fabric-node/cfn-disabled-test/disable")
 
         # Try to send heartbeat (should fail - disabled)
         heartbeat_response = client.put(f"/api/workspaces/{workspace_id}/cognitive-fabric-node/cfn-disabled-test/heartbeat")
         assert heartbeat_response.status_code == 403
         assert "disabled" in heartbeat_response.json()["detail"]
 
-        # Re-register using the reregister endpoint
-        client.post(f"/api/workspaces/{workspace_id}/cognitive-fabric-node/register", json=cfn_data)
+        # Try to re-register (should fail - disabled CFN cannot auto re-enable)
+        response = client.post(f"/api/workspaces/{workspace_id}/cognitive-fabric-node", json=cfn_data)
+        assert response.status_code == 403
+        assert "disabled" in response.json()["detail"].lower()
 
-        # Now heartbeat should work
+        # Heartbeat still should NOT work
         heartbeat_response2 = client.put(
             f"/api/workspaces/{workspace_id}/cognitive-fabric-node/cfn-disabled-test/heartbeat"
         )
-        assert heartbeat_response2.status_code == 200
+        assert heartbeat_response2.status_code == 403
 
-    def test_register_already_active_cfn_fails(self, client):
-        """Test that registering an already active CFN fails"""
+    def test_create_already_active_cfn_refreshes(self, client):
+        """Test that registering an already active CFN refreshes config (reboot scenario)"""
         ws_response = client.post("/api/workspaces", json={"name": "Test Workspace"})
         workspace_id = ws_response.json()["id"]
 
         cfn_data = {"cfn_id": "cfn-active-test", "cfn_name": "active-node"}
 
-        # Register
-        client.post(f"/api/workspaces/{workspace_id}/cognitive-fabric-node/register", json=cfn_data)
+        # Initial creation
+        response1 = client.post(f"/api/workspaces/{workspace_id}/cognitive-fabric-node", json=cfn_data)
+        assert response1.status_code == 201
 
-        # Try to register again without de-registering first (should fail)
-        response = client.post(
-            f"/api/workspaces/{workspace_id}/cognitive-fabric-node/register", json=cfn_data
+        # Register again (reboot scenario - should refresh config and succeed)
+        updated_cfn_data = {
+            "cfn_id": "cfn-active-test",
+            "cfn_name": "active-node-rebooted",
+            "cfn_config": {"memory": "16GB"},
+        }
+        response2 = client.post(
+            f"/api/workspaces/{workspace_id}/cognitive-fabric-node", json=updated_cfn_data
         )
-        assert response.status_code == 409
-        assert "already registered" in response.json()["detail"]
+        assert response2.status_code == 201  # Refresh succeeds
+        assert response2.json()["cfn_name"] == "active-node-rebooted"
+        assert response2.json()["status"] == "offline"  # Back to offline after reboot
 
 
 class TestCognitiveFabricNodeBackgroundMonitoring:
@@ -569,7 +707,7 @@ class TestCognitiveFabricNodeBackgroundMonitoring:
         workspace_id = ws_response.json()["id"]
 
         register_response = client.post(
-            f"/api/workspaces/{workspace_id}/cognitive-fabric-node/register",
+            f"/api/workspaces/{workspace_id}/cognitive-fabric-node",
             json={"cfn_id": "cfn-stale-test", "cfn_name": "stale-node"},
         )
         assert register_response.json()["status"] == "offline"  # Starts offline
@@ -596,14 +734,14 @@ class TestCognitiveFabricNodeBackgroundMonitoring:
 
 
 @pytest.fixture
-def registered_cfn(client):
+def created_cfn(client):
     """Fixture: Register a CFN, send heartbeat to make it online, and return workspace_id, cfn_id"""
     ws_response = client.post("/api/workspaces", json={"name": "Test Workspace"})
     workspace_id = ws_response.json()["id"]
 
     cfn_data = {"cfn_id": "cfn-fixture-123", "cfn_name": "fixture-cfn-node"}
 
-    response = client.post(f"/api/workspaces/{workspace_id}/cognitive-fabric-node/register", json=cfn_data)
+    response = client.post(f"/api/workspaces/{workspace_id}/cognitive-fabric-node", json=cfn_data)
     assert response.status_code == 201
     assert response.json()["status"] == "offline"  # Initially offline
 
@@ -624,7 +762,7 @@ def multiple_cfn_nodes(client):
     cfn_ids = []
     for i in range(3):
         cfn_data = {"cfn_id": f"cfn-multi-{i}", "cfn_name": f"cfn-node-{i}"}
-        response = client.post(f"/api/workspaces/{workspace_id}/cognitive-fabric-node/register", json=cfn_data)
+        response = client.post(f"/api/workspaces/{workspace_id}/cognitive-fabric-node", json=cfn_data)
         assert response.status_code == 201
 
         # Send heartbeat to make it online

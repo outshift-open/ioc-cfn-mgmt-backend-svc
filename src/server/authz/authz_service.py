@@ -102,10 +102,9 @@ class AuthzService:
         Raises:
             HTTPException: 403 Forbidden if the user lacks permission.
         """
-        # TODO: Enable when we need RBAC enforcement
-        # if not self.check_permission(user=user, action=action, resource=resource):
-        #     error_detail = detail or f"You don't have permission to {action} {resource}"
-        #     raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=error_detail)
+        if not self.check_permission(user=user, action=action, resource=resource):
+            error_detail = detail or f"You don't have permission to {action} {resource}"
+            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=error_detail)
         return
 
 

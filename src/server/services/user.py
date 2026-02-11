@@ -125,9 +125,7 @@ class UserService:
                 )
 
                 if existing_workspace:
-                    logger.info(
-                        f"Default workspace already exists for admin user with ID: {existing_workspace.id}"
-                    )
+                    logger.info(f"Default workspace already exists for admin user with ID: {existing_workspace.id}")
                 else:
                     # Create default workspace for admin user with hardcoded ID for dev/testing
                     logger.info("Creating default workspace for admin user")

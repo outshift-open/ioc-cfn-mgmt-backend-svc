@@ -19,10 +19,7 @@ from server.utils.version import get_app_version
 from server.utils.repo_root import REPO_ROOT
 
 # Load environment variables
-load_dotenv(
-    dotenv_path=REPO_ROOT + "/env.conf",  # Load from repo root
-    override=True
-)
+load_dotenv(dotenv_path=REPO_ROOT + "/env.conf", override=True)  # Load from repo root
 
 # Setup logging once for the entire application
 setup_logging(service_name)
