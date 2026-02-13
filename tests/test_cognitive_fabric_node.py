@@ -32,8 +32,8 @@ class TestCognitiveFabricNodeCreate:
         assert data["cfn_name"] == "test-cfn-node"
         assert data["status"] == "offline"  # Starts offline, heartbeat makes it online
         assert "cloud_config" in data
-        assert data["cloud_config"]["workspace_id"] == workspace_id
-        assert "log_level" in data["cloud_config"]
+        assert data["cloud_config"]["metadata"]["workspace_id"] == workspace_id
+        assert "metadata" in data["cloud_config"]
 
         # Send heartbeat to make it online
         heartbeat_response = client.put(f"/api/workspaces/{workspace_id}/cognitive-fabric-node/cfn-test-node-123/heartbeat")

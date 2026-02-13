@@ -27,6 +27,9 @@ from server.services.audit import (
     ResourceType,
     audit_service,
 )
+from server.services.cognitive_engine import cognitive_engine_service
+from server.services.memory_provider import memory_provider_service
+from server.services.multi_agentic_system import multi_agentic_system_service
 from server.services.workspace import workspace_service
 
 
@@ -1133,11 +1136,104 @@ class CognitiveFabricNodeService:
         Returns:
             Dictionary with cloud configuration
         """
+        # Generate timestamp-based config_id
+        timestamp = datetime.now(timezone.utc).strftime('%Y%m%d-%H%M%S')
+        config_id = f"cfg-{timestamp}-{cfn_id[:8]}"
+
+        # Get workspace details
+        workspace = workspace_service.get(workspace_id)
+
+        # Get CFN details
+        db = RelationalDB()
+        session = db.get_session()
+        try:
+            cfn = session.query(CognitiveFabricNodeModel).filter(
+                CognitiveFabricNodeModel.cfn_id == cfn_id
+            ).first()
+
+            cfn_name = cfn.cfn_name if cfn else "unknown"
+            created_by = cfn.created_by if cfn else "system"
+            created_at = (cfn.created_at.isoformat() if cfn and
+                          cfn.created_at else datetime.now(timezone.utc).isoformat())
+            updated_by = cfn.updated_by if cfn else created_by
+            updated_at = (cfn.updated_at.isoformat() if cfn and
+                          cfn.updated_at else datetime.now(timezone.utc).isoformat())
+        finally:
+            session.close()
+
+        # Fetch Multi-Agentic Systems
+        try:
+            mas_systems = multi_agentic_system_service.list_dummy(workspace_id).systems
+            mas_payload = [system.model_dump(mode="json") for system in mas_systems]
+        except Exception:
+            mas_payload = []
+
+        # Fetch Cognitive Engines
+        try:
+            engines = cognitive_engine_service.list_dummy(workspace_id).engines
+            engines_payload = {
+                engine.cognitive_engine_id: {
+                    "name": engine.cognitive_engine_name,
+                    "enabled": engine.enabled,
+                    "config": engine.config or {},
+                }
+                for engine in engines
+            }
+        except Exception:
+            engines_payload = {}
+
+        # Fetch Memory Providers
+        try:
+            providers = memory_provider_service.list_dummy(workspace_id).providers
+            providers_payload = [
+                {
+                    "memory_provider_id": provider.memory_provider_id,
+                    "name": provider.memory_provider_name,
+                    "type": provider.provider_type,
+                    "provider": provider.provider,
+                    "enabled": provider.enabled,
+                    "config": provider.config or {},
+                }
+                for provider in providers
+            ]
+        except Exception:
+            providers_payload = []
+
+        # Convert CFN model to dict for JSON serialization
+        cfn_data = None
+        if cfn:
+            cfn_data = {
+                "cfn_id": cfn.cfn_id,
+                "cfn_name": cfn.cfn_name,
+                "cfn_config": cfn.cfn_config,
+                "status": cfn.status,
+                "enabled": cfn.enabled,
+                "created_by": cfn.created_by,
+                "created_at": cfn.created_at.isoformat() if cfn.created_at else None,
+                "updated_by": cfn.updated_by,
+                "updated_at": cfn.updated_at.isoformat() if cfn.updated_at else None,
+            }
+
         return {
-            "workspace_id": workspace_id,
-            "log_level": "INFO",
-            "features": [],
-            "updated_at": datetime.now(timezone.utc).isoformat(),
+            "version": "1.0",
+            "config_id": config_id,
+            "metadata": {
+                "workspace_id": workspace_id,
+                "workspace_name": workspace.name if workspace else "Unknown Workspace",
+                "cfn_id": cfn_id,
+                "cfn_name": cfn_name,
+                "created_by": created_by,
+                "created_at": created_at,
+                "updated_by": updated_by,
+                "updated_at": updated_at,
+                "environment": "production",
+            },
+            "multi_agent_systems": {
+                "systems": mas_payload
+            },
+            "cognitive_fabric_node": cfn_data,
+            "cognitive_engines": engines_payload,
+            "memory_providers": providers_payload,
         }
 
     def mark_stale_nodes_offline(self, threshold_minutes: int = 2) -> int:

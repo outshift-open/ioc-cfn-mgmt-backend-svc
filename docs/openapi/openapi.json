@@ -915,14 +915,14 @@
         }
       }
     },
-    "/api/workspaces/{workspace_id}/register": {
+    "/api/workspaces/{workspace_id}/create": {
       "post": {
         "tags": [
           "cognitive-fabric-nodes"
         ],
         "summary": "Create Cfn Node",
         "description": "Create a new CFN node or refresh an active one\n\n- **cfn_id**: Persistent CFN identifier (provided by CFN, immutable)\n- **cfn_name**: Human-readable CFN name (can be updated later)\n- **cfn_config**: Optional current CFN configuration\n\n**Behavior by CFN State:**\n\n1. **New CFN or Deleted CFN (ID reuse)**: Creates new entry\n   - Status: 201 Created\n   - Returns: offline status with cloud_config\n\n2. **Active CFN (reboot/reconnection)**: Refreshes config\n   - Status: 201 Created\n   - Returns: offline status with cloud_config\n   - Allows CFN to reconnect after reboot\n\n3. **Disabled CFN (ID locked)**: Rejects creation\n   - Status: 403 Forbidden\n   - CFN ID is locked and cannot be reused\n   - Admin must manually enable it first via PATCH /enable\n\n**Response includes:**\n- **cfn_id**: The CFN identifier\n- **cfn_name**: The CFN name\n- **status**: Current status (offline)\n- **cloud_config**: Cloud configuration for the CFN to apply locally\n  - workspace_id: Associated workspace\n  - log_level: Logging level (e.g., INFO)\n  - features: Enabled features list\n  - updated_at: Configuration timestamp\n\nCFN must send heartbeat to change status from offline to online.",
-        "operationId": "create_cfn_node_api_workspaces__workspace_id__register_post",
+        "operationId": "create_cfn_node_api_workspaces__workspace_id__create_post",
         "security": [
           {
             "HTTPBearer": []
@@ -989,14 +989,14 @@
         }
       }
     },
-    "/api/workspaces/{workspace_id}/create": {
+    "/api/workspaces/{workspace_id}/cognitive-fabric-node/register": {
       "post": {
         "tags": [
           "cognitive-fabric-nodes"
         ],
         "summary": "Create Cfn Node",
         "description": "Create a new CFN node or refresh an active one\n\n- **cfn_id**: Persistent CFN identifier (provided by CFN, immutable)\n- **cfn_name**: Human-readable CFN name (can be updated later)\n- **cfn_config**: Optional current CFN configuration\n\n**Behavior by CFN State:**\n\n1. **New CFN or Deleted CFN (ID reuse)**: Creates new entry\n   - Status: 201 Created\n   - Returns: offline status with cloud_config\n\n2. **Active CFN (reboot/reconnection)**: Refreshes config\n   - Status: 201 Created\n   - Returns: offline status with cloud_config\n   - Allows CFN to reconnect after reboot\n\n3. **Disabled CFN (ID locked)**: Rejects creation\n   - Status: 403 Forbidden\n   - CFN ID is locked and cannot be reused\n   - Admin must manually enable it first via PATCH /enable\n\n**Response includes:**\n- **cfn_id**: The CFN identifier\n- **cfn_name**: The CFN name\n- **status**: Current status (offline)\n- **cloud_config**: Cloud configuration for the CFN to apply locally\n  - workspace_id: Associated workspace\n  - log_level: Logging level (e.g., INFO)\n  - features: Enabled features list\n  - updated_at: Configuration timestamp\n\nCFN must send heartbeat to change status from offline to online.",
-        "operationId": "create_cfn_node_api_workspaces__workspace_id__create_post",
+        "operationId": "create_cfn_node_api_workspaces__workspace_id__cognitive_fabric_node_register_post",
         "security": [
           {
             "HTTPBearer": []
@@ -1046,6 +1046,160 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/CognitiveFabricNodeRegisterResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/workspaces/{workspace_id}/cognitive-fabric-node": {
+      "post": {
+        "tags": [
+          "cognitive-fabric-nodes"
+        ],
+        "summary": "Create Cfn Node",
+        "description": "Create a new CFN node or refresh an active one\n\n- **cfn_id**: Persistent CFN identifier (provided by CFN, immutable)\n- **cfn_name**: Human-readable CFN name (can be updated later)\n- **cfn_config**: Optional current CFN configuration\n\n**Behavior by CFN State:**\n\n1. **New CFN or Deleted CFN (ID reuse)**: Creates new entry\n   - Status: 201 Created\n   - Returns: offline status with cloud_config\n\n2. **Active CFN (reboot/reconnection)**: Refreshes config\n   - Status: 201 Created\n   - Returns: offline status with cloud_config\n   - Allows CFN to reconnect after reboot\n\n3. **Disabled CFN (ID locked)**: Rejects creation\n   - Status: 403 Forbidden\n   - CFN ID is locked and cannot be reused\n   - Admin must manually enable it first via PATCH /enable\n\n**Response includes:**\n- **cfn_id**: The CFN identifier\n- **cfn_name**: The CFN name\n- **status**: Current status (offline)\n- **cloud_config**: Cloud configuration for the CFN to apply locally\n  - workspace_id: Associated workspace\n  - log_level: Logging level (e.g., INFO)\n  - features: Enabled features list\n  - updated_at: Configuration timestamp\n\nCFN must send heartbeat to change status from offline to online.",
+        "operationId": "create_cfn_node_api_workspaces__workspace_id__cognitive_fabric_node_post",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "workspace_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Workspace Id"
+            }
+          },
+          {
+            "name": "X-API-Key",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Api-Key"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CognitiveFabricNodeRegisterRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CognitiveFabricNodeRegisterResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "get": {
+        "tags": [
+          "cognitive-fabric-nodes"
+        ],
+        "summary": "List Cfn Nodes",
+        "description": "List all CFN nodes in workspace\n\n- **workspace_id**: UUID of the workspace\n- **status**: Optional status filter (online, offline, blocked)\n\nReturns a list of all CFN nodes (enabled and disabled) with summary information and total count.\n\nDeleted CFNs are never included.",
+        "operationId": "list_cfn_nodes_api_workspaces__workspace_id__cognitive_fabric_node_get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "workspace_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Workspace Id"
+            }
+          },
+          {
+            "name": "status",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Filter by status (online, offline, blocked)",
+              "title": "Status"
+            },
+            "description": "Filter by status (online, offline, blocked)"
+          },
+          {
+            "name": "X-API-Key",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Api-Key"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CognitiveFabricNodeList"
                 }
               }
             }
@@ -1500,14 +1654,14 @@
         }
       }
     },
-    "/api/workspaces/{workspace_id}/cognitive-fabric-node": {
+    "/api/workspaces/workspaces/{workspace_id}/cognitive-engines": {
       "get": {
         "tags": [
-          "cognitive-fabric-nodes"
+          "cognitive-engines"
         ],
-        "summary": "List Cfn Nodes",
-        "description": "List all CFN nodes in workspace\n\n- **workspace_id**: UUID of the workspace\n- **status**: Optional status filter (online, offline, blocked)\n\nReturns a list of all CFN nodes (enabled and disabled) with summary information and total count.\n\nDeleted CFNs are never included.",
-        "operationId": "list_cfn_nodes_api_workspaces__workspace_id__cognitive_fabric_node_get",
+        "summary": "List Cognitive Engines",
+        "description": "Get list of all cognitive engines in workspace",
+        "operationId": "list_cognitive_engines_api_workspaces_workspaces__workspace_id__cognitive_engines_get",
         "security": [
           {
             "HTTPBearer": []
@@ -1522,24 +1676,6 @@
               "type": "string",
               "title": "Workspace Id"
             }
-          },
-          {
-            "name": "status",
-            "in": "query",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "description": "Filter by status (online, offline, blocked)",
-              "title": "Status"
-            },
-            "description": "Filter by status (online, offline, blocked)"
           },
           {
             "name": "X-API-Key",
@@ -1564,7 +1700,71 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/CognitiveFabricNodeList"
+                  "$ref": "#/components/schemas/CognitiveEngineList"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/workspaces/workspaces/{workspace_id}/memory-providers": {
+      "get": {
+        "tags": [
+          "memory-providers"
+        ],
+        "summary": "List Memory Providers",
+        "description": "Get list of all memory providers in workspace",
+        "operationId": "list_memory_providers_api_workspaces_workspaces__workspace_id__memory_providers_get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "workspace_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Workspace Id"
+            }
+          },
+          {
+            "name": "X-API-Key",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Api-Key"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MemoryProviderList"
                 }
               }
             }
@@ -2939,6 +3139,78 @@
         "title": "AuditResponse",
         "description": "Response model for audit entries"
       },
+      "CognitiveEngineList": {
+        "properties": {
+          "engines": {
+            "items": {
+              "$ref": "#/components/schemas/CognitiveEngineListItem"
+            },
+            "type": "array",
+            "title": "Engines",
+            "description": "List of cognitive engines"
+          },
+          "total": {
+            "type": "integer",
+            "title": "Total",
+            "description": "Total number of engines"
+          }
+        },
+        "type": "object",
+        "required": [
+          "engines",
+          "total"
+        ],
+        "title": "CognitiveEngineList",
+        "description": "Schema for cognitive engine list response"
+      },
+      "CognitiveEngineListItem": {
+        "properties": {
+          "cognitive_engine_id": {
+            "type": "string",
+            "title": "Cognitive Engine Id"
+          },
+          "workspace_id": {
+            "type": "string",
+            "title": "Workspace Id"
+          },
+          "cognitive_engine_name": {
+            "type": "string",
+            "title": "Cognitive Engine Name"
+          },
+          "config": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Config"
+          },
+          "enabled": {
+            "type": "boolean",
+            "title": "Enabled"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "cognitive_engine_id",
+          "workspace_id",
+          "cognitive_engine_name",
+          "config",
+          "enabled",
+          "created_at"
+        ],
+        "title": "CognitiveEngineListItem",
+        "description": "Schema for cognitive engine list item"
+      },
       "CognitiveFabricNodeDetail": {
         "properties": {
           "cfn_id": {
@@ -3396,6 +3668,88 @@
         ],
         "title": "LoginRequest",
         "description": "Schema for login request"
+      },
+      "MemoryProviderList": {
+        "properties": {
+          "providers": {
+            "items": {
+              "$ref": "#/components/schemas/MemoryProviderListItem"
+            },
+            "type": "array",
+            "title": "Providers",
+            "description": "List of memory providers"
+          },
+          "total": {
+            "type": "integer",
+            "title": "Total",
+            "description": "Total number of providers"
+          }
+        },
+        "type": "object",
+        "required": [
+          "providers",
+          "total"
+        ],
+        "title": "MemoryProviderList",
+        "description": "Schema for memory provider list response"
+      },
+      "MemoryProviderListItem": {
+        "properties": {
+          "memory_provider_id": {
+            "type": "string",
+            "title": "Memory Provider Id"
+          },
+          "workspace_id": {
+            "type": "string",
+            "title": "Workspace Id"
+          },
+          "memory_provider_name": {
+            "type": "string",
+            "title": "Memory Provider Name"
+          },
+          "provider_type": {
+            "type": "string",
+            "title": "Provider Type"
+          },
+          "provider": {
+            "type": "string",
+            "title": "Provider"
+          },
+          "config": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Config"
+          },
+          "enabled": {
+            "type": "boolean",
+            "title": "Enabled"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "memory_provider_id",
+          "workspace_id",
+          "memory_provider_name",
+          "provider_type",
+          "provider",
+          "config",
+          "enabled",
+          "created_at"
+        ],
+        "title": "MemoryProviderListItem",
+        "description": "Schema for memory provider list item"
       },
       "MultiAgenticSystem": {
         "properties": {

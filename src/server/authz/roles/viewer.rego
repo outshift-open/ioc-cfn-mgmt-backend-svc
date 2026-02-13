@@ -6,6 +6,8 @@ import data.authz.operations.users
 import data.authz.operations.api_keys
 import data.authz.operations.softwares
 import data.authz.operations.cognitive_fabric_node
+import data.authz.operations.cognitive_engine
+import data.authz.operations.memory_provider
 import data.authz.operations.multi_agentic_system
 
 # Viewer role permissions - read-only operations
@@ -37,6 +39,18 @@ allow if {
 	input.user.role == "viewer"
 	input.resource == "cognitive_fabric_node"
 	input.operation in cognitive_fabric_node.viewer
+}
+
+allow if {
+	input.user.role == "viewer"
+	input.resource == "cognitive_engine"
+	input.operation in cognitive_engine.viewer
+}
+
+allow if {
+	input.user.role == "viewer"
+	input.resource == "memory_provider"
+	input.operation in memory_provider.viewer
 }
 
 allow if {
