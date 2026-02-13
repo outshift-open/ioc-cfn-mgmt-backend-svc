@@ -31,6 +31,11 @@ def check_workspace_exists(workspace_id: str) -> None:
 
 
 @router.post(
+    "/{workspace_id}/cognitive-fabric-node",
+    response_model=CognitiveFabricNodeRegisterResponse,
+    status_code=status.HTTP_201_CREATED,
+)
+@router.post(
     "/{workspace_id}/create",
     response_model=CognitiveFabricNodeRegisterResponse,
     status_code=status.HTTP_201_CREATED,
