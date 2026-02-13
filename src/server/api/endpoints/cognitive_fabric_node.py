@@ -35,6 +35,11 @@ def check_workspace_exists(workspace_id: str) -> None:
     response_model=CognitiveFabricNodeRegisterResponse,
     status_code=status.HTTP_201_CREATED,
 )
+@router.post(
+    "/{workspace_id}/register",
+    response_model=CognitiveFabricNodeRegisterResponse,
+    status_code=status.HTTP_201_CREATED,
+)
 def create_cfn_node(
     workspace_id: str,
     cfn_data: CognitiveFabricNodeRegisterRequest,
@@ -226,7 +231,9 @@ def list_cfn_nodes(
     - **workspace_id**: UUID of the workspace
     - **status**: Optional status filter (online, offline, blocked)
 
-    Returns a list of CFN nodes with summary information and total count.
+    Returns a list of all CFN nodes (enabled and disabled) with summary information and total count.
+
+    Deleted CFNs are never included.
     """
     check_workspace_exists(workspace_id)
     authz_service.require_permission(auth_user, "list", "cognitive_fabric_node")

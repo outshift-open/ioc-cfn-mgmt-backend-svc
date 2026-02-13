@@ -990,6 +990,9 @@ class CognitiveFabricNodeService:
         """
         List all Cognitive Fabric Nodes in workspace
 
+        Returns all CFNs (enabled and disabled) in the workspace.
+        Deleted CFNs are never included.
+
         Args:
             workspace_id: Workspace identifier
             status_filter: Optional status filter (online, offline, blocked)
@@ -1012,12 +1015,11 @@ class CognitiveFabricNodeService:
             session = db.get_session()
 
             try:
-                # Base query - only show enabled CFNs (hide disabled and deleted)
+                # Base query - exclude only deleted CFNs (include both enabled and disabled)
                 query = session.query(CognitiveFabricNodeModel).filter(
                     and_(
                         CognitiveFabricNodeModel.workspace_id == workspace_id,
                         CognitiveFabricNodeModel.deleted_at.is_(None),
-                        CognitiveFabricNodeModel.enabled.is_(True),  # Only show enabled CFNs
                     )
                 )
 

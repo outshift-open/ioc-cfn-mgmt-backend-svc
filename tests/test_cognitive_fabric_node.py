@@ -211,6 +211,84 @@ class TestCognitiveFabricNodeList:
         assert response.status_code == 200
         assert response.json()["total"] == 0
 
+    def test_list_cfn_includes_both_enabled_and_disabled(self, client):
+        """Test that list returns both enabled and disabled CFNs"""
+        # Create workspace
+        ws_response = client.post("/api/workspaces", json={"name": "Test Workspace"})
+        workspace_id = ws_response.json()["id"]
+
+        # Create two CFNs
+        client.post(
+            f"/api/workspaces/{workspace_id}/cognitive-fabric-node",
+            json={"cfn_id": "cfn-enabled", "cfn_name": "enabled-node"},
+        )
+        client.post(
+            f"/api/workspaces/{workspace_id}/cognitive-fabric-node",
+            json={"cfn_id": "cfn-to-disable", "cfn_name": "disabled-node"},
+        )
+
+        # Disable one CFN
+        disable_response = client.patch(f"/api/workspaces/{workspace_id}/cognitive-fabric-node/cfn-to-disable/disable")
+        assert disable_response.status_code == 200
+
+        # List CFNs (should include both enabled and disabled)
+        response = client.get(f"/api/workspaces/{workspace_id}/cognitive-fabric-node")
+        assert response.status_code == 200
+        data = response.json()
+        assert data["total"] == 2
+        assert len(data["nodes"]) == 2
+
+        # Verify both enabled and disabled are present
+        cfn_ids = {node["cfn_id"] for node in data["nodes"]}
+        assert "cfn-enabled" in cfn_ids
+        assert "cfn-to-disable" in cfn_ids
+
+        # Verify enabled status
+        for node in data["nodes"]:
+            if node["cfn_id"] == "cfn-enabled":
+                assert node["enabled"] is True
+            elif node["cfn_id"] == "cfn-to-disable":
+                assert node["enabled"] is False
+
+    def test_list_cfn_never_includes_deleted(self, client):
+        """Test that deleted CFNs are never included in list"""
+        # Create workspace
+        ws_response = client.post("/api/workspaces", json={"name": "Test Workspace"})
+        workspace_id = ws_response.json()["id"]
+
+        # Create three CFNs
+        client.post(
+            f"/api/workspaces/{workspace_id}/cognitive-fabric-node",
+            json={"cfn_id": "cfn-enabled", "cfn_name": "enabled-node"},
+        )
+        client.post(
+            f"/api/workspaces/{workspace_id}/cognitive-fabric-node",
+            json={"cfn_id": "cfn-disabled", "cfn_name": "disabled-node"},
+        )
+        client.post(
+            f"/api/workspaces/{workspace_id}/cognitive-fabric-node",
+            json={"cfn_id": "cfn-to-delete", "cfn_name": "deleted-node"},
+        )
+
+        # Disable one CFN
+        client.patch(f"/api/workspaces/{workspace_id}/cognitive-fabric-node/cfn-disabled/disable")
+
+        # Disable and delete another CFN
+        client.patch(f"/api/workspaces/{workspace_id}/cognitive-fabric-node/cfn-to-delete/disable")
+        delete_response = client.delete(f"/api/workspaces/{workspace_id}/cognitive-fabric-node/cfn-to-delete")
+        assert delete_response.status_code == 204
+
+        # List CFNs (should show enabled + disabled, but not deleted)
+        response = client.get(f"/api/workspaces/{workspace_id}/cognitive-fabric-node")
+        assert response.status_code == 200
+        data = response.json()
+        assert data["total"] == 2
+
+        cfn_ids = {node["cfn_id"] for node in data["nodes"]}
+        assert "cfn-enabled" in cfn_ids
+        assert "cfn-disabled" in cfn_ids
+        assert "cfn-to-delete" not in cfn_ids  # Deleted CFN should never appear
+
 
 class TestCognitiveFabricNodeGet:
     """Test cases for getting Cognitive Fabric Node details"""
@@ -330,9 +408,12 @@ class TestCognitiveFabricNodeDisable:
         assert data["enabled"] is False
         assert data["cfn_id"] == cfn_id
 
-        # Verify CFN no longer appears in list
+        # Verify disabled CFN still appears in list (but with enabled=False)
         list_response = client.get(f"/api/workspaces/{workspace_id}/cognitive-fabric-node")
-        assert list_response.json()["total"] == 0
+        list_data = list_response.json()
+        assert list_data["total"] == 1
+        assert list_data["nodes"][0]["cfn_id"] == cfn_id
+        assert list_data["nodes"][0]["enabled"] is False
 
     def test_disable_cfn_twice(self, client, created_cfn):
         """Test disabling CFN twice (should fail second time)"""
@@ -449,9 +530,12 @@ class TestCognitiveFabricNodeEnableDisable:
         response2 = client.patch(f"/api/workspaces/{workspace_id}/cognitive-fabric-node/cfn-disable-test/disable")
         assert response2.status_code == 200
 
-        # Verify it's not in the list
+        # Verify disabled CFN still appears in the list (but with enabled=False)
         list_response = client.get(f"/api/workspaces/{workspace_id}/cognitive-fabric-node")
-        assert list_response.json()["total"] == 0
+        list_data = list_response.json()
+        assert list_data["total"] == 1
+        assert list_data["nodes"][0]["cfn_id"] == "cfn-disable-test"
+        assert list_data["nodes"][0]["enabled"] is False
 
         # Attempt to re-register (should fail - disabled CFN cannot auto re-enable)
         updated_cfn_data = {
@@ -466,9 +550,12 @@ class TestCognitiveFabricNodeEnableDisable:
         assert response3.status_code == 403
         assert "disabled" in response3.json()["detail"].lower()
 
-        # Verify it's still NOT in the list
+        # Verify disabled CFN is still in the list with enabled=False
         list_response = client.get(f"/api/workspaces/{workspace_id}/cognitive-fabric-node")
-        assert list_response.json()["total"] == 0
+        list_data = list_response.json()
+        assert list_data["total"] == 1
+        assert list_data["nodes"][0]["cfn_id"] == "cfn-disable-test"
+        assert list_data["nodes"][0]["enabled"] is False
 
     def test_enable_disabled_cfn(self, client):
         """Test manually re-enabling a disabled CFN via /enable endpoint"""
