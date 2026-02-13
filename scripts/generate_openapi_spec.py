@@ -27,6 +27,10 @@ def generate_openapi_spec():
     # Generate OpenAPI spec
     openapi_spec = app.openapi()
 
+    # Convert OpenAPI 3.1.0 to 3.0.0 for better Swagger UI compatibility
+    if openapi_spec.get('openapi') == '3.1.0':
+        openapi_spec['openapi'] = '3.0.0'
+
     # Save to file
     spec_file = openapi_dir / "openapi.json"
 
