@@ -5,7 +5,7 @@ import bcrypt
 # Get logger instance (logging is setup in main.py)
 logger = logging.getLogger(__name__)
 
-service_name = os.environ.get("SERVICE_NAME", "ioc-cfn-mgmt-backend")
+service_name = os.environ.get("SERVICE_NAME", "ioc-cfn-mgmt-backend-svc")
 
 
 def hash_password(password: str) -> str:

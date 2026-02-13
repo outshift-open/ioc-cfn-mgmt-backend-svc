@@ -1,7 +1,7 @@
 {
   "openapi": "3.0.0",
   "info": {
-    "title": "ioc-cfn-mgmt-backend API",
+    "title": "ioc-cfn-mgmt-backend-svc API",
     "description": "IOC CFN Management Backend Service API",
     "version": "0.1.0"
   },

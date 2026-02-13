@@ -138,7 +138,7 @@ def health():
 @app.get("/env")
 def env_var():
     return {
-        "service": "ioc-cfn-mgmt-backend",
+        "service": "ioc-cfn-mgmt-backend-svc",
         "environment_variables": {
             "CONFIGMAP_TEST": os.environ.get("CONFIGMAP_TEST"),
             "CONFIGMAP_DEFAULT_EXAMPLE": os.environ.get("CONFIGMAP_DEFAULT_EXAMPLE"),

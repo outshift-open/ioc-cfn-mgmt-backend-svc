@@ -3,7 +3,7 @@
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
 ## User specific instructions
-- Make changes in backend service: ioc-cfn-mgmt-backend only
+- Make changes in backend service: ioc-cfn-mgmt-backend-svconly
 - Do not modify frontend service: ioc-cfn-mgmt-ui-svc
 
 ## Repository Overview
@@ -23,7 +23,7 @@ This is a multi-service TKF (Trusted Knowledge Fabric) platform with two main se
            │
            ▼
 ┌────────────────────────┐
-│ ioc-cfn-mgmt-backend   │  FastAPI + Python 3.10+
+│ ioc-cfn-mgmt-backend-svc  │  FastAPI + Python 3.10+
 │      Port 8000         │  (Backend Service)
 └────────┬───────────────┘
          │
@@ -65,7 +65,7 @@ npm run build:clean   # Clean build
 
 **Test credentials:** Username: `admin`, Password: `admin`
 
-### ioc-cfn-mgmt-backend (Backend Service)
+### ioc-cfn-mgmt-backend-svc(Backend Service)
 
 Uses **Task** and **Poetry**. Requires PostgreSQL database.
 
@@ -726,10 +726,10 @@ task helm-lint
 task helm-template
 
 # Install
-helm install ioc-cfn-mgmt-backend ./deploy/charts/ioc-cfn-mgmt-backend --namespace tkf-platform
+helm install ioc-cfn-mgmt-backend-svc./deploy/charts/ioc-cfn-mgmt-backend-svc--namespace tkf-platform
 
 # Upgrade
-helm upgrade ioc-cfn-mgmt-backend ./deploy/charts/ioc-cfn-mgmt-backend
+helm upgrade ioc-cfn-mgmt-backend-svc./deploy/charts/ioc-cfn-mgmt-backend
 ```
 
 Configure health probes to use `/api/internal/diagnostics/health` endpoint.
@@ -896,16 +896,16 @@ cfn_config:
 
 **Authorization Requirements:**
 
-| Operation | Required Permission |
-|-----------|-------------------|
-| Create CFN | Workspace admin or super_admin |
-| Enable CFN | Workspace admin or super_admin |
-| Disable CFN | Workspace admin or super_admin |
-| Delete CFN | Workspace admin or super_admin |
-| Update CFN | Workspace admin or super_admin |
-| List CFNs | Workspace admin/viewer or super_admin |
-| Get CFN Details | Workspace admin/viewer or super_admin |
-| Send Heartbeat | Authenticated user (CFN must be enabled) |
+| Operation       | Required Permission                      |
+| --------------- | ---------------------------------------- |
+| Create CFN      | Workspace admin or super_admin           |
+| Enable CFN      | Workspace admin or super_admin           |
+| Disable CFN     | Workspace admin or super_admin           |
+| Delete CFN      | Workspace admin or super_admin           |
+| Update CFN      | Workspace admin or super_admin           |
+| List CFNs       | Workspace admin/viewer or super_admin    |
+| Get CFN Details | Workspace admin/viewer or super_admin    |
+| Send Heartbeat  | Authenticated user (CFN must be enabled) |
 
 **Alternative Approaches Considered (and rejected):**
 
@@ -1203,12 +1203,12 @@ API Endpoint
 
 ### System Roles
 
-| Role | Description | Access Level |
-|------|-------------|--------------|
-| **admin** | Default role for all users | Full access to resources they have workspace membership for |
-| **viewer** | Read-only role | Can list and view resources, cannot modify |
-| **guest** | Minimal access role | No permissions by default |
-| **super_admin** | Future feature | Global access to all workspaces (bypasses membership) |
+| Role            | Description                | Access Level                                                |
+| --------------- | -------------------------- | ----------------------------------------------------------- |
+| **admin**       | Default role for all users | Full access to resources they have workspace membership for |
+| **viewer**      | Read-only role             | Can list and view resources, cannot modify                  |
+| **guest**       | Minimal access role        | No permissions by default                                   |
+| **super_admin** | Future feature             | Global access to all workspaces (bypasses membership)       |
 
 **Important:** The "admin" role is the DEFAULT role for all new users. It does NOT grant elevated privileges - users still need workspace membership to access workspace resources.
 
@@ -1216,31 +1216,31 @@ API Endpoint
 
 #### Cognitive Fabric Nodes
 
-| Operation | Admin | Viewer | Guest |
-|-----------|-------|--------|-------|
-| create, enable, disable, delete, update, heartbeat | ✅ | ❌ | ❌ |
-| list, get | ✅ | ✅ | ❌ |
+| Operation                                          | Admin | Viewer | Guest |
+| -------------------------------------------------- | ----- | ------ | ----- |
+| create, enable, disable, delete, update, heartbeat | ✅     | ❌      | ❌     |
+| list, get                                          | ✅     | ✅      | ❌     |
 
 #### Multi-Agentic Systems
 
-| Operation | Admin | Viewer | Guest |
-|-----------|-------|--------|-------|
-| create, update, delete | ✅ | ❌ | ❌ |
-| list, get | ✅ | ✅ | ❌ |
+| Operation              | Admin | Viewer | Guest |
+| ---------------------- | ----- | ------ | ----- |
+| create, update, delete | ✅     | ❌      | ❌     |
+| list, get              | ✅     | ✅      | ❌     |
 
 #### Workspaces
 
-| Operation | Admin | Viewer | Guest |
-|-----------|-------|--------|-------|
-| create, update, delete | ✅ | ❌ | ❌ |
-| get, list | ✅ | ✅ | ❌ |
+| Operation              | Admin | Viewer | Guest |
+| ---------------------- | ----- | ------ | ----- |
+| create, update, delete | ✅     | ❌      | ❌     |
+| get, list              | ✅     | ✅      | ❌     |
 
 #### API Keys
 
-| Operation | Admin | Viewer | Guest |
-|-----------|-------|--------|-------|
-| create, delete | ✅ | ❌ | ❌ |
-| get, list | ✅ | ✅ | ❌ |
+| Operation      | Admin | Viewer | Guest |
+| -------------- | ----- | ------ | ----- |
+| create, delete | ✅     | ❌      | ❌     |
+| get, list      | ✅     | ✅      | ❌     |
 
 ### Policy Files Structure
 
