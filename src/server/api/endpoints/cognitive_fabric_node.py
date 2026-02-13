@@ -31,7 +31,7 @@ def check_workspace_exists(workspace_id: str) -> None:
 
 
 @router.post(
-    "/{workspace_id}/cognitive-fabric-node",
+    "/{workspace_id}/create",
     response_model=CognitiveFabricNodeRegisterResponse,
     status_code=status.HTTP_201_CREATED,
 )
@@ -56,11 +56,11 @@ def create_cfn_node(
 
     1. **New CFN or Deleted CFN (ID reuse)**: Creates new entry
        - Status: 201 Created
-       - Returns: offline status
+       - Returns: offline status with cloud_config
 
     2. **Active CFN (reboot/reconnection)**: Refreshes config
        - Status: 201 Created
-       - Returns: offline status
+       - Returns: offline status with cloud_config
        - Allows CFN to reconnect after reboot
 
     3. **Disabled CFN (ID locked)**: Rejects creation
@@ -68,7 +68,16 @@ def create_cfn_node(
        - CFN ID is locked and cannot be reused
        - Admin must manually enable it first via PATCH /enable
 
-    Returns the cfn_id, cfn_name, status (offline), and cloud_config for the CFN to apply.
+    **Response includes:**
+    - **cfn_id**: The CFN identifier
+    - **cfn_name**: The CFN name
+    - **status**: Current status (offline)
+    - **cloud_config**: Cloud configuration for the CFN to apply locally
+      - workspace_id: Associated workspace
+      - log_level: Logging level (e.g., INFO)
+      - features: Enabled features list
+      - updated_at: Configuration timestamp
+
     CFN must send heartbeat to change status from offline to online.
     """
     check_workspace_exists(workspace_id)
@@ -94,7 +103,15 @@ def update_cfn_node(
     - **cfn_name**: Optional updated CFN name
     - **cfn_config**: Optional updated CFN configuration
 
-    Returns full CFN details including updated cloud_config
+    **Response includes:**
+    - Full CFN details (cfn_id, workspace_id, cfn_name, cfn_config, status, last_seen, enabled, timestamps)
+    - **cloud_config**: Regenerated cloud configuration for the CFN to apply
+      - workspace_id: Associated workspace
+      - log_level: Logging level
+      - features: Enabled features list
+      - updated_at: Configuration timestamp
+
+    The cloud_config is automatically regenerated with each update to ensure CFN has the latest configuration.
     """
     check_workspace_exists(workspace_id)
     authz_service.require_permission(auth_user, "update", "cognitive_fabric_node")
@@ -119,7 +136,13 @@ def enable_cfn_node(
     This is an admin operation to re-enable a disabled CFN.
     After enabling, the CFN can call /register to reconnect and resume operations.
 
-    Returns full CFN details with enabled=True and status=offline (until heartbeat is sent).
+    **Response includes:**
+    - Full CFN details with enabled=True and status=offline (until heartbeat is sent)
+    - **cloud_config**: Cloud configuration for the CFN to apply when it reconnects
+      - workspace_id: Associated workspace
+      - log_level: Logging level
+      - features: Enabled features list
+      - updated_at: Configuration timestamp
     """
     check_workspace_exists(workspace_id)
     authz_service.require_permission(auth_user, "enable", "cognitive_fabric_node")
@@ -149,7 +172,9 @@ def disable_cfn_node(
     The CFN can be re-enabled using the /enable endpoint, or permanently
     deleted using the DELETE endpoint.
 
-    Returns full CFN details with enabled=False.
+    **Response includes:**
+    - Full CFN details with enabled=False
+    - **cloud_config**: Cloud configuration (preserved from last state)
     """
     check_workspace_exists(workspace_id)
     authz_service.require_permission(auth_user, "disable", "cognitive_fabric_node")
@@ -255,7 +280,16 @@ def get_cfn_node(
     - **workspace_id**: UUID of the workspace
     - **cfn_id**: CFN identifier
 
-    Returns full CFN details including configuration, status, and timestamps.
+    Returns full CFN details including:
+    - cfn_id, cfn_name
+    - cfn_config (node-reported configuration)
+    - cloud_config (cloud-side configuration to be applied)
+    - status (online, offline, blocked)
+    - enabled flag (true if CFN can operate, false if disabled)
+    - created_at, updated_at, last_seen timestamps
+
+    This endpoint retrieves information for both enabled and disabled CFNs.
+    Deleted CFNs will return 404 Not Found.
     """
     check_workspace_exists(workspace_id)
     authz_service.require_permission(auth_user, "get", "cognitive_fabric_node")
