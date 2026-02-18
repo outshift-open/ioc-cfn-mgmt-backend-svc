@@ -69,9 +69,13 @@ class TestWorkspaceEndpoints:
         assert workspace["name"] == sample_workspace_data["name"]
         assert "created_at" in workspace
 
-    def test_list_workspaces_multiple(self, client):
+    def test_list_workspaces_multiple(self, client, registered_cfn):
         """Test listing multiple workspaces."""
-        workspaces_data = [{"name": "Workspace 1"}, {"name": "Workspace 2"}, {"name": "Workspace 3"}]
+        workspaces_data = [
+            {"name": "Workspace 1", "cfn_id": registered_cfn},
+            {"name": "Workspace 2", "cfn_id": registered_cfn},
+            {"name": "Workspace 3", "cfn_id": registered_cfn},
+        ]
 
         created_ids = []
         for ws_data in workspaces_data:
@@ -141,9 +145,9 @@ class TestWorkspaceEndpoints:
         del_ws_resp_ok = client.delete(f"/api/workspaces/{workspace_id}")
         assert del_ws_resp_ok.status_code == 204
 
-    def test_delete_default_workspace_public_forbidden(self, client):
+    def test_delete_default_workspace_public_forbidden(self, client, registered_cfn):
         """Public delete of Default Workspace should be forbidden (403)."""
-        create_resp = client.post("/api/workspaces", json={"name": "Default Workspace"})
+        create_resp = client.post("/api/workspaces", json={"name": "Default Workspace", "cfn_id": registered_cfn})
         assert create_resp.status_code == 201
         default_ws_id = create_resp.json()["id"]
 
@@ -152,10 +156,10 @@ class TestWorkspaceEndpoints:
         assert del_resp.status_code == 403
         assert del_resp.json()["detail"] == "Failed to delete workspace: Default Workspace cannot be deleted"
 
-    def test_delete_default_workspace_internal_allowed(self, client):
+    def test_delete_default_workspace_internal_allowed(self, client, registered_cfn):
         """Internal delete of Default Workspace should be allowed (no deps present)."""
         # Create Default Workspace
-        create_resp = client.post("/api/workspaces", json={"name": "Default Workspace"})
+        create_resp = client.post("/api/workspaces", json={"name": "Default Workspace", "cfn_id": registered_cfn})
         assert create_resp.status_code == 201
         default_ws_id = create_resp.json()["id"]
 
@@ -164,10 +168,10 @@ class TestWorkspaceEndpoints:
         assert del_resp.status_code == 200
         assert del_resp.json()["message"] in {"Workspace deleted successfully", "Workspace permanently deleted"}
 
-    def test_internal_purge_handles_dependents(self, client):
+    def test_internal_purge_handles_dependents(self, client, registered_cfn):
         """Internal purge should delete dependents and workspace without FK errors."""
         # Create workspace and a MAS dependent
-        ws_resp = client.post("/api/workspaces", json={"name": "Default Workspace"})
+        ws_resp = client.post("/api/workspaces", json={"name": "Default Workspace", "cfn_id": registered_cfn})
         assert ws_resp.status_code == 201
         ws_id = ws_resp.json()["id"]
 
@@ -246,19 +250,27 @@ class TestWorkspaceEndpoints:
 
         user2_client = TestClient(app)
         user2_client.headers = {"X-API-Key": user2_api_key}
+        
+        # Create CFNs for each workspace
+        dev_cfn_resp = client.post("/api/cognitive-fabric-nodes", json={"cfn_id": "cfn-dev-test", "cfn_name": "dev-cfn-node"})
+        assert dev_cfn_resp.status_code == 201
+        user1_cfn_resp = user1_client.post("/api/cognitive-fabric-nodes", json={"cfn_id": "cfn-user1-test", "cfn_name": "user1-cfn-node"})
+        assert user1_cfn_resp.status_code == 201
+        user2_cfn_resp = user2_client.post("/api/cognitive-fabric-nodes", json={"cfn_id": "cfn-user2-test", "cfn_name": "user2-cfn-node"})
+        assert user2_cfn_resp.status_code == 201
 
         # Dev-user (from fixture) creates a workspace
-        dev_ws_resp = client.post("/api/workspaces", json={"name": "Dev User Workspace"})
+        dev_ws_resp = client.post("/api/workspaces", json={"name": "Dev User Workspace", "cfn_id": "cfn-dev-test"})
         assert dev_ws_resp.status_code == 201
         dev_ws_id = dev_ws_resp.json()["id"]
 
         # User1 creates a workspace
-        user1_ws_resp = user1_client.post("/api/workspaces", json={"name": "User1 Workspace"})
+        user1_ws_resp = user1_client.post("/api/workspaces", json={"name": "User1 Workspace", "cfn_id": "cfn-user1-test"})
         assert user1_ws_resp.status_code == 201
         user1_ws_id = user1_ws_resp.json()["id"]
 
         # User2 creates a workspace
-        user2_ws_resp = user2_client.post("/api/workspaces", json={"name": "User2 Workspace"})
+        user2_ws_resp = user2_client.post("/api/workspaces", json={"name": "User2 Workspace", "cfn_id": "cfn-user2-test"})
         assert user2_ws_resp.status_code == 201
         user2_ws_id = user2_ws_resp.json()["id"]
 
@@ -336,8 +348,12 @@ class TestWorkspaceEndpoints:
         session.add(user_api_key_obj)
         session.commit()
 
+        # Register CFN first
+        cfn_resp = client.post("/api/cognitive-fabric-nodes", json={"cfn_id": "cfn-shared-test", "cfn_name": "shared-cfn-node"})
+        assert cfn_resp.status_code == 201
+        
         # Dev-user creates a workspace
-        dev_ws_resp = client.post("/api/workspaces", json={"name": "Shared Workspace"})
+        dev_ws_resp = client.post("/api/workspaces", json={"name": "Shared Workspace", "cfn_id": "cfn-shared-test"})
         assert dev_ws_resp.status_code == 201
         dev_ws_id = dev_ws_resp.json()["id"]
 
@@ -424,9 +440,13 @@ class TestWorkspaceEndpoints:
 
         user_client = TestClient(app)
         user_client.headers = {"X-API-Key": user_api_key}
+        
+        # Register CFN first
+        cfn_resp = user_client.post("/api/cognitive-fabric-nodes", json={"cfn_id": "cfn-creator-test", "cfn_name": "creator-cfn-node"})
+        assert cfn_resp.status_code == 201
 
         # User creates a workspace (automatically added as workspace admin)
-        user_ws_resp = user_client.post("/api/workspaces", json={"name": "Creator Workspace"})
+        user_ws_resp = user_client.post("/api/workspaces", json={"name": "Creator Workspace", "cfn_id": "cfn-creator-test"})
         assert user_ws_resp.status_code == 201
         user_ws_id = user_ws_resp.json()["id"]
 
@@ -537,14 +557,20 @@ class TestWorkspaceEndpoints:
 
         user2_client = TestClient(app)
         user2_client.headers = {"X-API-Key": user2_api_key}
+        
+        # Create CFNs for each workspace
+        user1_cfn_resp = user1_client.post("/api/cognitive-fabric-nodes", json={"cfn_id": "cfn-super-admin-user1", "cfn_name": "user1-super-admin-cfn"})
+        assert user1_cfn_resp.status_code == 201
+        user2_cfn_resp = user2_client.post("/api/cognitive-fabric-nodes", json={"cfn_id": "cfn-super-admin-user2", "cfn_name": "user2-super-admin-cfn"})
+        assert user2_cfn_resp.status_code == 201
 
         # User1 creates a workspace
-        user1_ws_resp = user1_client.post("/api/workspaces", json={"name": "User1 Workspace"})
+        user1_ws_resp = user1_client.post("/api/workspaces", json={"name": "User1 Workspace", "cfn_id": "cfn-super-admin-user1"})
         assert user1_ws_resp.status_code == 201
         user1_ws_id = user1_ws_resp.json()["id"]
 
         # User2 creates a workspace
-        user2_ws_resp = user2_client.post("/api/workspaces", json={"name": "User2 Workspace"})
+        user2_ws_resp = user2_client.post("/api/workspaces", json={"name": "User2 Workspace", "cfn_id": "cfn-super-admin-user2"})
         assert user2_ws_resp.status_code == 201
         user2_ws_id = user2_ws_resp.json()["id"]
 
@@ -622,14 +648,20 @@ class TestWorkspaceEndpoints:
 
         user2_client = TestClient(app)
         user2_client.headers = {"X-API-Key": user2_api_key}
+        
+        # Register CFNs for each user's workspace
+        user1_cfn_resp = user1_client.post("/api/cognitive-fabric-nodes", json={"cfn_id": "cfn-default-user1", "cfn_name": "default-user1-cfn"})
+        assert user1_cfn_resp.status_code == 201
+        user2_cfn_resp = user2_client.post("/api/cognitive-fabric-nodes", json={"cfn_id": "cfn-default-user2", "cfn_name": "default-user2-cfn"})
+        assert user2_cfn_resp.status_code == 201
 
         # User A creates a workspace named "Default Workspace"
-        user1_ws_resp = user1_client.post("/api/workspaces", json={"name": "Default Workspace"})
+        user1_ws_resp = user1_client.post("/api/workspaces", json={"name": "Default Workspace", "cfn_id": "cfn-default-user1"})
         assert user1_ws_resp.status_code == 201
         user1_ws_id = user1_ws_resp.json()["id"]
 
         # User B should also be able to create a workspace named "Default Workspace"
-        user2_ws_resp = user2_client.post("/api/workspaces", json={"name": "Default Workspace"})
+        user2_ws_resp = user2_client.post("/api/workspaces", json={"name": "Default Workspace", "cfn_id": "cfn-default-user2"})
         assert user2_ws_resp.status_code == 201
         user2_ws_id = user2_ws_resp.json()["id"]
 

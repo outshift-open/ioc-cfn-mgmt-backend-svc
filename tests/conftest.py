@@ -199,9 +199,50 @@ def setup_test_environment():
 
 
 @pytest.fixture
-def sample_workspace_data():
-    """Sample workspace data for testing."""
-    return {"name": "Test Workspace"}
+def sample_cfn():
+    """Register a test CFN and return its ID."""
+    return "test-cfn-123"
+
+
+@pytest.fixture
+def registered_cfn(client):
+    """Register a CFN without creating a workspace, return cfn_id."""
+    import uuid
+
+    cfn_id = f"test-cfn-{uuid.uuid4().hex[:8]}"
+    cfn_data = {
+        "cfn_id": cfn_id,
+        "cfn_name": f"Test CFN {cfn_id}",
+        "cfn_config": {"memory": "4GB", "max_connections": 100},
+    }
+    cfn_response = client.post("/api/cognitive-fabric-nodes/register", json=cfn_data)
+    assert cfn_response.status_code == 201
+    return cfn_id
+
+
+@pytest.fixture
+def created_cfn(client, sample_cfn):
+    """Create a CFN node and a workspace that uses it, return tuple (workspace_id, cfn_id)."""
+    cfn_data = {
+        "cfn_id": sample_cfn,
+        "cfn_name": "Test CFN Node",
+        "cfn_config": {"memory": "4GB", "max_connections": 100},
+    }
+    cfn_response = client.post("/api/cognitive-fabric-nodes/register", json=cfn_data)
+    assert cfn_response.status_code == 201
+    cfn_id = cfn_response.json()["cfn_id"]
+    
+    ws_response = client.post("/api/workspaces", json={"name": "Test Workspace", "cfn_id": cfn_id})
+    assert ws_response.status_code == 201
+    workspace_id = ws_response.json()["id"]
+    
+    return (workspace_id, cfn_id)
+
+
+@pytest.fixture
+def sample_workspace_data(registered_cfn):
+    """Sample workspace data for testing (includes required CFN)."""
+    return {"name": "Test Workspace", "cfn_id": registered_cfn}
 
 
 @pytest.fixture

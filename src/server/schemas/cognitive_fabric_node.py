@@ -77,11 +77,10 @@ class CognitiveFabricNodeRegisterResponse(BaseModel):
                 "cfn_name": "cfn-node-prod-1",
                 "status": "offline",
                 "cloud_config": {
-                    "max_connections": 200,
-                    "memory_limit": "8GB",
-                    "workspace_id": "workspace-uuid",
+                    "version": "1.0",
+                    "workspaces": [],
+                    "memory_providers": [],
                     "log_level": "INFO",
-                    "features": ["reasoning", "memory"],
                 },
             }
         }
@@ -103,11 +102,10 @@ class CognitiveFabricNodeDetail(BaseModel):
         json_schema_extra={
             "example": {
                 "cfn_id": "cfn-persistent-id-123",
-                "workspace_id": "workspace-uuid",
+                "workspace_ids": ["workspace-uuid-1", "workspace-uuid-2"],
                 "cfn_name": "cfn-node-prod-1",
                 "cfn_config": {"max_connections": 100, "memory_limit": "4GB"},
                 "cloud_config": {
-                    "workspace_id": "workspace-uuid",
                     "log_level": "INFO",
                     "features": ["reasoning", "memory"],
                 },
@@ -123,7 +121,7 @@ class CognitiveFabricNodeDetail(BaseModel):
     )
 
     cfn_id: str = Field(..., description="Cognitive Fabric Node identifier")
-    workspace_id: str = Field(..., description="Workspace identifier")
+    workspace_ids: List[str] = Field(default_factory=list, description="Associated workspace identifiers")
     cfn_name: str = Field(..., description="Cognitive Fabric Node name")
     cfn_config: Optional[Dict[str, Any]] = Field(None, description="Node configuration")
     cloud_config: Optional[Dict[str, Any]] = Field(None, description="Cloud configuration")
@@ -143,7 +141,7 @@ class CognitiveFabricNodeListItem(BaseModel):
         json_schema_extra={
             "example": {
                 "cfn_id": "cfn-persistent-id-123",
-                "workspace_id": "workspace-uuid",
+                "workspace_ids": ["workspace-uuid-1"],
                 "cfn_name": "cfn-node-prod-1",
                 "status": "online",
                 "last_seen": "2026-01-30T12:34:56Z",
@@ -154,7 +152,7 @@ class CognitiveFabricNodeListItem(BaseModel):
     )
 
     cfn_id: str = Field(..., description="Cognitive Fabric Node identifier")
-    workspace_id: str = Field(..., description="Workspace identifier")
+    workspace_ids: List[str] = Field(default_factory=list, description="Associated workspace identifiers")
     cfn_name: str = Field(..., description="Cognitive Fabric Node name")
     status: CognitiveFabricNodeStatus = Field(..., description="Current node status")
     last_seen: datetime = Field(..., description="Last heartbeat timestamp")
@@ -171,7 +169,7 @@ class CognitiveFabricNodeList(BaseModel):
                 "nodes": [
                     {
                         "cfn_id": "cfn-persistent-id-123",
-                        "workspace_id": "workspace-uuid",
+                        "workspace_ids": ["workspace-uuid-1"],
                         "cfn_name": "cfn-node-prod-1",
                         "status": "online",
                         "last_seen": "2026-01-30T12:34:56Z",

@@ -1,4 +1,4 @@
-from sqlalchemy import Column, String, DateTime, text, Index
+from sqlalchemy import Column, String, DateTime, text, Index, ForeignKey
 from sqlalchemy.dialects.postgresql import ARRAY, JSONB
 
 from server.database.relational_db.models import Base
@@ -11,6 +11,13 @@ class Workspace(Base):
 
     # Required fields
     name = Column(String(255), nullable=False)
+
+    # CFN association - workspace chooses which CFN to run on
+    cfn_id = Column(
+        String(255),
+        ForeignKey("cognitive_fabric_node.cfn_id", ondelete="RESTRICT"),
+        nullable=False,  # Every workspace must be assigned to a CFN
+    )
 
     # Optional fields
     users = Column(ARRAY(String), nullable=True)
@@ -32,6 +39,7 @@ class Workspace(Base):
     __table_args__ = (
         Index("idx_workspace_name", "name"),
         Index("idx_workspace_deleted_at", "deleted_at"),
+        Index("idx_workspace_cfn_id", "cfn_id"),
     )
 
     def __repr__(self):

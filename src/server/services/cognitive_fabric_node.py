@@ -1,7 +1,7 @@
 """Cognitive Fabric Node service - Business logic for Cognitive Fabric Node operations"""
 
 from datetime import datetime, timedelta, timezone
-from typing import Optional
+from typing import List, Optional
 
 from fastapi import HTTPException, status
 from sqlalchemy import and_
@@ -11,6 +11,7 @@ from server.database.relational_db.db import RelationalDB
 from server.database.relational_db.models.cognitive_fabric_node import (
     CognitiveFabricNode as CognitiveFabricNodeModel,
 )
+from server.database.relational_db.models.workspace import Workspace as WorkspaceModel
 from server.schemas.cognitive_fabric_node import (
     CognitiveFabricNodeDetail,
     CognitiveFabricNodeHeartbeatResponse,
@@ -36,9 +37,16 @@ from server.services.workspace import workspace_service
 class CognitiveFabricNodeService:
     """Service layer for Cognitive Fabric Node business logic"""
 
-    def create(
-        self, workspace_id: str, cfn_data: CognitiveFabricNodeRegisterRequest, user_id: str
-    ) -> CognitiveFabricNodeRegisterResponse:
+    def _get_workspace_ids(self, session, cfn_id: str) -> List[str]:
+        """Get all workspace IDs associated with a CFN (workspaces that reference this CFN)"""
+        workspaces = (
+            session.query(WorkspaceModel.id)
+            .filter(WorkspaceModel.cfn_id == cfn_id, WorkspaceModel.deleted_at.is_(None))
+            .all()
+        )
+        return [ws.id for ws in workspaces]
+
+    def create(self, cfn_data: CognitiveFabricNodeRegisterRequest, user_id: str) -> CognitiveFabricNodeRegisterResponse:
         """
         Create a new Cognitive Fabric Node or refresh an active one
 
@@ -49,23 +57,18 @@ class CognitiveFabricNodeService:
         3. Active CFN reconnection: Refresh config (allows reboot/reconciliation)
         4. Disabled CFN: Return 403 Forbidden (requires manual re-enable)
 
+        Workspace association is done during workspace creation.
+
         Args:
-            workspace_id: Workspace identifier
-            cfn_data: CFN registration data
+            cfn_data: CFN registration data (cfn_id, cfn_name, cfn_config)
             user_id: User creating the CFN
 
         Returns:
             CognitiveFabricNodeRegisterResponse with cloud_config
 
         Raises:
-            HTTPException: 404 if workspace not found, 403 if disabled
+            HTTPException: 409 if name/id conflict, 403 if disabled
         """
-        # Validate workspace exists
-        if not workspace_service.exists(workspace_id):
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail="Workspace not found",
-            )
 
         try:
             db = RelationalDB()
@@ -81,30 +84,26 @@ class CognitiveFabricNodeService:
 
                 if existing_cfn:
                     # Scenario 1: CFN is fully deleted (deleted_at is set) - ID can be reused
-                    # UPDATE the existing deleted record instead of creating new
                     if existing_cfn.deleted_at is not None:
-                        # ID is available for reuse
-                        # Check if new name conflicts with another ACTIVE CFN (not the deleted one)
+                        # Check if new name conflicts with another ACTIVE CFN (globally unique)
                         conflicting_name = (
                             session.query(CognitiveFabricNodeModel)
                             .filter(
-                                CognitiveFabricNodeModel.workspace_id == workspace_id,
                                 CognitiveFabricNodeModel.cfn_name == cfn_data.cfn_name,
                                 CognitiveFabricNodeModel.deleted_at.is_(None),
-                                CognitiveFabricNodeModel.cfn_id != cfn_data.cfn_id,  # Exclude the deleted CFN itself
+                                CognitiveFabricNodeModel.cfn_id != cfn_data.cfn_id,
                             )
                             .first()
                         )
                         if conflicting_name:
                             raise HTTPException(
                                 status_code=status.HTTP_409_CONFLICT,
-                                detail=f"CFN with name '{cfn_data.cfn_name}' already exists in this workspace",
+                                detail=f"CFN with name '{cfn_data.cfn_name}' already exists",
                             )
 
-                        # Reuse the deleted CFN ID by updating the existing record
-                        return self._reuse_deleted_cfn(session, existing_cfn, workspace_id, cfn_data, user_id)
+                        return self._reuse_deleted_cfn(session, existing_cfn, cfn_data, user_id)
 
-                    # Scenario 2a: CFN is disabled (but not deleted) - ID is LOCKED, cannot reuse
+                    # Scenario 2a: CFN is disabled (but not deleted) - ID is LOCKED
                     elif not existing_cfn.enabled:
                         raise HTTPException(
                             status_code=status.HTTP_403_FORBIDDEN,
@@ -113,43 +112,30 @@ class CognitiveFabricNodeService:
 
                     # Scenario 2b: CFN is active - Allow reboot/reconnection (refresh config)
                     else:
-                        # Check workspace matches
-                        if existing_cfn.workspace_id != workspace_id:
-                            raise HTTPException(
-                                status_code=status.HTTP_403_FORBIDDEN,
-                                detail=f"CFN '{cfn_data.cfn_id}' is active in a different workspace",
-                            )
+                        return self._refresh_cfn(session, existing_cfn, cfn_data, user_id)
 
-                        # Refresh existing CFN (reboot/reconnection)
-                        return self._refresh_cfn(session, existing_cfn, workspace_id, cfn_data, user_id)
-
-                # Scenario 3: New CFN (no existing_cfn) - Create new entry
-                # Check if cfn_name already exists in this workspace
-                if not existing_cfn or existing_cfn.deleted_at is not None:
-                    # Only check name conflicts if this is truly a new CFN or reusing a deleted ID
-                    existing_name = (
-                        session.query(CognitiveFabricNodeModel)
-                        .filter(
-                            CognitiveFabricNodeModel.workspace_id == workspace_id,
-                            CognitiveFabricNodeModel.cfn_name == cfn_data.cfn_name,
-                            CognitiveFabricNodeModel.deleted_at.is_(None),
-                        )
-                        .first()
+                # Scenario 3: New CFN - Create new entry
+                # Check if cfn_name already exists globally
+                existing_name = (
+                    session.query(CognitiveFabricNodeModel)
+                    .filter(
+                        CognitiveFabricNodeModel.cfn_name == cfn_data.cfn_name,
+                        CognitiveFabricNodeModel.deleted_at.is_(None),
                     )
-                    if existing_name:
-                        raise HTTPException(
-                            status_code=status.HTTP_409_CONFLICT,
-                            detail=f"CFN with name '{cfn_data.cfn_name}' already exists in this workspace",
-                        )
+                    .first()
+                )
+                if existing_name:
+                    raise HTTPException(
+                        status_code=status.HTTP_409_CONFLICT,
+                        detail=f"CFN with name '{cfn_data.cfn_name}' already exists",
+                    )
 
-                # Generate cloud_config
-                cloud_config = self.generate_cloud_config(workspace_id, cfn_data.cfn_id)
+                # Generate cloud_config (no workspaces initially)
+                cloud_config = self.generate_cloud_config(cfn_data.cfn_id, [])
 
                 # Create new CFN record with offline status
-                # CFN must send heartbeat to become online
                 new_cfn = CognitiveFabricNodeModel(
                     cfn_id=cfn_data.cfn_id,
-                    workspace_id=workspace_id,
                     cfn_name=cfn_data.cfn_name,
                     cfn_config=cfn_data.cfn_config,
                     cloud_config=cloud_config,
@@ -160,6 +146,8 @@ class CognitiveFabricNodeService:
                 )
 
                 session.add(new_cfn)
+                session.flush()
+
                 session.commit()
                 session.refresh(new_cfn)
 
@@ -188,10 +176,10 @@ class CognitiveFabricNodeService:
             except IntegrityError as e:
                 session.rollback()
                 error_str = str(e)
-                if "idx_cfn_workspace_name_unique" in error_str:
+                if "idx_cfn_name_unique" in error_str:
                     raise HTTPException(
                         status_code=status.HTTP_409_CONFLICT,
-                        detail=f"CFN with name '{cfn_data.cfn_name}' already exists in this workspace",
+                        detail=f"CFN with name '{cfn_data.cfn_name}' already exists",
                     )
                 elif "cognitive_fabric_node_pkey" in error_str:
                     raise HTTPException(
@@ -226,7 +214,6 @@ class CognitiveFabricNodeService:
         self,
         session,
         cfn: CognitiveFabricNodeModel,
-        workspace_id: str,
         cfn_data: CognitiveFabricNodeRegisterRequest,
         user_id: str,
     ) -> CognitiveFabricNodeRegisterResponse:
@@ -236,7 +223,6 @@ class CognitiveFabricNodeService:
         Args:
             session: Database session
             cfn: Existing CFN model instance (disabled/deleted)
-            workspace_id: Workspace identifier
             cfn_data: CFN registration data
             user_id: User performing re-registration
 
@@ -244,21 +230,13 @@ class CognitiveFabricNodeService:
             CognitiveFabricNodeRegisterResponse with cloud_config
 
         Raises:
-            HTTPException: 409 if name conflict, 403 if workspace mismatch
+            HTTPException: 409 if name conflict
         """
-        # Check if workspace matches
-        if cfn.workspace_id != workspace_id:
-            raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN,
-                detail=f"CFN '{cfn_data.cfn_id}' was previously registered in a different workspace",
-            )
-
-        # Check if cfn_name conflicts with another active CFN in the workspace
+        # Check if cfn_name conflicts with another active CFN (globally unique)
         if cfn_data.cfn_name != cfn.cfn_name:
             existing_name = (
                 session.query(CognitiveFabricNodeModel)
                 .filter(
-                    CognitiveFabricNodeModel.workspace_id == workspace_id,
                     CognitiveFabricNodeModel.cfn_name == cfn_data.cfn_name,
                     CognitiveFabricNodeModel.cfn_id != cfn_data.cfn_id,
                     CognitiveFabricNodeModel.deleted_at.is_(None),
@@ -268,20 +246,22 @@ class CognitiveFabricNodeService:
             if existing_name:
                 raise HTTPException(
                     status_code=status.HTTP_409_CONFLICT,
-                    detail=f"CFN with name '{cfn_data.cfn_name}' already exists in this workspace",
+                    detail=f"CFN with name '{cfn_data.cfn_name}' already exists",
                 )
 
         # Re-activate the CFN with offline status
-        # CFN must send heartbeat to become online
         cfn.cfn_name = cfn_data.cfn_name
         cfn.cfn_config = cfn_data.cfn_config
-        cfn.cloud_config = self.generate_cloud_config(workspace_id, cfn_data.cfn_id)
         cfn.status = CognitiveFabricNodeStatus.OFFLINE.value
         cfn.last_seen = datetime.now(timezone.utc)
         cfn.enabled = True
         cfn.deleted_at = None
         cfn.updated_at = datetime.now(timezone.utc)
         cfn.updated_by = user_id
+
+        # Regenerate cloud_config with existing workspace associations
+        workspace_ids = self._get_workspace_ids(session, cfn.cfn_id)
+        cfn.cloud_config = self.generate_cloud_config(cfn.cfn_id, workspace_ids)
 
         session.commit()
         session.refresh(cfn)
@@ -312,21 +292,15 @@ class CognitiveFabricNodeService:
         self,
         session,
         cfn: CognitiveFabricNodeModel,
-        workspace_id: str,
         cfn_data: CognitiveFabricNodeRegisterRequest,
         user_id: str,
     ) -> CognitiveFabricNodeRegisterResponse:
         """
         Reuse a deleted CFN ID by updating the existing deleted record (internal method)
 
-        This allows CFN IDs to be reused after deregistration (hard delete).
-        The existing deleted record is updated with new data, effectively creating
-        a "new" CFN with the same ID.
-
         Args:
             session: Database session
             cfn: Existing CFN model instance (deleted, deleted_at is set)
-            workspace_id: Workspace identifier
             cfn_data: CFN registration data
             user_id: User performing registration
 
@@ -337,18 +311,19 @@ class CognitiveFabricNodeService:
             HTTPException: 409 if name conflict
         """
         # Update the deleted CFN to create a "new" CFN with the same ID
-        cfn.workspace_id = workspace_id
         cfn.cfn_name = cfn_data.cfn_name
         cfn.cfn_config = cfn_data.cfn_config
-        cfn.cloud_config = self.generate_cloud_config(workspace_id, cfn_data.cfn_id)
-        cfn.status = CognitiveFabricNodeStatus.OFFLINE.value  # Offline until heartbeat
+        cfn.status = CognitiveFabricNodeStatus.OFFLINE.value
         cfn.last_seen = datetime.now(timezone.utc)
-        cfn.enabled = True  # Re-enable
-        cfn.deleted_at = None  # Clear deletion marker
+        cfn.enabled = True
+        cfn.deleted_at = None
         cfn.updated_at = datetime.now(timezone.utc)
         cfn.updated_by = user_id
-        cfn.created_at = datetime.now(timezone.utc)  # Reset creation time
+        cfn.created_at = datetime.now(timezone.utc)
         cfn.created_by = user_id
+
+        # No workspace associations initially (done during workspace creation)
+        cfn.cloud_config = self.generate_cloud_config(cfn.cfn_id, [])
 
         session.commit()
         session.refresh(cfn)
@@ -379,20 +354,15 @@ class CognitiveFabricNodeService:
         self,
         session,
         cfn: CognitiveFabricNodeModel,
-        workspace_id: str,
         cfn_data: CognitiveFabricNodeRegisterRequest,
         user_id: str,
     ) -> CognitiveFabricNodeRegisterResponse:
         """
         Refresh an active CFN node during reboot/reconnection (internal method)
 
-        This allows CFN nodes to re-register with updated config after reboot.
-        Status remains offline until heartbeat is sent.
-
         Args:
             session: Database session
             cfn: Existing CFN model instance (active)
-            workspace_id: Workspace identifier
             cfn_data: CFN registration data
             user_id: User performing re-registration
 
@@ -402,12 +372,11 @@ class CognitiveFabricNodeService:
         Raises:
             HTTPException: 409 if name conflict
         """
-        # Check if cfn_name conflicts with another active CFN in the workspace
+        # Check if cfn_name conflicts with another active CFN (globally unique)
         if cfn_data.cfn_name != cfn.cfn_name:
             existing_name = (
                 session.query(CognitiveFabricNodeModel)
                 .filter(
-                    CognitiveFabricNodeModel.workspace_id == workspace_id,
                     CognitiveFabricNodeModel.cfn_name == cfn_data.cfn_name,
                     CognitiveFabricNodeModel.cfn_id != cfn_data.cfn_id,
                     CognitiveFabricNodeModel.deleted_at.is_(None),
@@ -417,17 +386,19 @@ class CognitiveFabricNodeService:
             if existing_name:
                 raise HTTPException(
                     status_code=status.HTTP_409_CONFLICT,
-                    detail=f"CFN with name '{cfn_data.cfn_name}' already exists in this workspace",
+                    detail=f"CFN with name '{cfn_data.cfn_name}' already exists",
                 )
 
-        # Update CFN config and refresh
+        # Update CFN config and refresh (keep existing workspace associations)
         cfn.cfn_name = cfn_data.cfn_name
         cfn.cfn_config = cfn_data.cfn_config
-        cfn.cloud_config = self.generate_cloud_config(workspace_id, cfn_data.cfn_id)
-        cfn.status = CognitiveFabricNodeStatus.OFFLINE.value  # Offline until heartbeat
+        cfn.status = CognitiveFabricNodeStatus.OFFLINE.value
         cfn.last_seen = datetime.now(timezone.utc)
         cfn.updated_at = datetime.now(timezone.utc)
         cfn.updated_by = user_id
+
+        workspace_ids = self._get_workspace_ids(session, cfn.cfn_id)
+        cfn.cloud_config = self.generate_cloud_config(cfn.cfn_id, workspace_ids)
 
         session.commit()
         session.refresh(cfn)
@@ -455,13 +426,12 @@ class CognitiveFabricNodeService:
         return response
 
     def update(
-        self, workspace_id: str, cfn_id: str, cfn_data: CognitiveFabricNodeUpdateRequest, user_id: str
+        self, cfn_id: str, cfn_data: CognitiveFabricNodeUpdateRequest, user_id: str
     ) -> CognitiveFabricNodeDetail:
         """
         Update Cognitive Fabric Node
 
         Args:
-            workspace_id: Workspace identifier
             cfn_id: CFN identifier (immutable)
             cfn_data: Update data
             user_id: User performing update
@@ -470,7 +440,7 @@ class CognitiveFabricNodeService:
             CognitiveFabricNodeDetail with updated information
 
         Raises:
-            HTTPException: 404 if not found, 403 if wrong workspace, 409 if name conflict
+            HTTPException: 404 if not found, 409 if name conflict
         """
         try:
             db = RelationalDB()
@@ -493,19 +463,11 @@ class CognitiveFabricNodeService:
                         detail="CFN node not found",
                     )
 
-                # Validate CFN belongs to the workspace
-                if cfn.workspace_id != workspace_id:
-                    raise HTTPException(
-                        status_code=status.HTTP_403_FORBIDDEN,
-                        detail="CFN node does not belong to this workspace",
-                    )
-
-                # Update cfn_name if provided (check uniqueness)
+                # Update cfn_name if provided (check global uniqueness)
                 if cfn_data.cfn_name is not None:
                     existing_name = (
                         session.query(CognitiveFabricNodeModel)
                         .filter(
-                            CognitiveFabricNodeModel.workspace_id == workspace_id,
                             CognitiveFabricNodeModel.cfn_name == cfn_data.cfn_name,
                             CognitiveFabricNodeModel.cfn_id != cfn_id,
                             CognitiveFabricNodeModel.deleted_at.is_(None),
@@ -515,7 +477,7 @@ class CognitiveFabricNodeService:
                     if existing_name:
                         raise HTTPException(
                             status_code=status.HTTP_409_CONFLICT,
-                            detail=f"CFN with name '{cfn_data.cfn_name}' already exists in this workspace",
+                            detail=f"CFN with name '{cfn_data.cfn_name}' already exists",
                         )
                     cfn.cfn_name = cfn_data.cfn_name
 
@@ -524,7 +486,8 @@ class CognitiveFabricNodeService:
                     cfn.cfn_config = cfn_data.cfn_config
 
                 # Regenerate cloud_config
-                cfn.cloud_config = self.generate_cloud_config(workspace_id, cfn_id)
+                workspace_ids = self._get_workspace_ids(session, cfn_id)
+                cfn.cloud_config = self.generate_cloud_config(cfn_id, workspace_ids)
 
                 # Update metadata
                 cfn.updated_at = datetime.now(timezone.utc)
@@ -535,7 +498,7 @@ class CognitiveFabricNodeService:
 
                 response = CognitiveFabricNodeDetail(
                     cfn_id=cfn.cfn_id,
-                    workspace_id=cfn.workspace_id,
+                    workspace_ids=workspace_ids,
                     cfn_name=cfn.cfn_name,
                     cfn_config=cfn.cfn_config,
                     cloud_config=cfn.cloud_config,
@@ -565,10 +528,10 @@ class CognitiveFabricNodeService:
 
             except IntegrityError as e:
                 session.rollback()
-                if "idx_cfn_workspace_name_unique" in str(e):
+                if "idx_cfn_name_unique" in str(e):
                     raise HTTPException(
                         status_code=status.HTTP_409_CONFLICT,
-                        detail=f"CFN with name '{cfn_data.cfn_name}' already exists in this workspace",
+                        detail=f"CFN with name '{cfn_data.cfn_name}' already exists",
                     )
                 raise HTTPException(
                     status_code=status.HTTP_400_BAD_REQUEST,
@@ -594,7 +557,7 @@ class CognitiveFabricNodeService:
                 detail=f"Failed to update CFN: {str(e)}",
             )
 
-    def disable(self, workspace_id: str, cfn_id: str, user_id: str) -> CognitiveFabricNodeDetail:
+    def disable(self, cfn_id: str, user_id: str) -> CognitiveFabricNodeDetail:
         """
         Disable Cognitive Fabric Node (soft disable)
 
@@ -603,7 +566,6 @@ class CognitiveFabricNodeService:
         A disabled CFN can be re-enabled via the enable endpoint.
 
         Args:
-            workspace_id: Workspace identifier
             cfn_id: CFN identifier
             user_id: User performing disable operation
 
@@ -611,7 +573,7 @@ class CognitiveFabricNodeService:
             CognitiveFabricNodeDetail with updated information
 
         Raises:
-            HTTPException: 404 if not found, 403 if wrong workspace, 400 if already disabled
+            HTTPException: 404 if not found, 400 if already disabled
         """
         try:
             db = RelationalDB()
@@ -634,13 +596,6 @@ class CognitiveFabricNodeService:
                         detail="CFN node not found",
                     )
 
-                # Validate CFN belongs to the workspace
-                if cfn.workspace_id != workspace_id:
-                    raise HTTPException(
-                        status_code=status.HTTP_403_FORBIDDEN,
-                        detail="CFN node does not belong to this workspace",
-                    )
-
                 # Check if already disabled
                 if not cfn.enabled:
                     raise HTTPException(
@@ -653,12 +608,14 @@ class CognitiveFabricNodeService:
                 cfn.updated_at = datetime.now(timezone.utc)
                 cfn.updated_by = user_id
 
+                workspace_ids = self._get_workspace_ids(session, cfn_id)
+
                 session.commit()
                 session.refresh(cfn)
 
                 response = CognitiveFabricNodeDetail(
                     cfn_id=cfn.cfn_id,
-                    workspace_id=cfn.workspace_id,
+                    workspace_ids=workspace_ids,
                     cfn_name=cfn.cfn_name,
                     cfn_config=cfn.cfn_config,
                     cloud_config=cfn.cloud_config,
@@ -706,7 +663,7 @@ class CognitiveFabricNodeService:
                 detail=f"Failed to disable CFN: {str(e)}",
             )
 
-    def delete(self, workspace_id: str, cfn_id: str, user_id: str) -> None:
+    def delete(self, cfn_id: str, user_id: str) -> None:
         """
         Delete Cognitive Fabric Node (hard delete)
 
@@ -715,12 +672,11 @@ class CognitiveFabricNodeService:
         A CFN must be disabled before it can be deleted.
 
         Args:
-            workspace_id: Workspace identifier
             cfn_id: CFN identifier
             user_id: User performing deletion
 
         Raises:
-            HTTPException: 404 if not found, 403 if wrong workspace, 400 if not disabled
+            HTTPException: 404 if not found, 400 if not disabled
         """
         try:
             db = RelationalDB()
@@ -743,13 +699,6 @@ class CognitiveFabricNodeService:
                         detail="CFN node not found",
                     )
 
-                # Validate CFN belongs to the workspace
-                if cfn.workspace_id != workspace_id:
-                    raise HTTPException(
-                        status_code=status.HTTP_403_FORBIDDEN,
-                        detail="CFN node does not belong to this workspace",
-                    )
-
                 # Check if CFN is disabled first
                 if cfn.enabled:
                     raise HTTPException(
@@ -761,6 +710,9 @@ class CognitiveFabricNodeService:
                 cfn.deleted_at = datetime.now(timezone.utc)
                 cfn.updated_at = datetime.now(timezone.utc)
                 cfn.updated_by = user_id
+
+                # Note: Workspaces referencing this CFN will have their cfn_id set to this value
+                # They should be updated or reassigned before deleting the CFN
 
                 session.commit()
 
@@ -796,7 +748,7 @@ class CognitiveFabricNodeService:
                 detail=f"Failed to de-register CFN: {str(e)}",
             )
 
-    def enable(self, workspace_id: str, cfn_id: str, user_id: str) -> CognitiveFabricNodeDetail:
+    def enable(self, cfn_id: str, user_id: str) -> CognitiveFabricNodeDetail:
         """
         Manually re-enable a disabled/de-registered CFN node
 
@@ -804,7 +756,6 @@ class CognitiveFabricNodeService:
         After enabling, the CFN can call /register to reconnect.
 
         Args:
-            workspace_id: Workspace identifier
             cfn_id: CFN identifier
             user_id: User performing the enable operation
 
@@ -812,7 +763,7 @@ class CognitiveFabricNodeService:
             CognitiveFabricNodeDetail with updated information
 
         Raises:
-            HTTPException: 404 if not found, 403 if wrong workspace, 400 if already enabled
+            HTTPException: 404 if not found, 400 if already enabled
         """
         try:
             db = RelationalDB()
@@ -828,13 +779,6 @@ class CognitiveFabricNodeService:
                         detail="CFN node not found",
                     )
 
-                # Validate CFN belongs to the workspace
-                if cfn.workspace_id != workspace_id:
-                    raise HTTPException(
-                        status_code=status.HTTP_403_FORBIDDEN,
-                        detail="CFN node does not belong to this workspace",
-                    )
-
                 # Check if already enabled
                 if cfn.enabled and cfn.deleted_at is None:
                     raise HTTPException(
@@ -845,16 +789,18 @@ class CognitiveFabricNodeService:
                 # Re-enable the CFN
                 cfn.enabled = True
                 cfn.deleted_at = None
-                cfn.status = CognitiveFabricNodeStatus.OFFLINE.value  # Will become online after heartbeat
+                cfn.status = CognitiveFabricNodeStatus.OFFLINE.value
                 cfn.updated_at = datetime.now(timezone.utc)
                 cfn.updated_by = user_id
+
+                workspace_ids = self._get_workspace_ids(session, cfn_id)
 
                 session.commit()
                 session.refresh(cfn)
 
                 response = CognitiveFabricNodeDetail(
                     cfn_id=cfn.cfn_id,
-                    workspace_id=cfn.workspace_id,
+                    workspace_ids=workspace_ids,
                     cfn_name=cfn.cfn_name,
                     cfn_config=cfn.cfn_config,
                     cloud_config=cfn.cloud_config,
@@ -902,19 +848,18 @@ class CognitiveFabricNodeService:
                 detail=f"Failed to enable CFN: {str(e)}",
             )
 
-    def heartbeat(self, workspace_id: str, cfn_id: str) -> CognitiveFabricNodeHeartbeatResponse:
+    def heartbeat(self, cfn_id: str) -> CognitiveFabricNodeHeartbeatResponse:
         """
         Update CFN heartbeat
 
         Args:
-            workspace_id: Workspace identifier
             cfn_id: CFN identifier
 
         Returns:
             CognitiveFabricNodeHeartbeatResponse with status and last_seen
 
         Raises:
-            HTTPException: 404 if not found, 403 if blocked or wrong workspace
+            HTTPException: 404 if not found, 403 if blocked
         """
         try:
             db = RelationalDB()
@@ -928,13 +873,6 @@ class CognitiveFabricNodeService:
                     raise HTTPException(
                         status_code=status.HTTP_404_NOT_FOUND,
                         detail="CFN node not found",
-                    )
-
-                # Validate CFN belongs to the workspace
-                if cfn.workspace_id != workspace_id:
-                    raise HTTPException(
-                        status_code=status.HTTP_403_FORBIDDEN,
-                        detail="CFN node does not belong to this workspace",
                     )
 
                 # Check if deleted (hard deleted)
@@ -989,25 +927,24 @@ class CognitiveFabricNodeService:
                 detail=f"Failed to process heartbeat: {str(e)}",
             )
 
-    def list(self, workspace_id: str, status_filter: Optional[str] = None) -> CognitiveFabricNodeList:
+    def list(self, workspace_id: Optional[str] = None, status_filter: Optional[str] = None) -> CognitiveFabricNodeList:
         """
-        List all Cognitive Fabric Nodes in workspace
+        List all Cognitive Fabric Nodes, optionally filtered by workspace
 
-        Returns all CFNs (enabled and disabled) in the workspace.
-        Deleted CFNs are never included.
+        Returns all CFNs (enabled and disabled). Deleted CFNs are never included.
 
         Args:
-            workspace_id: Workspace identifier
+            workspace_id: Optional workspace filter (filters to CFN assigned to that workspace)
             status_filter: Optional status filter (online, offline, blocked)
 
         Returns:
             CognitiveFabricNodeList with nodes and total count
 
         Raises:
-            HTTPException: 404 if workspace not found
+            HTTPException: 404 if workspace_id provided but not found
         """
-        # Validate workspace exists
-        if not workspace_service.exists(workspace_id):
+        # Validate workspace exists if filter provided
+        if workspace_id and not workspace_service.exists(workspace_id):
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail="Workspace not found",
@@ -1018,13 +955,24 @@ class CognitiveFabricNodeService:
             session = db.get_session()
 
             try:
-                # Base query - exclude only deleted CFNs (include both enabled and disabled)
+                # Base query - exclude only deleted CFNs
                 query = session.query(CognitiveFabricNodeModel).filter(
-                    and_(
-                        CognitiveFabricNodeModel.workspace_id == workspace_id,
-                        CognitiveFabricNodeModel.deleted_at.is_(None),
-                    )
+                    CognitiveFabricNodeModel.deleted_at.is_(None),
                 )
+
+                # Filter by workspace if provided (find CFN assigned to that workspace)
+                if workspace_id:
+                    # Get the CFN ID for this workspace
+                    workspace = (
+                        session.query(WorkspaceModel)
+                        .filter(WorkspaceModel.id == workspace_id, WorkspaceModel.deleted_at.is_(None))
+                        .first()
+                    )
+                    if workspace and workspace.cfn_id:
+                        query = query.filter(CognitiveFabricNodeModel.cfn_id == workspace.cfn_id)
+                    else:
+                        # Workspace has no CFN assigned, return empty list
+                        return CognitiveFabricNodeList(nodes=[], total=0)
 
                 # Apply status filter if provided
                 if status_filter:
@@ -1032,18 +980,20 @@ class CognitiveFabricNodeService:
 
                 cfns = query.all()
 
-                node_list = [
-                    CognitiveFabricNodeListItem(
-                        cfn_id=cfn.cfn_id,
-                        workspace_id=cfn.workspace_id,
-                        cfn_name=cfn.cfn_name,
-                        status=CognitiveFabricNodeStatus(cfn.status),
-                        last_seen=cfn.last_seen,
-                        enabled=cfn.enabled,
-                        created_at=cfn.created_at,
+                node_list = []
+                for cfn in cfns:
+                    workspace_ids = self._get_workspace_ids(session, cfn.cfn_id)
+                    node_list.append(
+                        CognitiveFabricNodeListItem(
+                            cfn_id=cfn.cfn_id,
+                            workspace_ids=workspace_ids,
+                            cfn_name=cfn.cfn_name,
+                            status=CognitiveFabricNodeStatus(cfn.status),
+                            last_seen=cfn.last_seen,
+                            enabled=cfn.enabled,
+                            created_at=cfn.created_at,
+                        )
                     )
-                    for cfn in cfns
-                ]
 
                 return CognitiveFabricNodeList(nodes=node_list, total=len(node_list))
 
@@ -1058,19 +1008,18 @@ class CognitiveFabricNodeService:
                 detail=f"Failed to list CFN nodes: {str(e)}",
             )
 
-    def get(self, workspace_id: str, cfn_id: str) -> CognitiveFabricNodeDetail:
+    def get(self, cfn_id: str) -> CognitiveFabricNodeDetail:
         """
         Get detailed Cognitive Fabric Node information
 
         Args:
-            workspace_id: Workspace identifier
             cfn_id: CFN identifier
 
         Returns:
             CognitiveFabricNodeDetail with full information
 
         Raises:
-            HTTPException: 404 if not found, 403 if wrong workspace
+            HTTPException: 404 if not found
         """
         try:
             db = RelationalDB()
@@ -1092,16 +1041,11 @@ class CognitiveFabricNodeService:
                         detail="CFN node not found",
                     )
 
-                # Validate CFN belongs to the workspace
-                if cfn.workspace_id != workspace_id:
-                    raise HTTPException(
-                        status_code=status.HTTP_403_FORBIDDEN,
-                        detail="CFN node does not belong to this workspace",
-                    )
+                workspace_ids = self._get_workspace_ids(session, cfn_id)
 
                 return CognitiveFabricNodeDetail(
                     cfn_id=cfn.cfn_id,
-                    workspace_id=cfn.workspace_id,
+                    workspace_ids=workspace_ids,
                     cfn_name=cfn.cfn_name,
                     cfn_config=cfn.cfn_config,
                     cloud_config=cfn.cloud_config,
@@ -1125,66 +1069,126 @@ class CognitiveFabricNodeService:
                 detail=f"Failed to retrieve CFN node: {str(e)}",
             )
 
-    def generate_cloud_config(self, workspace_id: str, cfn_id: str) -> dict:
+    def generate_cloud_config(self, cfn_id: str, workspace_ids: List[str] = None) -> dict:
         """
         Generate cloud configuration for CFN
 
+        Aggregates config from all associated workspaces.
+
         Args:
-            workspace_id: Workspace identifier
             cfn_id: CFN identifier
+            workspace_ids: List of workspace IDs (if None, fetches from join table)
 
         Returns:
             Dictionary with cloud configuration
         """
+        if workspace_ids is None:
+            db = RelationalDB()
+            session = db.get_session()
+            try:
+                workspace_ids = self._get_workspace_ids(session, cfn_id)
+            finally:
+                session.close()
+
         # Generate timestamp-based config_id
-        timestamp = datetime.now(timezone.utc).strftime('%Y%m%d-%H%M%S')
+        timestamp = datetime.now(timezone.utc).strftime("%Y%m%d-%H%M%S")
         config_id = f"cfg-{timestamp}-{cfn_id[:8]}"
 
         # Get workspace details
-        workspace = workspace_service.get(workspace_id)
+        workspaces_info = []
+        for ws_id in workspace_ids:
+            ws = workspace_service.get(ws_id)
+            if ws:
+                workspaces_info.append(
+                    {
+                        "workspace_id": ws_id,
+                        "workspace_name": ws.name if ws else "Unknown Workspace",
+                    }
+                )
 
         # Get CFN details
         db = RelationalDB()
         session = db.get_session()
         try:
-            cfn = session.query(CognitiveFabricNodeModel).filter(
-                CognitiveFabricNodeModel.cfn_id == cfn_id
-            ).first()
+            cfn = session.query(CognitiveFabricNodeModel).filter(CognitiveFabricNodeModel.cfn_id == cfn_id).first()
 
             cfn_name = cfn.cfn_name if cfn else "unknown"
             created_by = cfn.created_by if cfn else "system"
-            created_at = (cfn.created_at.isoformat() if cfn and
-                          cfn.created_at else datetime.now(timezone.utc).isoformat())
+            created_at = (
+                cfn.created_at.isoformat() if cfn and cfn.created_at else datetime.now(timezone.utc).isoformat()
+            )
             updated_by = cfn.updated_by if cfn else created_by
-            updated_at = (cfn.updated_at.isoformat() if cfn and
-                          cfn.updated_at else datetime.now(timezone.utc).isoformat())
+            updated_at = (
+                cfn.updated_at.isoformat() if cfn and cfn.updated_at else datetime.now(timezone.utc).isoformat()
+            )
         finally:
             session.close()
 
-        # Fetch Multi-Agentic Systems
-        try:
-            mas_systems = multi_agentic_system_service.list_dummy(workspace_id).systems
-            mas_payload = [system.model_dump(mode="json") for system in mas_systems]
-        except Exception:
-            mas_payload = []
-
-        # Fetch Cognitive Engines
-        try:
-            engines = cognitive_engine_service.list_dummy(workspace_id).engines
-            engines_payload = {
-                engine.cognitive_engine_id: {
-                    "name": engine.cognitive_engine_name,
-                    "enabled": engine.enabled,
-                    "config": engine.config or {},
-                }
-                for engine in engines
+        workspaces_payload = []
+        for ws_id in workspace_ids:
+            ws = workspace_service.get(ws_id)
+            workspace_obj = {
+                "workspace_id": ws_id,
+                "workspace_name": ws.name if ws else "Unknown Workspace",
+                "multi_agent_systems": [],
+                "cognitive_engines": [],
+                "cognitive_agents": [],
             }
-        except Exception:
-            engines_payload = {}
 
-        # Fetch Memory Providers
+            # Get Multi-Agentic Systems for this workspace
+            try:
+                mas_systems = multi_agentic_system_service.list_dummy(ws_id).systems
+                workspace_obj["multi_agent_systems"] = [system.model_dump(mode="json") for system in mas_systems]
+            except Exception:
+                pass
+
+            # Get Cognitive Engines for this workspace
+            try:
+                engines = cognitive_engine_service.list_dummy(ws_id).engines
+                workspace_obj["cognitive_engines"] = [
+                    {
+                        "cognitive_engine_id": engine.cognitive_engine_id,
+                        "name": engine.cognitive_engine_name,
+                        "enabled": engine.enabled,
+                        "config": engine.config or {},
+                    }
+                    for engine in engines
+                ]
+            except Exception:
+                pass
+
+            # Get Cognitive Agents for this workspace (global/built-in defaults)
+            try:
+                from server.database.relational_db.models.cognitive_agent import CognitiveAgent as CognitiveAgentModel
+
+                db_agents = RelationalDB()
+                session_agents = db_agents.get_session()
+                try:
+                    agents = (
+                        session_agents.query(CognitiveAgentModel)
+                        .filter(CognitiveAgentModel.enabled == True)  # noqa: E712
+                        .all()
+                    )
+                    workspace_obj["cognitive_agents"] = [
+                        {
+                            "cognitive_agent_id": agent.cognitive_agent_id,
+                            "name": agent.cognitive_agent_name,
+                            "description": agent.description,
+                            "enabled": agent.enabled,
+                            "config": agent.config or {},
+                        }
+                        for agent in agents
+                    ]
+                finally:
+                    session_agents.close()
+            except Exception:
+                pass
+
+            workspaces_payload.append(workspace_obj)
+
+        # Fetch Memory Providers (global, not workspace-scoped)
         try:
-            providers = memory_provider_service.list_dummy(workspace_id).providers
+            providers = memory_provider_service.list_dummy().providers
             providers_payload = [
                 {
                     "memory_provider_id": provider.memory_provider_id,
@@ -1218,22 +1222,16 @@ class CognitiveFabricNodeService:
             "version": "1.0",
             "config_id": config_id,
             "metadata": {
-                "workspace_id": workspace_id,
-                "workspace_name": workspace.name if workspace else "Unknown Workspace",
                 "cfn_id": cfn_id,
                 "cfn_name": cfn_name,
                 "created_by": created_by,
                 "created_at": created_at,
                 "updated_by": updated_by,
                 "updated_at": updated_at,
-                "environment": "production",
             },
-            "multi_agent_systems": {
-                "systems": mas_payload
-            },
-            "cognitive_fabric_node": cfn_data,
-            "cognitive_engines": engines_payload,
+            "workspaces": workspaces_payload,
             "memory_providers": providers_payload,
+            "cognitive_fabric_node": cfn_data,
         }
 
     def mark_stale_nodes_offline(self, threshold_minutes: int = 2) -> int:

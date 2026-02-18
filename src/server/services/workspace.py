@@ -129,17 +129,48 @@ class WorkspaceService:
             workspace_data: Workspace creation data
             creator_user_id: ID of the user creating the workspace
             workspace_id: Optional hardcoded workspace ID (for admin default workspace only)
+
+        Raises:
+            HTTPException: 404 if CFN not found, 400 if CFN required but not provided, 409 on conflict
         """
+        from server.database.relational_db.models.cognitive_fabric_node import (
+            CognitiveFabricNode as CognitiveFabricNodeModel,
+        )
+
         try:
             db = RelationalDB()
             session = db.get_session()
 
             try:
+                # Validate CFN if provided
+                if workspace_data.cfn_id:
+                    cfn = (
+                        session.query(CognitiveFabricNodeModel)
+                        .filter(
+                            CognitiveFabricNodeModel.cfn_id == workspace_data.cfn_id,
+                            CognitiveFabricNodeModel.deleted_at.is_(None),
+                        )
+                        .first()
+                    )
+
+                    if not cfn:
+                        raise HTTPException(
+                            status_code=status.HTTP_404_NOT_FOUND,
+                            detail=f"CFN with id '{workspace_data.cfn_id}' not found or has been deleted",
+                        )
+
+                    if not cfn.enabled:
+                        raise HTTPException(
+                            status_code=status.HTTP_400_BAD_REQUEST,
+                            detail=f"CFN '{workspace_data.cfn_id}' is disabled. Please enable it first.",
+                        )
+
                 workspace_kwargs = {
                     "name": workspace_data.name,
                     "users": [],  # Legacy field, kept for backwards compatibility
                     "config": workspace_data.config,
                     "created_by": creator_user_id,
+                    "cfn_id": workspace_data.cfn_id,
                 }
 
                 # Only use hardcoded ID if provided (for admin default workspace)
@@ -149,6 +180,8 @@ class WorkspaceService:
                 new_workspace = WorkspaceModel(**workspace_kwargs)
 
                 session.add(new_workspace)
+                session.flush()
+
                 session.commit()
                 session.refresh(new_workspace)
 
@@ -165,6 +198,7 @@ class WorkspaceService:
                 response = WorkspaceResponse(id=new_workspace.id)  # type: ignore[arg-type]
 
                 # add to audits table
+                cfn_info = f" and associated with CFN {workspace_data.cfn_id}" if workspace_data.cfn_id else ""
                 audit_service.create_audit(
                     AuditRequest(
                         resource_type=ResourceType.WORKSPACE,
@@ -173,7 +207,7 @@ class WorkspaceService:
                         created_by="",  # TODO: get user from apikey
                         created_at=new_workspace.created_at,  # type: ignore[arg-type]
                         audit_information=workspace_data.model_dump(),
-                        audit_extra_information="Workspace created successfully",
+                        audit_extra_information=f"Workspace created successfully{cfn_info}",
                     )
                 )
 
@@ -268,6 +302,7 @@ class WorkspaceService:
                         WorkspaceDetail(
                             id=workspace.id,  # type: ignore[arg-type]
                             name=workspace.name,  # type: ignore[arg-type]
+                            cfn_id=workspace.cfn_id,  # type: ignore[arg-type]
                             created_at=workspace.created_at,  # type: ignore[arg-type]
                             created_by=workspace.created_by,  # type: ignore[arg-type]
                             created_by_username=creator_map.get(workspace.id),  # type: ignore[arg-type]
@@ -354,6 +389,7 @@ class WorkspaceService:
                 return WorkspaceDetail(
                     id=workspace.id,  # type: ignore[arg-type]
                     name=workspace.name,  # type: ignore[arg-type]
+                    cfn_id=workspace.cfn_id,  # type: ignore[arg-type]
                     created_at=workspace.created_at,  # type: ignore[arg-type]
                     created_by=workspace.created_by,  # type: ignore[arg-type]
                     created_by_username=creator_username,
@@ -431,6 +467,36 @@ class WorkspaceService:
                 if workspace_data.name is not None:
                     workspace.name = workspace_data.name  # type: ignore[assignment]
 
+                # Handle CFN reassignment
+                if workspace_data.cfn_id is not None:
+                    # Validate new CFN exists and is enabled
+                    from server.database.relational_db.models.cognitive_fabric_node import (
+                        CognitiveFabricNode as CognitiveFabricNodeModel,
+                    )
+
+                    cfn = (
+                        session.query(CognitiveFabricNodeModel)
+                        .filter(
+                            CognitiveFabricNodeModel.cfn_id == workspace_data.cfn_id,
+                            CognitiveFabricNodeModel.deleted_at.is_(None),
+                        )
+                        .first()
+                    )
+
+                    if not cfn:
+                        raise HTTPException(
+                            status_code=status.HTTP_404_NOT_FOUND,
+                            detail=f"CFN with id '{workspace_data.cfn_id}' not found or has been deleted",
+                        )
+
+                    if not cfn.enabled:
+                        raise HTTPException(
+                            status_code=status.HTTP_400_BAD_REQUEST,
+                            detail=f"CFN '{workspace_data.cfn_id}' is disabled. Please enable it first.",
+                        )
+
+                    workspace.cfn_id = workspace_data.cfn_id  # type: ignore[assignment]
+
                 workspace.updated_at = datetime.now(timezone.utc)  # type: ignore[assignment]
 
                 session.commit()
@@ -450,6 +516,7 @@ class WorkspaceService:
                 response = WorkspaceDetail(
                     id=workspace.id,  # type: ignore[arg-type]
                     name=workspace.name,  # type: ignore[arg-type]
+                    cfn_id=workspace.cfn_id,  # type: ignore[arg-type]
                     created_at=workspace.created_at,  # type: ignore[arg-type]
                     updated_at=workspace.updated_at,  # type: ignore[arg-type]
                     created_by=workspace.created_by,  # type: ignore[arg-type]

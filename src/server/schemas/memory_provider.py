@@ -1,4 +1,4 @@
-"""Memory Provider schemas"""
+"""Memory Provider schemas — Memory Providers are shared across workspaces"""
 
 from datetime import datetime
 from typing import Optional
@@ -27,7 +27,6 @@ class MemoryProviderListItem(BaseModel):
     """Schema for memory provider list item"""
 
     memory_provider_id: str
-    workspace_id: str
     memory_provider_name: str
     provider_type: str
     provider: str
@@ -47,7 +46,6 @@ class MemoryProviderDetail(BaseModel):
     """Schema for detailed memory provider information"""
 
     memory_provider_id: str
-    workspace_id: str
     memory_provider_name: str
     provider_type: str
     provider: str

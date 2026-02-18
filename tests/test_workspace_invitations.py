@@ -9,10 +9,10 @@ import pytest
 class TestWorkspaceInvitationFlow:
     """Test cases for workspace invitation and member management."""
 
-    def test_create_workspace_auto_adds_creator_as_admin(self, client, admin_user):
+    def test_create_workspace_auto_adds_creator_as_admin(self, client, admin_user, registered_cfn):
         """Test that workspace creator is automatically added as admin member."""
         # Create workspace
-        response = client.post("/api/workspaces/", json={"name": "Test Workspace"})
+        response = client.post("/api/workspaces/", json={"name": "Test Workspace", "cfn_id": registered_cfn})
         assert response.status_code == 201
         workspace_id = response.json()["id"]
 
@@ -28,10 +28,10 @@ class TestWorkspaceInvitationFlow:
         assert member["role"] == "admin"
         assert member["workspace_id"] == workspace_id
 
-    def test_admin_can_invite_user(self, client, admin_user, test_user):
+    def test_admin_can_invite_user(self, client, admin_user, test_user, registered_cfn):
         """Test that admin can invite a user to workspace."""
         # Create workspace
-        response = client.post("/api/workspaces/", json={"name": "Test Workspace"})
+        response = client.post("/api/workspaces/", json={"name": "Test Workspace", "cfn_id": registered_cfn})
         assert response.status_code == 201
         workspace_id = response.json()["id"]
 
@@ -48,10 +48,10 @@ class TestWorkspaceInvitationFlow:
         invitation_id = response.json()["id"]
         assert isinstance(invitation_id, str)
 
-    def test_invite_nonexistent_user_fails(self, client):
+    def test_invite_nonexistent_user_fails(self, client, registered_cfn):
         """Test that inviting nonexistent user fails."""
         # Create workspace
-        response = client.post("/api/workspaces/", json={"name": "Test Workspace"})
+        response = client.post("/api/workspaces/", json={"name": "Test Workspace", "cfn_id": registered_cfn})
         workspace_id = response.json()["id"]
 
         # Try to invite nonexistent user
@@ -66,10 +66,10 @@ class TestWorkspaceInvitationFlow:
         assert response.status_code == 404
         assert "not found" in response.json()["detail"].lower()
 
-    def test_invite_invalid_role_fails(self, client, test_user):
+    def test_invite_invalid_role_fails(self, client, test_user, registered_cfn):
         """Test that inviting with invalid role fails."""
         # Create workspace
-        response = client.post("/api/workspaces/", json={"name": "Test Workspace"})
+        response = client.post("/api/workspaces/", json={"name": "Test Workspace", "cfn_id": registered_cfn})
         workspace_id = response.json()["id"]
 
         # Try to invite with invalid role
@@ -83,10 +83,10 @@ class TestWorkspaceInvitationFlow:
         )
         assert response.status_code == 422
 
-    def test_list_workspace_invitations(self, client, test_user):
+    def test_list_workspace_invitations(self, client, test_user, registered_cfn):
         """Test listing invitations for a workspace."""
         # Create workspace
-        response = client.post("/api/workspaces/", json={"name": "Test Workspace"})
+        response = client.post("/api/workspaces/", json={"name": "Test Workspace", "cfn_id": registered_cfn})
         workspace_id = response.json()["id"]
 
         # Create invitation
@@ -116,10 +116,10 @@ class TestWorkspaceInvitationFlow:
         assert "inviter_username" in invitation
         assert "expires_at" in invitation
 
-    def test_get_pending_invitations(self, client, test_user):
-        """Test getting pending invitations for current user."""
+    def test_get_pending_invitations(self, client, test_user, registered_cfn):
+        """Test getting pending invitation for a user."""
         # Create workspace
-        response = client.post("/api/workspaces/", json={"name": "Test Workspace"})
+        response = client.post("/api/workspaces/", json={"name": "Test Workspace", "cfn_id": registered_cfn})
         workspace_id = response.json()["id"]
 
         # Create invitation for test_user
@@ -139,10 +139,10 @@ class TestWorkspaceInvitationFlow:
         # Dev-user has no invitations
         assert response.json()["total"] == 0
 
-    def test_cancel_invitation(self, client, test_user):
-        """Test admin can cancel a pending invitation."""
+    def test_cancel_invitation(self, client, test_user, registered_cfn):
+        """Test canceling pending invitation."""
         # Create workspace
-        response = client.post("/api/workspaces/", json={"name": "Test Workspace"})
+        response = client.post("/api/workspaces/", json={"name": "Test Workspace", "cfn_id": registered_cfn})
         workspace_id = response.json()["id"]
 
         # Create invitation
@@ -166,10 +166,10 @@ class TestWorkspaceInvitationFlow:
         response = client.get(f"/api/workspaces/{workspace_id}/invitations")
         assert response.json()["total"] == 0
 
-    def test_duplicate_invitation_fails(self, client, test_user):
+    def test_duplicate_invitation_fails(self, client, test_user, registered_cfn):
         """Test that creating duplicate pending invitation fails."""
         # Create workspace
-        response = client.post("/api/workspaces/", json={"name": "Test Workspace"})
+        response = client.post("/api/workspaces/", json={"name": "Test Workspace", "cfn_id": registered_cfn})
         workspace_id = response.json()["id"]
 
         # Create first invitation
@@ -191,7 +191,7 @@ class TestWorkspaceInvitationFlow:
         assert response.status_code == 409
         assert "already exists" in response.json()["detail"].lower()
 
-    def test_accept_invitation_returns_assigned_role(self, client, admin_user, test_user):
+    def test_accept_invitation_returns_assigned_role(self, client, admin_user, test_user, registered_cfn):
         """Test that accepting an invitation returns workspace details and assigned role."""
         import hashlib
 
@@ -221,7 +221,7 @@ class TestWorkspaceInvitationFlow:
             session.close()
 
         # Create workspace as admin
-        response = client.post("/api/workspaces/", json={"name": "Test Workspace"})
+        response = client.post("/api/workspaces/", json={"name": "Test Workspace", "cfn_id": registered_cfn})
         assert response.status_code == 201
         workspace_id = response.json()["id"]
 
@@ -266,10 +266,10 @@ class TestWorkspaceInvitationFlow:
 class TestWorkspaceMemberManagement:
     """Test cases for workspace member management."""
 
-    def test_list_workspace_members(self, client):
+    def test_list_workspace_members(self, client, test_user, registered_cfn):
         """Test listing workspace members."""
         # Create workspace
-        response = client.post("/api/workspaces/", json={"name": "Test Workspace"})
+        response = client.post("/api/workspaces/", json={"name": "Test Workspace", "cfn_id": registered_cfn})
         workspace_id = response.json()["id"]
 
         # List members
@@ -282,10 +282,10 @@ class TestWorkspaceMemberManagement:
         assert data["members"][0]["role"] == "admin"
         assert data["members"][0]["is_creator"] is True
 
-    def test_update_member_role(self, client, test_user):
+    def test_update_member_role(self, client, test_user, registered_cfn):
         """Test updating a member's role."""
         # Create workspace
-        response = client.post("/api/workspaces/", json={"name": "Test Workspace"})
+        response = client.post("/api/workspaces/", json={"name": "Test Workspace", "cfn_id": registered_cfn})
         workspace_id = response.json()["id"]
 
         # Manually add test_user as viewer
@@ -307,10 +307,10 @@ class TestWorkspaceMemberManagement:
         assert data["role"] == "admin"
         assert data["user_id"] == test_user["id"]
 
-    def test_remove_member(self, client, test_user):
+    def test_remove_member(self, client, test_user, registered_cfn):
         """Test removing a member from workspace."""
         # Create workspace
-        response = client.post("/api/workspaces/", json={"name": "Test Workspace"})
+        response = client.post("/api/workspaces/", json={"name": "Test Workspace", "cfn_id": registered_cfn})
         workspace_id = response.json()["id"]
 
         # Manually add test_user
@@ -334,10 +334,10 @@ class TestWorkspaceMemberManagement:
         member_ids = [m["user_id"] for m in members]
         assert test_user["id"] not in member_ids
 
-    def test_admin_cannot_remove_self(self, client):
-        """Test that admin cannot remove themselves."""
+    def test_admin_cannot_remove_self(self, client, registered_cfn):
+        """Test that admin cannot remove themselves from workspace."""
         # Create workspace
-        response = client.post("/api/workspaces/", json={"name": "Test Workspace"})
+        response = client.post("/api/workspaces/", json={"name": "Test Workspace", "cfn_id": registered_cfn})
         workspace_id = response.json()["id"]
 
         # Try to remove self (dev-user is the creator/admin)
@@ -347,7 +347,7 @@ class TestWorkspaceMemberManagement:
         assert response.status_code == 403
         assert "cannot remove yourself" in response.json()["detail"].lower()
 
-    def test_is_creator_flag_in_member_list(self, client, test_user):
+    def test_is_creator_flag_in_member_list(self, client, test_user, registered_cfn):
         """Test that is_creator flag correctly identifies workspace creator."""
         from server.database.relational_db.db import RelationalDB
         from server.database.relational_db.models.workspace_member import (
@@ -355,7 +355,7 @@ class TestWorkspaceMemberManagement:
         )
 
         # Create workspace as dev-user
-        response = client.post("/api/workspaces/", json={"name": "Test Workspace"})
+        response = client.post("/api/workspaces/", json={"name": "Test Workspace", "cfn_id": registered_cfn})
         workspace_id = response.json()["id"]
 
         # Add test_user as a member (not creator)
@@ -392,7 +392,7 @@ class TestWorkspaceMemberManagement:
         assert dev_user_member["is_creator"] is True
         assert test_user_member["is_creator"] is False
 
-    def test_cannot_remove_workspace_creator(self, client, test_user):
+    def test_cannot_remove_workspace_creator(self, client, test_user, registered_cfn):
         """Test that workspace creator cannot be removed by another admin."""
         import hashlib
         from fastapi.testclient import TestClient
@@ -401,7 +401,7 @@ class TestWorkspaceMemberManagement:
         from server.main import app
 
         # Create workspace as dev-user (creator)
-        response = client.post("/api/workspaces/", json={"name": "Test Workspace"})
+        response = client.post("/api/workspaces/", json={"name": "Test Workspace", "cfn_id": registered_cfn})
         assert response.status_code == 201
         workspace_id = response.json()["id"]
 
@@ -449,7 +449,7 @@ class TestWorkspaceMemberManagement:
         assert response.status_code == 403
         assert "cannot remove the workspace creator" in response.json()["detail"].lower()
 
-    def test_non_member_cannot_access_workspace(self, client, test_user):
+    def test_non_member_cannot_access_workspace(self, client, test_user, registered_cfn):
         """Test that regular admin user cannot access workspace they're not a member of."""
         import hashlib
         from fastapi.testclient import TestClient
@@ -458,7 +458,7 @@ class TestWorkspaceMemberManagement:
         from server.main import app
 
         # Create workspace as dev-user
-        response = client.post("/api/workspaces/", json={"name": "Test Workspace"})
+        response = client.post("/api/workspaces/", json={"name": "Test Workspace", "cfn_id": registered_cfn})
         assert response.status_code == 201
         workspace_id = response.json()["id"]
 
@@ -506,10 +506,10 @@ class TestWorkspaceMemberManagement:
 class TestWorkspaceInvitationExpiration:
     """Test cases for invitation expiration."""
 
-    def test_invitation_has_expiration_date(self, client, test_user):
-        """Test that created invitations have expiration dates."""
+    def test_invitation_has_expiration_date(self, client, test_user, registered_cfn):
+        """Test that invitations have an expiration date."""
         # Create workspace
-        response = client.post("/api/workspaces/", json={"name": "Test Workspace"})
+        response = client.post("/api/workspaces/", json={"name": "Test Workspace", "cfn_id": registered_cfn})
         workspace_id = response.json()["id"]
 
         # Create invitation

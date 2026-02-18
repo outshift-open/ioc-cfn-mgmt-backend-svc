@@ -28,9 +28,10 @@ def create_workspace(
     Create a new workspace
 
     - **name**: Name of the workspace (required)
-    - **users**: List of user IDs (optional)
+    - **cfn_id**: CFN identifier to associate with this workspace (required)
     - **config**: Workspace configuration (optional)
 
+    The workspace is bound to a CFN during creation.
     Returns the UUID of the created workspace
     """
     authz_service.require_permission(auth_user, "create", "workspace")
@@ -75,6 +76,7 @@ def update_workspace(
 
     - **workspace_id**: UUID of the workspace
     - **name**: New name for the workspace (optional)
+    - **cfn_id**: Reassign workspace to a different CFN (optional)
 
     Returns the updated workspace details if user has access
     """

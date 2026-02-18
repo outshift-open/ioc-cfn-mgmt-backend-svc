@@ -29,16 +29,8 @@ class MultiAgenticSystemService:
             name="Dummy Multi-Agentic System",
             description="A sample multi-agentic system for testing",
             agents={
-                "planner": {
-                    "type": "planner",
-                    "model": "claude-opus-4-6",
-                    "config": {"temperature": 0.7}
-                },
-                "executor": {
-                    "type": "executor",
-                    "model": "claude-sonnet-4-5",
-                    "config": {"temperature": 0.5}
-                }
+                "planner": {"type": "planner", "model": "claude-opus-4-6", "config": {"temperature": 0.7}},
+                "executor": {"type": "executor", "model": "claude-sonnet-4-5", "config": {"temperature": 0.5}},
             },
             config={},
             created_at="2024-01-01T00:00:00Z",

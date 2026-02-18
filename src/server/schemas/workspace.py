@@ -12,6 +12,12 @@ class WorkspaceCreate(BaseModel):
         min_length=1,
         max_length=100,
     )
+    cfn_id: str = Field(
+        ...,
+        description="CFN identifier to associate with this workspace (required)",
+        min_length=1,
+        max_length=255,
+    )
     config: Dict[str, Any] = Field(default_factory=dict, description="Workspace configuration settings")
 
 
@@ -28,6 +34,12 @@ class WorkspaceUpdate(BaseModel):
         min_length=1,
         max_length=100,
     )
+    cfn_id: Optional[str] = Field(
+        None,
+        description="CFN identifier to reassign workspace to a different CFN",
+        min_length=1,
+        max_length=255,
+    )
 
 
 class WorkspaceDetail(BaseModel):
@@ -36,6 +48,7 @@ class WorkspaceDetail(BaseModel):
             "example": {
                 "id": "550e8400-e29b-41d4-a716-446655440000",
                 "name": "My Workspace",
+                "cfn_id": "cfn-node-001",
                 "created_at": "2024-11-14T10:30:00Z",
                 "updated_at": "2024-11-14T11:15:00Z",
                 "created_by": "user-123",
@@ -48,6 +61,7 @@ class WorkspaceDetail(BaseModel):
 
     id: str
     name: str
+    cfn_id: Optional[str] = Field(None, description="CFN identifier that manages this workspace")
     created_at: datetime
     updated_at: Optional[datetime] = None
     created_by: Optional[str] = None

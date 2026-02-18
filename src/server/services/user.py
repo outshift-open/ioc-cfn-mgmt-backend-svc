@@ -108,39 +108,7 @@ class UserService:
                         )
                     )
 
-                # Create default workspace for admin user if it doesn't exist
-                from server.database.relational_db.models.workspace import Workspace as WorkspaceModel
-                from server.schemas.workspace import WorkspaceCreate
-                from server.services.workspace import workspace_service
 
-                # Check if admin user already has a default workspace
-                existing_workspace = (
-                    session.query(WorkspaceModel)
-                    .filter(
-                        WorkspaceModel.name == workspace_service.DEFAULT_WORKSPACE_NAME,
-                        WorkspaceModel.created_by == user_id,
-                        WorkspaceModel.deleted_at.is_(None),
-                    )
-                    .first()
-                )
-
-                if existing_workspace:
-                    logger.info(f"Default workspace already exists for admin user with ID: {existing_workspace.id}")
-                else:
-                    # Create default workspace for admin user with hardcoded ID for dev/testing
-                    logger.info("Creating default workspace for admin user")
-                    workspace_data = WorkspaceCreate(
-                        name=workspace_service.DEFAULT_WORKSPACE_NAME,
-                        config={},
-                    )
-                    workspace_response = workspace_service.create(
-                        workspace_data=workspace_data,
-                        creator_user_id=user_id,
-                        workspace_id=ADMIN_WORKSPACE_ID_DEFAULT,
-                    )
-                    logger.info(
-                        f"Successfully created default workspace for admin user with ID: {workspace_response.id}"
-                    )
 
                 response = UserResponse(id=user_id, api_key=None, api_key_preview=None)
                 return response

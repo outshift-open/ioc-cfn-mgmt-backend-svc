@@ -429,15 +429,12 @@ class TestAPIKeyValidation:
 class TestAPIKeyWorkspaceAccess:
     """Test cases for workspace access with API keys."""
 
-    def test_api_key_access_user_workspace(self, client, admin_user, sample_workspace_data):
+    def test_api_key_access_user_workspace(self, client, admin_user, registered_cfn):
         """Test that API key can access workspaces the user is a member of."""
         app.dependency_overrides[get_auth_user] = override_get_auth_user(admin_user)
         try:
             # Create workspace (requires admin)
-            workspace_data = {
-                "name": "User Workspace",
-                "users": [admin_user["id"]]
-            }
+            workspace_data = {"name": "User Workspace", "users": [admin_user["id"]], "cfn_id": registered_cfn}
             response = client.post("/api/workspaces", json=workspace_data)
             assert response.status_code == 201
             workspace_id = response.json()["id"]
@@ -448,11 +445,11 @@ class TestAPIKeyWorkspaceAccess:
         finally:
             app.dependency_overrides.clear()
 
-    def test_admin_api_key_access_all_workspaces(self, client, admin_user):
+    def test_admin_api_key_access_all_workspaces(self, client, admin_user, registered_cfn):
         """Test that super_admin can access all workspaces, but regular admin cannot."""
         # Create workspace as admin
         app.dependency_overrides[get_auth_user] = override_get_auth_user(admin_user)
-        workspace_data = {"name": "Test Workspace"}
+        workspace_data = {"name": "Test Workspace", "cfn_id": registered_cfn}
         response = client.post("/api/workspaces", json=workspace_data)
         assert response.status_code == 201
         workspace_id = response.json()["id"]

@@ -1,4 +1,8 @@
-"""Memory Provider service - Business logic for Memory Provider operations"""
+"""Memory Provider service - Business logic for Memory Provider operations
+
+Memory Providers are shared across workspaces (cross-workspace resource).
+They are associated with workspaces via the workspace_memory_provider join table.
+"""
 
 from fastapi import HTTPException, status
 
@@ -10,26 +14,22 @@ from server.schemas.memory_provider import MemoryProviderList, MemoryProviderLis
 class MemoryProviderService:
     """Service layer for Memory Provider business logic"""
 
-    def list_dummy(self, workspace_id: str) -> MemoryProviderList:
+    def list_dummy(self) -> MemoryProviderList:
         """Dummy implementation for listing memory providers"""
         dummy_provider = MemoryProviderListItem(
             memory_provider_id="dummy-id",
-            workspace_id=workspace_id,
             memory_provider_name="Dummy Memory Provider",
             provider_type="dummy",
             provider="dummy",
-            config={"type": "dummy", "version": "1.0"},
+            config={"version": "1.0"},
             enabled=True,
             created_at="2024-01-01T00:00:00Z",
         )
         return MemoryProviderList(providers=[dummy_provider], total=1)
 
-    def list(self, workspace_id: str) -> MemoryProviderList:
+    def list(self) -> MemoryProviderList:
         """
-        List all Memory Providers in workspace
-
-        Args:
-            workspace_id: Workspace identifier
+        List all Memory Providers (global)
 
         Returns:
             MemoryProviderList with providers and total count
@@ -39,11 +39,9 @@ class MemoryProviderService:
             session = db.get_session()
 
             try:
-                # Query all enabled providers in workspace
                 providers = (
                     session.query(MemoryProviderModel)
                     .filter(
-                        MemoryProviderModel.workspace_id == workspace_id,
                         MemoryProviderModel.deleted_at.is_(None),
                         MemoryProviderModel.enabled.is_(True),
                     )
@@ -53,7 +51,6 @@ class MemoryProviderService:
                 provider_list = [
                     MemoryProviderListItem(
                         memory_provider_id=provider.memory_provider_id,
-                        workspace_id=provider.workspace_id,
                         memory_provider_name=provider.memory_provider_name,
                         provider_type=provider.provider_type,
                         provider=provider.provider,

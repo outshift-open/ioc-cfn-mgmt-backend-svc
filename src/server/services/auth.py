@@ -11,8 +11,6 @@ from server.authn.jwt import create_access_token, create_refresh_token
 from server.common import hash_password, verify_password
 from server.database.relational_db.db import RelationalDB
 from server.database.relational_db.models.user import User as UserModel
-from server.schemas.workspace import WorkspaceCreate
-from server.services.workspace import workspace_service
 
 logger = logging.getLogger(__name__)
 
@@ -174,16 +172,7 @@ class AuthService:
 
                 logger.info(f"New user registered successfully - Username: {username}, Domain: {domain}, Role: {role}")
 
-                # Create default workspace for the new user
-                try:
-                    workspace_service.create(
-                        WorkspaceCreate(name="Default Workspace", config={}),
-                        creator_user_id=user_id,
-                    )
-                    logger.info(f"Default workspace created for user {username}")
-                except Exception as e:
-                    logger.warning(f"Failed to create default workspace for user {username}: {str(e)}")
-                    # Don't fail signup if workspace creation fails
+                # Note: Default workspace creation removed - workspaces require CFN assignment
 
                 # Prepare user data
                 user_data = {
