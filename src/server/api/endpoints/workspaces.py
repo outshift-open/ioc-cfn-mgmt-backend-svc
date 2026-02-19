@@ -12,11 +12,10 @@ from server.schemas.workspace import (
 from server.services.workspace import workspace_service
 
 router = APIRouter()
-internal_router = APIRouter()
 
 
 @router.post(
-    "/",
+    "/create",
     response_model=WorkspaceResponse,
     status_code=status.HTTP_201_CREATED,
 )
@@ -38,7 +37,8 @@ def create_workspace(
     return workspace_service.create(workspace_data, creator_user_id=auth_user["id"])
 
 
-@router.get("/", response_model=WorkspaceList)
+@router.get("/list", response_model=WorkspaceList)
+@router.get("", response_model=WorkspaceList)
 def list_workspaces(auth_user: dict = Depends(get_auth_user)):
     """
     List workspaces accessible to the user
@@ -87,29 +87,15 @@ def update_workspace(
 @router.delete("/{workspace_id}", status_code=status.HTTP_204_NO_CONTENT)
 def delete_workspace(
     workspace_id: str,
-    _purge: bool = False,
     auth_user: dict = Depends(get_auth_user),
 ):
     """
     Delete a workspace
 
     - **workspace_id**: UUID of the workspace
-    - **_purge**: Optional query parameter. If false (default), performs soft
-      delete. If true, performs hard delete.
 
-    Returns success message if user has access
+    Performs a soft delete. Returns success message if user has access
     """
     authz_service.require_permission(auth_user, "delete", "workspace")
-    workspace_service.delete(
-        workspace_id, _purge, allow_default_delete=False, user_id=auth_user["id"], user_role=auth_user["role"]
-    )
+    workspace_service.delete(workspace_id, user_id=auth_user["id"], user_role=auth_user["role"])
     return None
-
-
-@internal_router.delete("/{workspace_id}", status_code=status.HTTP_200_OK)
-def delete_workspace_internal(workspace_id: str, _purge: bool = False):
-    """
-    Internal delete for workspaces. Allows deleting the Default Workspace,
-    still enforces dependency checks.
-    """
-    return workspace_service.delete(workspace_id, _purge, allow_default_delete=True)

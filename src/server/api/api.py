@@ -11,16 +11,12 @@ from server.api.endpoints.workspace_invitations import (
     router as workspace_invitations_router,
 )
 from server.api.endpoints.workspace_members import router as workspace_members_router
-from server.api.endpoints.workspaces import (
-    internal_router as internal_workspaces_router,
-)
 from server.api.endpoints.workspaces import router as workspaces_router
 
 api_router = APIRouter()
 
 api_router.include_router(auth_router, prefix="/auth", tags=["authentication"])
 api_router.include_router(workspaces_router, prefix="/workspaces", tags=["workspaces"])
-api_router.include_router(internal_workspaces_router, prefix="/internal/workspaces", tags=["internal-workspaces"])
 api_router.include_router(multi_agentic_system_router, prefix="/workspaces", tags=["multi-agentic-systems"])
 api_router.include_router(cognitive_fabric_node_router, prefix="", tags=["cognitive-fabric-nodes"])
 api_router.include_router(cognitive_engine_router, prefix="/workspaces", tags=["cognitive-engines"])

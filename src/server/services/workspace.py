@@ -1,10 +1,12 @@
 """Workspace service - Business logic for workspace operations"""
 
+import logging
 from datetime import datetime, timezone
 
 from fastapi import HTTPException, status
 from sqlalchemy import and_, exists
 from sqlalchemy.exc import IntegrityError
+
 
 from server.database.relational_db.db import RelationalDB
 from server.database.relational_db.models.multi_agentic_system import MultiAgenticSystem as MASModel
@@ -27,6 +29,8 @@ from server.services.audit import (
     ResourceType,
     audit_service,
 )
+
+logger = logging.getLogger(__name__)
 
 
 class WorkspaceService:
@@ -173,9 +177,24 @@ class WorkspaceService:
                     "cfn_id": workspace_data.cfn_id,
                 }
 
-                # Only use hardcoded ID if provided (for admin default workspace)
-                if workspace_id:
-                    workspace_kwargs["id"] = workspace_id
+                # Check if workspace name already exists for the user to prevent duplicates
+                existing_workspace = (
+                    session.query(WorkspaceModel)
+                    .filter(
+                        and_(
+                            WorkspaceModel.name == workspace_data.name,
+                            WorkspaceModel.created_by == creator_user_id,
+                            WorkspaceModel.deleted_at.is_(None),
+                        )
+                    )
+                    .first()
+                )
+
+                if existing_workspace:
+                    raise HTTPException(
+                        status_code=status.HTTP_409_CONFLICT,
+                        detail=f"Workspace with name '{workspace_data.name}' already exists",
+                    )
 
                 new_workspace = WorkspaceModel(**workspace_kwargs)
 
@@ -559,14 +578,11 @@ class WorkspaceService:
     def delete(
         self,
         workspace_id: str,
-        _purge: bool = False,
-        allow_default_delete: bool = False,
         user_id: str = None,
         user_role: str = None,
     ) -> dict:
-        """Delete a workspace (soft delete by default, hard delete if purge=True).
+        """Delete a workspace (soft delete only).
 
-        Blocks deletion of the default workspace.
         If user_id and user_role are provided, verifies the user has access to the workspace.
         Super admins have access to all workspaces. Regular users must be workspace admins or creators.
         """
@@ -617,16 +633,9 @@ class WorkspaceService:
                                 detail="Access denied: You must be a workspace admin or creator",
                             )
 
-                # Block deletion of the Default Workspace in public paths
-                if (not allow_default_delete) and (workspace.name == self.DEFAULT_WORKSPACE_NAME):
-                    raise HTTPException(
-                        status_code=status.HTTP_403_FORBIDDEN,
-                        detail="Failed to delete workspace: Default Workspace cannot be deleted",
-                    )
-
-                # Validate dependent objects only for soft delete; for purge, hard-delete dependents first
+                # Validate dependent objects - soft delete requires no dependencies
                 has_deps, found_detail = self._get_dependency_status(session, workspace_id)
-                if has_deps and not _purge:
+                if has_deps:
                     raise HTTPException(
                         status_code=status.HTTP_409_CONFLICT,
                         detail=(
@@ -636,14 +645,8 @@ class WorkspaceService:
                         ),
                     )
 
-                if _purge:
-                    # Hard delete dependents (including soft-deleted ones) to avoid FK violations
-                    self._purge_dependents(session, workspace_id)
-                    session.delete(workspace)
-                    message = "Workspace permanently deleted"
-                else:
-                    workspace.deleted_at = datetime.now(timezone.utc)  # type: ignore[assignment]
-                    message = "Workspace deleted successfully"
+                workspace.deleted_at = datetime.now(timezone.utc)  # type: ignore[assignment]
+                message = "Workspace deleted successfully"
 
                 session.commit()
 
@@ -655,7 +658,6 @@ class WorkspaceService:
                         audit_resource_id=workspace_id,
                         deleted_by="",  # TODO: get user from apikey
                         deleted_at=workspace.deleted_at,  # type: ignore[arg-type]
-                        audit_information={"purge": _purge},
                         audit_extra_information=message,
                     )
                 )

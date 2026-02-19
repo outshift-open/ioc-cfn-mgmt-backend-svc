@@ -1,6 +1,5 @@
 """Pytest fixtures and minimal test DB bootstrap."""
 import contextlib
-import hashlib
 import os
 import time
 
@@ -22,8 +21,6 @@ from server.database.relational_db.models.workspace_invitation import (
 )
 from server.database.relational_db.models.workspace_member import WorkspaceMember
 from server.main import app
-from server.schemas.api_key import ApiKeyCreate
-from server.services.api_key import api_key_service
 
 os.environ.setdefault("POSTGRES_DB", "ioc_test")
 os.environ.setdefault("POSTGRES_USER", "postgresUser")
@@ -100,31 +97,9 @@ def _ensure_test_database_exists(max_wait_seconds: int = 20) -> None:
 
 
 @pytest.fixture
-def dev_api_key(setup_test_environment):
-    """Get the API key created for dev-user during setup."""
-    # The API key is created in setup_test_environment
-    # We need to get it from the database
-    db = RelationalDB()
-    session = db.session_factory()
-    try:
-        api_key = session.query(ApiKey).filter(ApiKey.user_id == "dev-user", ApiKey.deleted_at.is_(None)).first()
-        if api_key:
-            # We need to return the actual key, but we only have the hash
-            # For testing, we'll use a known key that we'll set up
-            return "ioc_dev_test_key_12345678901234567890123456789012"
-        return None
-    finally:
-        session.close()
-
-
-@pytest.fixture
-def client(setup_test_environment, dev_api_key):
+def client(setup_test_environment):
     """Create an authenticated test client for the FastAPI app after DB setup."""
-    test_client = TestClient(app)
-    # Set default API key header for all requests
-    if dev_api_key:
-        test_client.headers = {"X-API-Key": dev_api_key}
-    return test_client
+    return TestClient(app)
 
 
 @pytest.fixture(autouse=True)
@@ -143,32 +118,19 @@ def setup_test_environment():
 
         session = db.session_factory()
 
-        # Create dev-user for testing
+        # Create admin (mock user returned by disabled auth)
+        # Note: The mock auth in server.authn.auth returns ID: "00000000-0000-0000-0000-000000000000"
         from server.common import hash_password
-        hashed_password = hash_password("dev")
-
-        dev_user = User(
-            id="dev-user",
-            username="dev-user",
+        hashed_password = hash_password("admin")
+        admin_user = User(
+            id="00000000-0000-0000-0000-000000000000",
+            username="admin",
             password=hashed_password,
-            domain="test.local",
+            domain="mock.local",
             role="admin",
         )
-        session.add(dev_user)
-        session.commit()
+        session.add(admin_user)
 
-        # Create API key for dev-user with a known key for testing
-        test_api_key = "ioc_dev_test_key_12345678901234567890123456789012"
-        key_hash = hashlib.sha256(test_api_key.encode()).hexdigest()
-        key_preview = f"{test_api_key[:15]}..."
-
-        dev_api_key = ApiKey(
-            user_id="dev-user",
-            key_hash=key_hash,
-            key_preview=key_preview,
-            name="Test API Key"
-        )
-        session.add(dev_api_key)
         session.commit()
 
         session.close()
@@ -231,11 +193,11 @@ def created_cfn(client, sample_cfn):
     cfn_response = client.post("/api/cognitive-fabric-nodes/register", json=cfn_data)
     assert cfn_response.status_code == 201
     cfn_id = cfn_response.json()["cfn_id"]
-    
-    ws_response = client.post("/api/workspaces", json={"name": "Test Workspace", "cfn_id": cfn_id})
+
+    ws_response = client.post("/api/workspaces/create", json={"name": "Test Workspace", "cfn_id": cfn_id})
     assert ws_response.status_code == 201
     workspace_id = ws_response.json()["id"]
-    
+
     return (workspace_id, cfn_id)
 
 
@@ -248,44 +210,9 @@ def sample_workspace_data(registered_cfn):
 @pytest.fixture
 def created_workspace(client, sample_workspace_data):
     """Create a workspace and return its ID."""
-    response = client.post("/api/workspaces", json=sample_workspace_data)
+    response = client.post("/api/workspaces/create", json=sample_workspace_data)
     assert response.status_code == 201
     return response.json()["id"]
-
-
-@pytest.fixture
-def test_user():
-    """Create a test user in the database and return user data."""
-    import uuid
-
-    from server.common import hash_password
-
-    db = RelationalDB()
-    session = db.session_factory()
-    try:
-        user_id = str(uuid.uuid4())
-        password = "testpassword"
-        hashed_password = hash_password(password)
-
-        user = User(
-            id=user_id,
-            username="testuser",
-            password=hashed_password,
-            domain="test.local",
-            role="viewer",  # Non-admin role
-        )
-        session.add(user)
-        session.commit()
-
-        return {
-            "id": user_id,
-            "username": "testuser",
-            "domain": "test.local",
-            "role": "viewer",
-            "email": "testuser@test.local",
-        }
-    finally:
-        session.close()
 
 
 @pytest.fixture

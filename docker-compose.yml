@@ -43,7 +43,6 @@ services:
       - POSTGRES_DB=${POSTGRES_DB:-ioc}
       - POSTGRES_USER=${POSTGRES_USER}
       - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
-      - CFN_DEV_MODE=${CFN_DEV_MODE}
     restart: unless-stopped
     depends_on:
       ioc-mgmt-relational-db:

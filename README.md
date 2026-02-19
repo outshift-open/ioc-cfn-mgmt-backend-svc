@@ -1,7 +1,6 @@
 # ioc-cfn-mgmt-backend
 
 [![Docker](https://img.shields.io/badge/docker-ghcr.io-blue?logo=docker)](https://github.com/orgs/cisco-eti/packages/container/package/ioc-cfn-mgmt-backend-svc)
-[![GitHub Pages](https://github.com/cisco-eti/ioc-cfn-mgmt-backend-svc/actions/workflows/github-pages.yaml/badge.svg)](https://github.com/cisco-eti/ioc-cfn-mgmt-backend-svc/actions/workflows/github-pages.yaml)
 [![GitHub Pages Site](https://img.shields.io/badge/GitHub%20Pages-Visit-green?logo=github)](https://scaling-potato-qm8j7n7.pages.github.io/)
 
 IOC CFN Management Backend Service - FastAPI backend for workspaces, users, API keys, Cognitive Fabric Nodes, and Multi-Agentic Systems

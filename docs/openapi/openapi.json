@@ -181,14 +181,14 @@
         }
       }
     },
-    "/api/workspaces/": {
+    "/api/workspaces/create": {
       "post": {
         "tags": [
           "workspaces"
         ],
         "summary": "Create Workspace",
         "description": "Create a new workspace\n\n- **name**: Name of the workspace (required)\n- **cfn_id**: CFN identifier to associate with this workspace (required)\n- **config**: Workspace configuration (optional)\n\nThe workspace is bound to a CFN during creation.\nReturns the UUID of the created workspace",
-        "operationId": "create_workspace_api_workspaces__post",
+        "operationId": "create_workspace_api_workspaces_create_post",
         "security": [
           {
             "HTTPBearer": []
@@ -244,14 +244,71 @@
             }
           }
         }
-      },
+      }
+    },
+    "/api/workspaces": {
       "get": {
         "tags": [
           "workspaces"
         ],
         "summary": "List Workspaces",
         "description": "List workspaces accessible to the user\n\nUsers see only workspaces they are members of. Super admins (future) see all workspaces.",
-        "operationId": "list_workspaces_api_workspaces__get",
+        "operationId": "list_workspaces_api_workspaces_get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "X-API-Key",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Api-Key"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkspaceList"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/workspaces/list": {
+      "get": {
+        "tags": [
+          "workspaces"
+        ],
+        "summary": "List Workspaces",
+        "description": "List workspaces accessible to the user\n\nUsers see only workspaces they are members of. Super admins (future) see all workspaces.",
+        "operationId": "list_workspaces_api_workspaces_list_get",
         "security": [
           {
             "HTTPBearer": []
@@ -439,7 +496,7 @@
           "workspaces"
         ],
         "summary": "Delete Workspace",
-        "description": "Delete a workspace\n\n- **workspace_id**: UUID of the workspace\n- **_purge**: Optional query parameter. If false (default), performs soft\n  delete. If true, performs hard delete.\n\nReturns success message if user has access",
+        "description": "Delete a workspace\n\n- **workspace_id**: UUID of the workspace\n\nPerforms a soft delete. Returns success message if user has access",
         "operationId": "delete_workspace_api_workspaces__workspace_id__delete",
         "security": [
           {
@@ -454,16 +511,6 @@
             "schema": {
               "type": "string",
               "title": "Workspace Id"
-            }
-          },
-          {
-            "name": "_purge",
-            "in": "query",
-            "required": false,
-            "schema": {
-              "type": "boolean",
-              "default": false,
-              "title": " Purge"
             }
           },
           {
@@ -486,57 +533,6 @@
         "responses": {
           "204": {
             "description": "Successful Response"
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/internal/workspaces/{workspace_id}": {
-      "delete": {
-        "tags": [
-          "internal-workspaces"
-        ],
-        "summary": "Delete Workspace Internal",
-        "description": "Internal delete for workspaces. Allows deleting the Default Workspace,\nstill enforces dependency checks.",
-        "operationId": "delete_workspace_internal_api_internal_workspaces__workspace_id__delete",
-        "parameters": [
-          {
-            "name": "workspace_id",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "title": "Workspace Id"
-            }
-          },
-          {
-            "name": "_purge",
-            "in": "query",
-            "required": false,
-            "schema": {
-              "type": "boolean",
-              "default": false,
-              "title": " Purge"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {}
-              }
-            }
           },
           "422": {
             "description": "Validation Error",

@@ -172,8 +172,6 @@ class AuthService:
 
                 logger.info(f"New user registered successfully - Username: {username}, Domain: {domain}, Role: {role}")
 
-                # Note: Default workspace creation removed - workspaces require CFN assignment
-
                 # Prepare user data
                 user_data = {
                     "id": user_id,
