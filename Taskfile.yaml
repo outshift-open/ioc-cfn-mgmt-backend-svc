@@ -9,6 +9,12 @@ vars:
   SRC_DIR: "{{.PWD}}/src"
   PYTHON: python3
   BIN_DIR: "{{.PWD}}/bin"
+  GIT_COMMIT_SHA:
+    sh: git rev-parse --short HEAD 2>/dev/null || echo "unknown"
+  GIT_COMMIT_TIME:
+    sh: git log -1 --format=%cI 2>/dev/null || echo "unknown"
+  GIT_BRANCH:
+    sh: git rev-parse --abbrev-ref HEAD 2>/dev/null || echo "unknown"
 
 tasks:
   deps:
@@ -101,16 +107,28 @@ tasks:
 
   docker-compose-full-stack-up:
     desc: Start all services with docker-compose
+    env:
+      GIT_COMMIT_SHA: "{{.GIT_COMMIT_SHA}}"
+      GIT_COMMIT_TIME: "{{.GIT_COMMIT_TIME}}"
+      GIT_BRANCH: "{{.GIT_BRANCH}}"
     cmds:
       - docker compose --env-file env.conf --profile full-stack up --pull always
 
   docker-compose-full-stack-down:
     desc: Stop all services with docker-compose
+    env:
+      GIT_COMMIT_SHA: "{{.GIT_COMMIT_SHA}}"
+      GIT_COMMIT_TIME: "{{.GIT_COMMIT_TIME}}"
+      GIT_BRANCH: "{{.GIT_BRANCH}}"
     cmds:
       - docker compose --env-file env.conf --profile full-stack down
 
   docker-compose-full-stack-down-with-volumes:
     desc: Stop all services and remove volumes with docker-compose
+    env:
+      GIT_COMMIT_SHA: "{{.GIT_COMMIT_SHA}}"
+      GIT_COMMIT_TIME: "{{.GIT_COMMIT_TIME}}"
+      GIT_BRANCH: "{{.GIT_BRANCH}}"
     cmds:
       - docker compose --env-file env.conf --profile full-stack down -v
 

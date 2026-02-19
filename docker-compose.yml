@@ -14,6 +14,7 @@ services:
       - "${POSTGRES_PORT:-5432}:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
+      - ./scripts/init-multi-db.sh:/docker-entrypoint-initdb.d/init-multi-db.sh:ro
     healthcheck:
       test:
         ["CMD-SHELL", "pg_isready -d ${POSTGRES_DB:-ioc} -U ${POSTGRES_USER}"]
@@ -69,6 +70,41 @@ services:
       - NEXTAUTH_SECRET=${NEXTAUTH_SECRET}
     restart: unless-stopped
     depends_on:
+      ioc-cfn-mgmt-backend-svc:
+        condition: service_healthy
+  ioc-cfn-svc:
+    image: ghcr.io/cisco-eti/ioc-cfn-svc:latest
+    build:
+      context: https://github.com/cisco-eti/ioc-cfn-svc.git
+      dockerfile: build/Dockerfile
+      args:
+        GIT_COMMIT_SHA: ${GIT_COMMIT_SHA:-unknown}
+        GIT_COMMIT_TIME: ${GIT_COMMIT_TIME:-unknown}
+        GIT_BRANCH: ${GIT_BRANCH:-unknown}
+    container_name: ioc-cfn-svc
+    platform: ${DOCKER_DEFAULT_PLATFORM}
+    profiles:
+      - full-stack
+    restart: unless-stopped
+    ports:
+      - "9010:9010"
+    environment:
+      PORT: "9010"
+      APP_NAME: "ioc-cfn-svc"
+      MGMT_URL: http://ioc-cfn-mgmt-backend-svc:8000
+      CFN_NAME: ${CFN_NAME:-cfn-new}
+      HEARTBEAT_INTERVAL_SECONDS: ${HEARTBEAT_INTERVAL_SECONDS:-10}
+      MCP_ENABLED: ${MCP_ENABLED:-false}
+      MCP_PORT: ${MCP_PORT:-9010}
+      DB_HOST: ioc-mgmt-relational-db
+      DB_PORT: ${POSTGRES_PORT:-5432}
+      DB_NAME: ${DB_NAME:-cfn_cp}
+      DB_USER: ${POSTGRES_USER}
+      DB_PASSWORD: ${POSTGRES_PASSWORD}
+      DB_SSL_MODE: ${DB_SSL_MODE:-disable}
+    depends_on:
+      ioc-mgmt-relational-db:
+        condition: service_healthy
       ioc-cfn-mgmt-backend-svc:
         condition: service_healthy
   ### End Application Services ###

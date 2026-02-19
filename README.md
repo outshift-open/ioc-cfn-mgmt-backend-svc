@@ -16,7 +16,8 @@ IOC CFN Management Backend Service - FastAPI backend for workspaces, users, API 
   - **Go users**: `go install github.com/go-task/task/v3/cmd/task@latest`
   - **Manual install**: `sh -c "$(curl --location https://taskfile.dev/install.sh)" -- -d -b ~/.local/bin`
 
-#### Dependencies for the Relational DB
+### Dependencies for the Relational DB
+
 For details please refer to the [README](src/server/database/relational_db/README.md)
 - [PostgreSQL 17 Alpine](https://hub.docker.com/_/postgres)
 - [Atlas](https://atlasgo.io/guides/orms/sqlalchemy/getting-started)
@@ -41,8 +42,13 @@ task run                     # installs deps, applies db migrations, then runs
 **Option 3: Full stack deployment**
 
 ```bash
-task docker-compose-full-stack-up    # Start complete stack (application + databases)
+task docker-compose-full-stack-up    # Start complete stack (application + databases + cfn-svc)
 ```
+
+> **Note:** The full-stack profile includes `ioc-cfn-svc` (port 9010), which depends on both
+> `ioc-cfn-mgmt-backend-svc` and PostgreSQL. It shares database credentials
+> (`POSTGRES_USER`, `POSTGRES_PASSWORD`, `POSTGRES_PORT`) from `env.conf` and uses a
+> separate database (`DB_NAME=cfn_cp`).
 
 ### Alternative Quick Start Methods
 
@@ -76,7 +82,7 @@ poetry run python -m server.main
 **Using Docker**
 
 ```bash
-task docker-compose-full-stack-up    # Full stack
+task docker-compose-full-stack-up    # Full stack (mgmt-backend + cfn-svc + ui + databases)
 task docker-compose-db-up            # Databases only
 ```
 
