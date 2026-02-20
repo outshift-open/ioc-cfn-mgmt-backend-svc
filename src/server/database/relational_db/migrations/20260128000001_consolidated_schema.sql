@@ -7,8 +7,6 @@
 --   - CFN restructure (cfn_id on workspace, cfn_workspace join removed)
 --   - Config naming update (cloud_config -> config)
 
-BEGIN;
-
 -- ====================
 -- Table: workspace
 -- ====================
@@ -257,5 +255,3 @@ CREATE TABLE "cognitive_agent" (
 );
 
 CREATE UNIQUE INDEX "idx_ca_name_unique" ON "cognitive_agent" ("cognitive_agent_name");
-
-COMMIT;

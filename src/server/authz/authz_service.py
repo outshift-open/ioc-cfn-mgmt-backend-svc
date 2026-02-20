@@ -2,6 +2,7 @@
 
 import json
 import logging
+import threading
 from pathlib import Path
 from typing import Any, Dict
 
@@ -17,6 +18,7 @@ class AuthzService:
         self.logger = logger
         self._authz_dir = Path(__file__).parent
         self._interpreter = Interpreter()
+        self._interpreter_lock = threading.Lock()  # Thread-safety for regopy (Python-Go bridge)
         self._load_policies()
 
     def _load_policies(self) -> None:
@@ -60,8 +62,12 @@ class AuthzService:
             Dict[str, Any]: The result of the policy evaluation.
         """
         self.logger.debug("Evaluating authorization policy with input: %s", input_data)
-        self._interpreter.set_input(Input(input_data))
-        result = self._interpreter.query("data.authz.allow")
+        
+        # Lock to prevent concurrent access to regopy interpreter (prevents segfaults)
+        with self._interpreter_lock:
+            self._interpreter.set_input(Input(input_data))
+            result = self._interpreter.query("data.authz.allow")
+        
         self.logger.debug("Authorization policy evaluation result: %s", result)
 
         # Parse the result from JSON string representation

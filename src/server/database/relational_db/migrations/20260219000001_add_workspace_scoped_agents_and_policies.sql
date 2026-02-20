@@ -4,8 +4,6 @@
 --   - Convert cognitive_agent from global to workspace-scoped
 --   - Add new policy table (workspace-scoped)
 
-BEGIN;
-
 -- ====================
 -- Update: cognitive_agent (Convert to workspace-scoped)
 -- ====================
@@ -56,5 +54,3 @@ CREATE TABLE IF NOT EXISTS "policy" (
 -- Create indexes for policy table
 CREATE INDEX IF NOT EXISTS "idx_policy_workspace_id" ON "policy" ("workspace_id");
 CREATE INDEX IF NOT EXISTS "idx_policy_deleted_at" ON "policy" ("deleted_at");
-
-COMMIT;
