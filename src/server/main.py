@@ -10,19 +10,20 @@ from fastapi.middleware.cors import CORSMiddleware
 from prometheus_fastapi_instrumentator import Instrumentator
 
 from app_logging.logger import setup_logging
-from server.api.api import api_router
 from server.common import service_name
-from server.database.relational_db.db import RelationalDB
-from server.services.cognitive_fabric_node_monitor import cognitive_fabric_node_monitor
-from server.services.user import UserService
-from server.utils.version import get_app_version
 from server.utils.repo_root import REPO_ROOT
 
-# Load environment variables
+# Load environment variables first (before importing modules that read env vars)
 load_dotenv(dotenv_path=REPO_ROOT + "/env.conf", override=True)  # Load from repo root
 
-# Setup logging once for the entire application
+# Setup logging before importing application modules that instantiate singletons at import time
 setup_logging(service_name)
+
+from server.api.api import api_router  # noqa: E402
+from server.database.relational_db.db import RelationalDB  # noqa: E402
+from server.services.cognitive_fabric_node_monitor import cognitive_fabric_node_monitor  # noqa: E402
+from server.services.user import UserService  # noqa: E402
+from server.utils.version import get_app_version  # noqa: E402
 
 logger = logging.getLogger(__name__)
 logger.info("Environment variables loaded")

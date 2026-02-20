@@ -32,6 +32,14 @@ class CognitiveEngineList(BaseModel):
     total: int = Field(..., description="Total number of engines")
 
 
+class CognitiveEngineUpdate(BaseModel):
+    """Schema for updating a cognitive engine"""
+
+    cognitive_engine_name: Optional[str] = Field(None, description="Engine name")
+    config: Optional[dict] = Field(None, description="Engine-specific configuration")
+    enabled: Optional[bool] = Field(None, description="Whether engine is enabled")
+
+
 class CognitiveEngineDetail(BaseModel):
     """Schema for detailed cognitive engine information"""
 

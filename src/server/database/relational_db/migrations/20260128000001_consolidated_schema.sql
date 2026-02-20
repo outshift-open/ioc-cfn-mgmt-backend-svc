@@ -1,5 +1,13 @@
--- Consolidated Database Schema Migration
--- Combined from multiple migrations for cleaner schema management
+-- Consolidated Database Schema
+-- Version: 2026-02-19
+-- Description: Complete database schema with all migrations consolidated
+-- Includes:
+--   - Base schema (workspace, user, audit, multi_agentic_system, api_key)
+--   - Workspace hierarchy restructure (memory_provider, cognitive_engine, cognitive_agent)
+--   - CFN restructure (cfn_id on workspace, cfn_workspace join removed)
+--   - Config naming update (cloud_config -> config)
+
+BEGIN;
 
 -- ====================
 -- Table: workspace
@@ -7,6 +15,7 @@
 CREATE TABLE "workspace" (
   "id" character varying(36) NOT NULL DEFAULT (gen_random_uuid())::text,
   "name" character varying(255) NOT NULL,
+  "cfn_id" character varying(255) NOT NULL,
   "users" character varying[] NULL,
   "config" jsonb NULL,
   "created_at" timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -19,29 +28,7 @@ CREATE TABLE "workspace" (
 
 CREATE INDEX "idx_workspace_name" ON "workspace" ("name");
 CREATE INDEX "idx_workspace_deleted_at" ON "workspace" ("deleted_at");
-
--- ====================
--- Table: multi_agentic_system
--- ====================
-CREATE TABLE "multi_agentic_system" (
-  "id" character varying(36) NOT NULL DEFAULT (gen_random_uuid())::text,
-  "workspace_id" character varying(36) NOT NULL,
-  "name" character varying(255) NOT NULL,
-  "description" text NULL,
-  "agents" jsonb NULL,
-  "config" jsonb NULL,
-  "created_at" timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  "updated_at" timestamp NULL DEFAULT CURRENT_TIMESTAMP,
-  "created_by" character varying(255) NULL,
-  "updated_by" character varying(255) NULL,
-  "deleted_at" timestamp NULL,
-  PRIMARY KEY ("id"),
-  CONSTRAINT "fk_multi_agentic_system_workspace" FOREIGN KEY ("workspace_id") REFERENCES "workspace" ("id")
-);
-
-CREATE INDEX "idx_mas_workspace_id" ON "multi_agentic_system" ("workspace_id");
-CREATE INDEX "idx_mas_deleted_at" ON "multi_agentic_system" ("deleted_at");
-CREATE UNIQUE INDEX "idx_mas_workspace_name_unique" ON "multi_agentic_system" ("workspace_id", "name") WHERE "deleted_at" IS NULL;
+CREATE INDEX "idx_workspace_cfn_id" ON "workspace" ("cfn_id");
 
 -- ====================
 -- Table: user
@@ -151,14 +138,36 @@ CREATE INDEX "idx_workspace_invitation_expires_at" ON "workspace_invitation" ("e
 CREATE INDEX "idx_workspace_invitation_deleted_at" ON "workspace_invitation" ("deleted_at");
 
 -- ====================
--- Table: cognitive_fabric_node
+-- Table: multi_agentic_system
+-- ====================
+CREATE TABLE "multi_agentic_system" (
+  "id" character varying(36) NOT NULL DEFAULT (gen_random_uuid())::text,
+  "workspace_id" character varying(36) NOT NULL,
+  "name" character varying(255) NOT NULL,
+  "description" text NULL,
+  "agents" jsonb NULL,
+  "config" jsonb NULL,
+  "created_at" timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  "updated_at" timestamp NULL DEFAULT CURRENT_TIMESTAMP,
+  "created_by" character varying(255) NULL,
+  "updated_by" character varying(255) NULL,
+  "deleted_at" timestamp NULL,
+  PRIMARY KEY ("id"),
+  CONSTRAINT "fk_multi_agentic_system_workspace" FOREIGN KEY ("workspace_id") REFERENCES "workspace" ("id")
+);
+
+CREATE INDEX "idx_mas_workspace_id" ON "multi_agentic_system" ("workspace_id");
+CREATE INDEX "idx_mas_deleted_at" ON "multi_agentic_system" ("deleted_at");
+CREATE UNIQUE INDEX "idx_mas_workspace_name_unique" ON "multi_agentic_system" ("workspace_id", "name") WHERE "deleted_at" IS NULL;
+
+-- ====================
+-- Table: cognitive_fabric_node (Global, no workspace FK)
 -- ====================
 CREATE TABLE "cognitive_fabric_node" (
   "cfn_id" character varying(255) NOT NULL,
-  "workspace_id" character varying(36) NOT NULL,
   "cfn_name" character varying(255) NOT NULL,
   "cfn_config" jsonb NULL,
-  "cloud_config" jsonb NULL,
+  "config" jsonb NULL,
   "status" character varying(50) NOT NULL DEFAULT 'online',
   "last_seen" timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
   "enabled" boolean NOT NULL DEFAULT true,
@@ -167,13 +176,86 @@ CREATE TABLE "cognitive_fabric_node" (
   "created_by" character varying(255) NULL,
   "updated_by" character varying(255) NULL,
   "deleted_at" timestamp NULL,
-  PRIMARY KEY ("cfn_id"),
-  CONSTRAINT "cognitive_fabric_node_workspace_id_fkey" FOREIGN KEY ("workspace_id") REFERENCES "workspace" ("id") ON UPDATE NO ACTION ON DELETE NO ACTION
+  PRIMARY KEY ("cfn_id")
 );
 
 CREATE INDEX "idx_cfn_enabled" ON "cognitive_fabric_node" ("enabled");
 CREATE INDEX "idx_cfn_deleted_at" ON "cognitive_fabric_node" ("deleted_at");
 CREATE INDEX "idx_cfn_last_seen" ON "cognitive_fabric_node" ("last_seen");
 CREATE INDEX "idx_cfn_status" ON "cognitive_fabric_node" ("status");
-CREATE INDEX "idx_cfn_workspace_id" ON "cognitive_fabric_node" ("workspace_id");
-CREATE UNIQUE INDEX "idx_cfn_workspace_name_unique" ON "cognitive_fabric_node" ("workspace_id", "cfn_name") WHERE (deleted_at IS NULL);
+CREATE UNIQUE INDEX "idx_cfn_name_unique" ON "cognitive_fabric_node" ("cfn_name") WHERE (deleted_at IS NULL);
+
+-- Add FK from workspace to cognitive_fabric_node (workspace chooses its CFN)
+ALTER TABLE "workspace" ADD CONSTRAINT "fk_workspace_cfn"
+  FOREIGN KEY ("cfn_id") REFERENCES "cognitive_fabric_node" ("cfn_id") ON DELETE RESTRICT;
+
+-- ====================
+-- Table: memory_provider (Global, shared across workspaces)
+-- ====================
+CREATE TABLE "memory_provider" (
+  "memory_provider_id" character varying(255) NOT NULL,
+  "memory_provider_name" character varying(255) NOT NULL,
+  "provider_type" character varying(50) NOT NULL,
+  "provider" character varying(100) NOT NULL,
+  "config" jsonb NULL,
+  "enabled" boolean NOT NULL DEFAULT true,
+  "created_at" timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  "updated_at" timestamp NULL,
+  "created_by" character varying(36) NOT NULL,
+  "updated_by" character varying(36) NULL,
+  "deleted_at" timestamp NULL,
+  PRIMARY KEY ("memory_provider_id")
+);
+
+-- ====================
+-- Table: workspace_memory_provider (Many-to-many join)
+-- ====================
+CREATE TABLE "workspace_memory_provider" (
+  "workspace_id" character varying(36) NOT NULL,
+  "memory_provider_id" character varying(255) NOT NULL,
+  "created_at" timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  "created_by" character varying(255) NULL,
+  PRIMARY KEY ("workspace_id", "memory_provider_id"),
+  CONSTRAINT "fk_wmp_workspace" FOREIGN KEY ("workspace_id") REFERENCES "workspace" ("id") ON DELETE CASCADE,
+  CONSTRAINT "fk_wmp_memory_provider" FOREIGN KEY ("memory_provider_id") REFERENCES "memory_provider" ("memory_provider_id") ON DELETE CASCADE
+);
+
+CREATE INDEX "idx_wmp_workspace_id" ON "workspace_memory_provider" ("workspace_id");
+CREATE INDEX "idx_wmp_memory_provider_id" ON "workspace_memory_provider" ("memory_provider_id");
+
+-- ====================
+-- Table: cognitive_engine (Workspace-scoped)
+-- ====================
+CREATE TABLE "cognitive_engine" (
+  "cognitive_engine_id" character varying(255) NOT NULL,
+  "workspace_id" character varying(36) NOT NULL,
+  "cognitive_engine_name" character varying(255) NOT NULL,
+  "config" jsonb NULL,
+  "enabled" boolean NOT NULL DEFAULT true,
+  "created_at" timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  "updated_at" timestamp NULL,
+  "created_by" character varying(36) NOT NULL,
+  "updated_by" character varying(36) NULL,
+  "deleted_at" timestamp NULL,
+  PRIMARY KEY ("cognitive_engine_id")
+);
+
+CREATE INDEX "idx_ce_workspace_id" ON "cognitive_engine" ("workspace_id");
+
+-- ====================
+-- Table: cognitive_agent (Global, read-only built-in defaults)
+-- ====================
+CREATE TABLE "cognitive_agent" (
+  "cognitive_agent_id" character varying(255) NOT NULL,
+  "cognitive_agent_name" character varying(255) NOT NULL,
+  "description" character varying(1000) NULL,
+  "config" jsonb NULL,
+  "enabled" boolean NOT NULL DEFAULT true,
+  "created_at" timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  "updated_at" timestamp NULL,
+  PRIMARY KEY ("cognitive_agent_id")
+);
+
+CREATE UNIQUE INDEX "idx_ca_name_unique" ON "cognitive_agent" ("cognitive_agent_name");
+
+COMMIT;

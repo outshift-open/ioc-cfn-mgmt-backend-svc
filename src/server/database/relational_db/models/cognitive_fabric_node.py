@@ -15,7 +15,7 @@ class CognitiveFabricNode(Base):
 
     # Optional fields
     cfn_config = Column(JSONB, nullable=True)
-    cloud_config = Column(JSONB, nullable=True)
+    config = Column(JSONB, nullable=True)
 
     # Status tracking
     status = Column(String(50), nullable=False, server_default=text("'online'"))

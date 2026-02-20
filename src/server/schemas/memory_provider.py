@@ -38,8 +38,18 @@ class MemoryProviderListItem(BaseModel):
 class MemoryProviderList(BaseModel):
     """Schema for memory provider list response"""
 
-    providers: list[MemoryProviderListItem] = Field(..., description="List of memory providers")
+    providers: list["MemoryProviderDetail"] = Field(..., description="List of memory providers")
     total: int = Field(..., description="Total number of providers")
+
+
+class MemoryProviderUpdate(BaseModel):
+    """Schema for updating a memory provider"""
+
+    memory_provider_name: Optional[str] = Field(None, description="Memory provider name")
+    provider_type: Optional[str] = Field(None, description="Provider type (internal, external)")
+    provider: Optional[str] = Field(None, description="Provider name (e.g., ioc-memory-provider)")
+    config: Optional[dict] = Field(None, description="Provider-specific configuration")
+    enabled: Optional[bool] = Field(None, description="Whether provider is enabled")
 
 
 class MemoryProviderDetail(BaseModel):

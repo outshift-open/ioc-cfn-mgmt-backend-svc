@@ -6,6 +6,16 @@ from server.schemas.workspace_member import WorkspaceMemberDetail
 
 
 class WorkspaceCreate(BaseModel):
+    model_config = ConfigDict(
+        json_schema_extra={
+            "example": {
+                "name": "cfn-workspace-001",
+                "cfn_id": "cfn-node-001",
+                "config": {"setting1": "value1", "setting2": "value2"},
+            }
+        }
+    )
+
     name: str = Field(
         ...,
         description="Name of the workspace",

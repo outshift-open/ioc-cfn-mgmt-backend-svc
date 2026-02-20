@@ -1,4 +1,4 @@
-"""Cognitive Agent database model"""
+"""Policy database model"""
 
 from datetime import datetime, timezone
 
@@ -8,16 +8,15 @@ from sqlalchemy.dialects.postgresql import JSONB
 from server.database.relational_db.models import Base
 
 
-class CognitiveAgent(Base):
-    """Cognitive Agent model - represents a cognitive agent in a workspace"""
+class Policy(Base):
+    """Policy model - represents a policy configuration"""
 
-    __tablename__ = "cognitive_agent"
+    __tablename__ = "policy"
 
-    cognitive_agent_id = Column(String(255), primary_key=True, nullable=False)
+    policy_id = Column(String(255), primary_key=True, nullable=False)
     workspace_id = Column(String(36), nullable=False, index=True)
-    cognitive_agent_name = Column(String(255), nullable=False)
-    description = Column(String(1000), nullable=True)
-    config = Column(JSONB, nullable=True)  # Agent-specific configuration
+    policy_name = Column(String(255), nullable=False)
+    config = Column(JSONB, nullable=True)  # Policy-specific configuration
     enabled = Column(Boolean, nullable=False, default=True)
     created_at = Column(TIMESTAMP, nullable=False, default=lambda: datetime.now(timezone.utc))
     updated_at = Column(TIMESTAMP, nullable=True, onupdate=func.now())
@@ -26,7 +25,4 @@ class CognitiveAgent(Base):
     deleted_at = Column(TIMESTAMP, nullable=True)
 
     def __repr__(self):
-        return (
-            f"<CognitiveAgent(cognitive_agent_id={self.cognitive_agent_id}, "
-            f"workspace_id={self.workspace_id}, name={self.cognitive_agent_name})>"
-        )
+        return f"<Policy(policy_id={self.policy_id}, workspace_id={self.workspace_id}, name={self.policy_name})>"

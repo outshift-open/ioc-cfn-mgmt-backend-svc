@@ -21,25 +21,6 @@ from server.services.audit import AuditEventType, ResourceType, audit_service, A
 class MultiAgenticSystemService:
     """Service layer for MAS business logic"""
 
-    def list_dummy(self, workspace_id: str) -> MultiAgenticSystems:
-        """Dummy implementation for listing multi-agentic systems"""
-        dummy_system = MultiAgenticSystemSchema(
-            id="dummy-mas-id",
-            workspace_id=workspace_id,
-            name="Dummy Multi-Agentic System",
-            description="A sample multi-agentic system for testing",
-            agents={
-                "planner": {"type": "planner", "model": "claude-opus-4-6", "config": {"temperature": 0.7}},
-                "executor": {"type": "executor", "model": "claude-sonnet-4-5", "config": {"temperature": 0.5}},
-            },
-            config={},
-            created_at="2024-01-01T00:00:00Z",
-            updated_at="2024-01-01T00:00:00Z",
-            created_by="system",
-            updated_by="system",
-        )
-        return MultiAgenticSystems(systems=[dummy_system])
-
     def create(self, workspace_id: str, mas_data: MultiAgenticSystemRequest) -> MultiAgenticSystemResponse:
         # Validate workspace exists
         if not workspace_service.exists(workspace_id):

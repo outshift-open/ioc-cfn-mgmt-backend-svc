@@ -20,7 +20,7 @@ class CognitiveFabricNodeRegisterRequest(BaseModel):
             "example": {
                 "cfn_id": "cfn-persistent-id-123",
                 "cfn_name": "cfn-node-prod-1",
-                "cfn_config": {"max_connections": 100, "memory_limit": "4GB"},
+                "cfn_config": {"log_level": "info"},
             }
         }
     )
@@ -50,7 +50,7 @@ class CognitiveFabricNodeUpdateRequest(BaseModel):
         json_schema_extra={
             "example": {
                 "cfn_name": "cfn-node-prod-1-updated",
-                "cfn_config": {"max_connections": 200, "memory_limit": "8GB"},
+                "cfn_config": {"log_level": "debug"},
             }
         }
     )
@@ -67,55 +67,30 @@ class CognitiveFabricNodeUpdateRequest(BaseModel):
     )
 
 
-class CognitiveFabricNodeRegisterResponse(BaseModel):
-    """Schema for Cognitive Fabric Node registration response"""
+class CognitiveFabricNodeResponse(BaseModel):
+    """Schema for Cognitive Fabric Node response (common response format)"""
 
     model_config = ConfigDict(
         json_schema_extra={
             "example": {
                 "cfn_id": "cfn-persistent-id-123",
+                "workspace_ids": [],
                 "cfn_name": "cfn-node-prod-1",
-                "status": "offline",
-                "cloud_config": {
-                    "version": "1.0",
+                "config": {
+                    "cfn_config": {"log_level": "info"},
+                    "policies": [],
                     "workspaces": [],
+                    "cognitive_agents": [],
                     "memory_providers": [],
-                    "log_level": "INFO",
+                    "cognitive_engines": [],
                 },
-            }
-        }
-    )
-
-    cfn_id: str = Field(..., description="Cognitive Fabric Node identifier")
-    cfn_name: str = Field(..., description="Cognitive Fabric Node name")
-    status: CognitiveFabricNodeStatus = Field(..., description="Current node status")
-    cloud_config: Optional[Dict[str, Any]] = Field(
-        None,
-        description="Cloud configuration for node to apply",
-    )
-
-
-class CognitiveFabricNodeDetail(BaseModel):
-    """Schema for detailed Cognitive Fabric Node information"""
-
-    model_config = ConfigDict(
-        json_schema_extra={
-            "example": {
-                "cfn_id": "cfn-persistent-id-123",
-                "workspace_ids": ["workspace-uuid-1", "workspace-uuid-2"],
-                "cfn_name": "cfn-node-prod-1",
-                "cfn_config": {"max_connections": 100, "memory_limit": "4GB"},
-                "cloud_config": {
-                    "log_level": "INFO",
-                    "features": ["reasoning", "memory"],
-                },
-                "status": "online",
-                "last_seen": "2026-01-30T12:34:56Z",
+                "status": "offline",
+                "last_seen": "2026-02-19T19:46:49.185773",
                 "enabled": True,
-                "created_at": "2026-01-30T10:00:00Z",
-                "updated_at": "2026-01-30T12:00:00Z",
-                "created_by": "user-id",
-                "updated_by": "user-id",
+                "created_at": "2026-02-19T19:46:49.102012",
+                "updated_at": "2026-02-19T19:46:49.102012",
+                "created_by": "00000000-0000-0000-0000-000000000000",
+                "updated_by": None,
             }
         }
     )
@@ -123,8 +98,7 @@ class CognitiveFabricNodeDetail(BaseModel):
     cfn_id: str = Field(..., description="Cognitive Fabric Node identifier")
     workspace_ids: List[str] = Field(default_factory=list, description="Associated workspace identifiers")
     cfn_name: str = Field(..., description="Cognitive Fabric Node name")
-    cfn_config: Optional[Dict[str, Any]] = Field(None, description="Node configuration")
-    cloud_config: Optional[Dict[str, Any]] = Field(None, description="Cloud configuration")
+    config: Optional[Dict[str, Any]] = Field(None, description="Aggregated configuration including cfn_config")
     status: CognitiveFabricNodeStatus = Field(..., description="Current node status")
     last_seen: datetime = Field(..., description="Last heartbeat timestamp")
     enabled: bool = Field(..., description="Whether node is enabled")

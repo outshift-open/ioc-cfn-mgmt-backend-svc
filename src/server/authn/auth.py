@@ -15,7 +15,7 @@ bearer_scheme = HTTPBearer(auto_error=False)
 
 async def get_auth_user(
     authorization: Optional[HTTPAuthorizationCredentials] = Depends(bearer_scheme),
-    x_api_key: Optional[str] = Header(None, alias="X-API-Key"),
+    # x_api_key: Optional[str] = Header(None, alias="X-API-Key"),  # Uncomment if API key support is needed
 ) -> dict:
     """
     FastAPI dependency supporting dual authentication:

@@ -30,7 +30,7 @@ class TestCognitiveFabricNodeCreate:
         assert data["cfn_id"] == "cfn-test-node-123"
         assert data["cfn_name"] == "test-cfn-node"
         assert data["status"] == "offline"  # Starts offline, heartbeat makes it online
-        assert "cloud_config" in data
+        assert "config" in data
 
         # Verify CFN exists by fetching it (debug check)
         cfn_check = client.get("/api/cognitive-fabric-nodes/cfn-test-node-123")
@@ -325,8 +325,8 @@ class TestCognitiveFabricNodeGet:
         assert data["cfn_id"] == cfn_id
         assert workspace_id in data["workspace_ids"]
         assert "cfn_name" in data
-        assert "cloud_config" in data
-        assert "cfn_config" in data
+        assert "config" in data
+        assert "cfn_config" in data["config"]  # cfn_config is now inside config
         assert "status" in data
         assert "last_seen" in data
         assert "enabled" in data
@@ -392,8 +392,8 @@ class TestCognitiveFabricNodeUpdate:
 
         assert response.status_code == 200
         data = response.json()
-        assert data["cfn_config"]["memory"] == "8GB"
-        assert data["cfn_config"]["max_connections"] == 200
+        assert data["config"]["cfn_config"]["memory"] == "8GB"
+        assert data["config"]["cfn_config"]["max_connections"] == 200
 
     def test_update_cfn_duplicate_name(self, client, multiple_cfn_nodes):
         """Test updating CFN with duplicate name"""
@@ -668,7 +668,7 @@ class TestCognitiveFabricNodeEnableDisable:
         assert detail_response.status_code == 200
         detail = detail_response.json()
         assert detail["cfn_name"] == "test-node-rebooted"
-        assert detail["cfn_config"]["memory"] == "8GB"
+        assert detail["config"]["cfn_config"]["memory"] == "8GB"
 
     def test_active_cfn_name_conflict(self, client):
         """Test active CFN trying to reconnect with a name that conflicts"""

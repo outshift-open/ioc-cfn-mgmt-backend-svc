@@ -55,19 +55,19 @@
         }
       }
     },
-    "/api/auth/signup": {
+    "/api/cognitive-fabric-nodes/register": {
       "post": {
         "tags": [
-          "authentication"
+          "cognitive-fabric-nodes"
         ],
-        "summary": "Signup",
-        "description": "Register a new user account.\n\n- **username**: Desired username (3-100 characters, alphanumeric with hyphens and underscores)\n- **email**: Email address\n- **password**: Password (minimum 8 characters)\n- **domain**: User domain (optional, default: ioc.local)\n- **role**: User role (optional, default: user)\n\nReturns JWT access token, refresh token, and user information",
-        "operationId": "signup_api_auth_signup_post",
+        "summary": "Create Cfn Node",
+        "description": "Register a new CFN node\n\n- **cfn_id**: Persistent CFN identifier (provided by CFN, immutable)\n- **cfn_name**: Human-readable CFN name (globally unique, can be updated later)\n- **cfn_config**: Optional current CFN configuration\n\nCFN is identifies to the management plane.\nRegistration creates the CFN record without workspace association.\nWorkspace association happens during workspace creation.\n\n**Response includes:**\n- **cfn_id**: The CFN identifier\n- **cfn_name**: The CFN name\n- **status**: Current status (offline)\n- **config**: Configuration for the CFN to apply locally\n  - cognitive_fabric_node: CFN-specific operational settings (non-workspace scoped)\n  - memory_providers: Global memory providers (non-workspace scoped)\n  - workspaces: Associated workspaces with MAS, cognitive agents, engines\n\nCFN must send heartbeat to change status from offline to online.",
+        "operationId": "create_cfn_node_api_cognitive_fabric_nodes_register_post",
         "requestBody": {
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/SignupRequest"
+                "$ref": "#/components/schemas/CognitiveFabricNodeRegisterRequest"
               }
             }
           },
@@ -79,7 +79,132 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/TokenResponse"
+                  "$ref": "#/components/schemas/CognitiveFabricNodeResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      }
+    },
+    "/api/cognitive-fabric-nodes": {
+      "post": {
+        "tags": [
+          "cognitive-fabric-nodes"
+        ],
+        "summary": "Create Cfn Node",
+        "description": "Register a new CFN node\n\n- **cfn_id**: Persistent CFN identifier (provided by CFN, immutable)\n- **cfn_name**: Human-readable CFN name (globally unique, can be updated later)\n- **cfn_config**: Optional current CFN configuration\n\nCFN is identifies to the management plane.\nRegistration creates the CFN record without workspace association.\nWorkspace association happens during workspace creation.\n\n**Response includes:**\n- **cfn_id**: The CFN identifier\n- **cfn_name**: The CFN name\n- **status**: Current status (offline)\n- **config**: Configuration for the CFN to apply locally\n  - cognitive_fabric_node: CFN-specific operational settings (non-workspace scoped)\n  - memory_providers: Global memory providers (non-workspace scoped)\n  - workspaces: Associated workspaces with MAS, cognitive agents, engines\n\nCFN must send heartbeat to change status from offline to online.",
+        "operationId": "create_cfn_node_api_cognitive_fabric_nodes_post",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CognitiveFabricNodeRegisterRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CognitiveFabricNodeResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "get": {
+        "tags": [
+          "cognitive-fabric-nodes"
+        ],
+        "summary": "List Cfn Nodes",
+        "description": "List all CFN nodes, optionally filtered by workspace\n\n- **workspace_id**: Optional workspace filter\n- **status**: Optional status filter (online, offline, blocked)\n\nReturns all CFN nodes (enabled and disabled). Deleted CFNs are never included.",
+        "operationId": "list_cfn_nodes_api_cognitive_fabric_nodes_get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "workspace_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Filter by workspace ID",
+              "title": "Workspace Id"
+            },
+            "description": "Filter by workspace ID"
+          },
+          {
+            "name": "status",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Filter by status (online, offline, blocked)",
+              "title": "Status"
+            },
+            "description": "Filter by status (online, offline, blocked)"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CognitiveFabricNodeList"
                 }
               }
             }
@@ -97,23 +222,39 @@
         }
       }
     },
-    "/api/auth/login": {
-      "post": {
+    "/api/cognitive-fabric-nodes/{cfn_id}": {
+      "put": {
         "tags": [
-          "authentication"
+          "cognitive-fabric-nodes"
         ],
-        "summary": "Login",
-        "description": "Authenticate user with username and password, return JWT tokens.\n\n- **username**: User's username\n- **password**: User's password\n\nReturns JWT access token (1 hour) and refresh token (7 days)",
-        "operationId": "login_api_auth_login_post",
+        "summary": "Update Cfn Node",
+        "description": "Update CFN node information\n\n- **cfn_id**: CFN identifier (immutable)\n- **cfn_name**: Optional updated CFN name (globally unique)\n- **cfn_config**: Optional updated CFN configuration\n\n**Response includes:**\n- Full CFN details (cfn_id, workspace_ids, cfn_name, cfn_config, status, last_seen, enabled, timestamps)\n- **config**: Regenerated configuration for the CFN to apply\n  - cognitive_fabric_node: CFN-specific operational settings\n  - memory_providers: Global memory providers\n  - workspaces: List of workspace details with MAS, cognitive agents, engines\n\nThe config is automatically regenerated with each update to ensure CFN has the latest configuration.",
+        "operationId": "update_cfn_node_api_cognitive_fabric_nodes__cfn_id__put",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "cfn_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Cfn Id"
+            }
+          }
+        ],
         "requestBody": {
+          "required": true,
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/LoginRequest"
+                "$ref": "#/components/schemas/CognitiveFabricNodeUpdateRequest"
               }
             }
-          },
-          "required": true
+          }
         },
         "responses": {
           "200": {
@@ -121,7 +262,92 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/TokenResponse"
+                  "$ref": "#/components/schemas/CognitiveFabricNodeResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "cognitive-fabric-nodes"
+        ],
+        "summary": "Delete Cfn Node",
+        "description": "Delete CFN node (hard delete)\n\n- **cfn_id**: CFN identifier\n\n**IMPORTANT:** A CFN must be disabled first before it can be deleted.\n\nDeleting a CFN marks it as deleted in the database and removes all\nworkspace associations. After deletion, the CFN ID can be reused to\ncreate a new CFN node.\n\n**Flow:**\n1. User clicks \"Disable\" in UI \u2192 CFN is disabled (PATCH /disable)\n2. \"Delete\" button appears in UI\n3. User clicks \"Delete\" \u2192 CFN is deleted (DELETE)\n4. CFN ID is now available for reuse\n\nNo response body (204 No Content).",
+        "operationId": "delete_cfn_node_api_cognitive_fabric_nodes__cfn_id__delete",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "cfn_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Cfn Id"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "get": {
+        "tags": [
+          "cognitive-fabric-nodes"
+        ],
+        "summary": "Get Cfn Node",
+        "description": "Get detailed CFN node information\n\n- **cfn_id**: CFN identifier\n\nReturns full CFN details including:\n- cfn_id, cfn_name\n- workspace_ids (all associated workspaces)\n- cfn_config (node-reported configuration)\n- config (aggregated configuration to be applied)\n- status (online, offline)\n- enabled flag (true if CFN can operate, false if disabled)\n- created_at, updated_at, last_seen timestamps\n\nThis endpoint retrieves information for both enabled and disabled CFNs.\nDeleted CFNs will return 404 Not Found.",
+        "operationId": "get_cfn_node_api_cognitive_fabric_nodes__cfn_id__get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "cfn_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Cfn Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CognitiveFabricNodeResponse"
                 }
               }
             }
@@ -139,23 +365,351 @@
         }
       }
     },
-    "/api/auth/refresh": {
+    "/api/cognitive-fabric-nodes/{cfn_id}/enable": {
+      "patch": {
+        "tags": [
+          "cognitive-fabric-nodes"
+        ],
+        "summary": "Enable Cfn Node",
+        "description": "Enable a disabled CFN node\n\n- **cfn_id**: CFN identifier\n\nThis is an admin operation to re-enable a disabled CFN.\nAfter enabling, the CFN can call /register to reconnect and resume operations.\n\n**Response includes:**\n- Full CFN details with enabled=True and status=offline (until heartbeat is sent)\n- **config**: Configuration for the CFN to apply when it reconnects\n  - cognitive_fabric_node: CFN-specific operational settings\n  - memory_providers: Global memory providers\n  - workspaces: List of workspace details with MAS, cognitive agents, engines",
+        "operationId": "enable_cfn_node_api_cognitive_fabric_nodes__cfn_id__enable_patch",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "cfn_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Cfn Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CognitiveFabricNodeResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/cognitive-fabric-nodes/{cfn_id}/disable": {
+      "patch": {
+        "tags": [
+          "cognitive-fabric-nodes"
+        ],
+        "summary": "Disable Cfn Node",
+        "description": "Disable CFN node (soft disable, prepares for deletion)\n\n- **cfn_id**: CFN identifier\n\nDisabling a CFN stops heartbeats and prepares it for deletion.\nThe CFN will no longer be able to send heartbeats.\nThe CFN ID is LOCKED and cannot be reused while in disabled state.\n\nAfter disabling, the \"Delete\" button will appear in the UI.\nThe CFN can be re-enabled using the /enable endpoint, or permanently\ndeleted using the DELETE endpoint.\n\n**Response includes:**\n- Full CFN details with enabled=False\n- **config**: Configuration (preserved from last state)",
+        "operationId": "disable_cfn_node_api_cognitive_fabric_nodes__cfn_id__disable_patch",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "cfn_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Cfn Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CognitiveFabricNodeResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/cognitive-fabric-nodes/{cfn_id}/heartbeat": {
+      "put": {
+        "tags": [
+          "cognitive-fabric-nodes"
+        ],
+        "summary": "Cfn Heartbeat",
+        "description": "CFN heartbeat endpoint - updates last_seen timestamp\n\n- **cfn_id**: CFN identifier\n\nCFN nodes call this periodically (e.g., every 30 seconds) to indicate they are online.\nReturns the current status and last_seen timestamp.\n\nNote: This endpoint requires authentication but not write access.\nDisabled or deleted nodes will receive 403 Forbidden.",
+        "operationId": "cfn_heartbeat_api_cognitive_fabric_nodes__cfn_id__heartbeat_put",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "cfn_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Cfn Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CognitiveFabricNodeHeartbeatResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/cognitive-fabric-node/{cfn_id}/workspaces": {
+      "get": {
+        "tags": [
+          "cognitive-fabric-nodes"
+        ],
+        "summary": "Get Cfn Workspaces Config",
+        "description": "Get aggregated workspace configuration for a CFN node\n\nThis endpoint returns the consolidated configuration document that aggregates\nworkspace-scoped and global resources for the CFN service to apply.\n\n- **cfn_id**: CFN identifier\n\nReturns configuration with:\n- **version**: Configuration schema version (0.1.0)\n- **cognitive_fabric_node**: List of CFN-specific operational settings (non-workspace scoped)\n- **memory_providers**: List of global memory providers (non-workspace scoped)\n- **workspaces**: List of workspaces with their resources:\n  - workspace_id: Workspace identifier\n  - workspace_name: Workspace name\n  - multi_agent_systems: MAS available in this workspace\n  - cognitive_agents: Cognitive agents in this workspace\n  - cognitive_engines: Cognitive engines in this workspace (not included for March 2026)\n  - policies: Policies in this workspace (not included for March 2026)",
+        "operationId": "get_cfn_workspaces_config_api_cognitive_fabric_node__cfn_id__workspaces_get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "cfn_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Cfn Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true,
+                  "title": "Response Get Cfn Workspaces Config Api Cognitive Fabric Node  Cfn Id  Workspaces Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/memory-providers": {
+      "get": {
+        "tags": [
+          "memory-providers"
+        ],
+        "summary": "List Memory Providers",
+        "description": "Get list of all memory providers (shared across workspaces)",
+        "operationId": "list_memory_providers_api_memory_providers_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MemoryProviderList"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      },
       "post": {
         "tags": [
-          "authentication"
+          "memory-providers"
         ],
-        "summary": "Refresh Token",
-        "description": "Refresh an access token using a valid refresh token.\n\n- **refresh_token**: Valid JWT refresh token\n\nReturns a new JWT access token",
-        "operationId": "refresh_token_api_auth_refresh_post",
+        "summary": "Create Memory Provider",
+        "description": "Create a new memory provider (shared across workspaces)",
+        "operationId": "create_memory_provider_api_memory_providers_post",
         "requestBody": {
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/RefreshTokenRequest"
+                "$ref": "#/components/schemas/MemoryProviderCreate"
               }
             }
           },
           "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MemoryProviderDetail"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      }
+    },
+    "/api/memory-providers/{memory_provider_id}": {
+      "get": {
+        "tags": [
+          "memory-providers"
+        ],
+        "summary": "Get Memory Provider",
+        "description": "Get details of a specific memory provider",
+        "operationId": "get_memory_provider_api_memory_providers__memory_provider_id__get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "memory_provider_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Memory Provider Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MemoryProviderDetail"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "patch": {
+        "tags": [
+          "memory-providers"
+        ],
+        "summary": "Update Memory Provider",
+        "description": "Update an existing memory provider",
+        "operationId": "update_memory_provider_api_memory_providers__memory_provider_id__patch",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "memory_provider_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Memory Provider Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MemoryProviderUpdate"
+              }
+            }
+          }
         },
         "responses": {
           "200": {
@@ -163,7 +717,57 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/TokenRefreshResponse"
+                  "$ref": "#/components/schemas/MemoryProviderDetail"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "memory-providers"
+        ],
+        "summary": "Delete Memory Provider",
+        "description": "Delete a memory provider (soft delete)",
+        "operationId": "delete_memory_provider_api_memory_providers__memory_provider_id__delete",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "memory_provider_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Memory Provider Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": {
+                    "type": "string"
+                  },
+                  "title": "Response Delete Memory Provider Api Memory Providers  Memory Provider Id  Delete"
                 }
               }
             }
@@ -189,38 +793,15 @@
         "summary": "Create Workspace",
         "description": "Create a new workspace\n\n- **name**: Name of the workspace (required)\n- **cfn_id**: CFN identifier to associate with this workspace (required)\n- **config**: Workspace configuration (optional)\n\nThe workspace is bound to a CFN during creation.\nReturns the UUID of the created workspace",
         "operationId": "create_workspace_api_workspaces_create_post",
-        "security": [
-          {
-            "HTTPBearer": []
-          }
-        ],
-        "parameters": [
-          {
-            "name": "X-API-Key",
-            "in": "header",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "X-Api-Key"
-            }
-          }
-        ],
         "requestBody": {
-          "required": true,
           "content": {
             "application/json": {
               "schema": {
                 "$ref": "#/components/schemas/WorkspaceCreate"
               }
             }
-          }
+          },
+          "required": true
         },
         "responses": {
           "201": {
@@ -243,7 +824,12 @@
               }
             }
           }
-        }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
       }
     },
     "/api/workspaces": {
@@ -254,29 +840,6 @@
         "summary": "List Workspaces",
         "description": "List workspaces accessible to the user\n\nUsers see only workspaces they are members of. Super admins (future) see all workspaces.",
         "operationId": "list_workspaces_api_workspaces_get",
-        "security": [
-          {
-            "HTTPBearer": []
-          }
-        ],
-        "parameters": [
-          {
-            "name": "X-API-Key",
-            "in": "header",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "X-Api-Key"
-            }
-          }
-        ],
         "responses": {
           "200": {
             "description": "Successful Response",
@@ -287,18 +850,13 @@
                 }
               }
             }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
           }
-        }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
       }
     },
     "/api/workspaces/list": {
@@ -309,29 +867,6 @@
         "summary": "List Workspaces",
         "description": "List workspaces accessible to the user\n\nUsers see only workspaces they are members of. Super admins (future) see all workspaces.",
         "operationId": "list_workspaces_api_workspaces_list_get",
-        "security": [
-          {
-            "HTTPBearer": []
-          }
-        ],
-        "parameters": [
-          {
-            "name": "X-API-Key",
-            "in": "header",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "X-Api-Key"
-            }
-          }
-        ],
         "responses": {
           "200": {
             "description": "Successful Response",
@@ -342,18 +877,13 @@
                 }
               }
             }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
           }
-        }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
       }
     },
     "/api/workspaces/{workspace_id}": {
@@ -377,22 +907,6 @@
             "schema": {
               "type": "string",
               "title": "Workspace Id"
-            }
-          },
-          {
-            "name": "X-API-Key",
-            "in": "header",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "X-Api-Key"
             }
           }
         ],
@@ -439,22 +953,6 @@
             "schema": {
               "type": "string",
               "title": "Workspace Id"
-            }
-          },
-          {
-            "name": "X-API-Key",
-            "in": "header",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "X-Api-Key"
             }
           }
         ],
@@ -512,22 +1010,6 @@
               "type": "string",
               "title": "Workspace Id"
             }
-          },
-          {
-            "name": "X-API-Key",
-            "in": "header",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "X-Api-Key"
-            }
           }
         ],
         "responses": {
@@ -568,22 +1050,6 @@
             "schema": {
               "type": "string",
               "title": "Workspace Id"
-            }
-          },
-          {
-            "name": "X-API-Key",
-            "in": "header",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "X-Api-Key"
             }
           }
         ],
@@ -640,22 +1106,6 @@
             "schema": {
               "type": "string",
               "title": "Workspace Id"
-            }
-          },
-          {
-            "name": "X-API-Key",
-            "in": "header",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "X-Api-Key"
             }
           }
         ],
@@ -714,22 +1164,6 @@
               "type": "string",
               "title": "Mas Id"
             }
-          },
-          {
-            "name": "X-API-Key",
-            "in": "header",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "X-Api-Key"
-            }
           }
         ],
         "responses": {
@@ -784,22 +1218,6 @@
             "schema": {
               "type": "string",
               "title": "Mas Id"
-            }
-          },
-          {
-            "name": "X-API-Key",
-            "in": "header",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "X-Api-Key"
             }
           }
         ],
@@ -876,22 +1294,6 @@
               "default": false,
               "title": " Purge"
             }
-          },
-          {
-            "name": "X-API-Key",
-            "in": "header",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "X-Api-Key"
-            }
           }
         ],
         "responses": {
@@ -911,14 +1313,14 @@
         }
       }
     },
-    "/api/cognitive-fabric-nodes/register": {
+    "/api/workspaces/{workspace_id}/cognitive-agents": {
       "post": {
         "tags": [
-          "cognitive-fabric-nodes"
+          "cognitive-agents"
         ],
-        "summary": "Create Cfn Node",
-        "description": "Register a new CFN node\n\n- **cfn_id**: Persistent CFN identifier (provided by CFN, immutable)\n- **cfn_name**: Human-readable CFN name (globally unique, can be updated later)\n- **cfn_config**: Optional current CFN configuration\n\nCFN is identifies to the management plane.\nRegistration creates the CFN record without workspace association.\nWorkspace association happens during workspace creation.\n\n**Behavior by CFN State:**\n\n1. **New CFN**: Creates new entry with no workspace associations\n   - Status: 201 Created\n   - Returns: offline status with empty cloud_config\n\n2. **Deleted CFN (ID reuse)**: Reuses deleted record\n   - Status: 201 Created\n   - Returns: offline status with empty cloud_config\n\n3. **Active CFN (reboot/reconnection)**: Refreshes config\n   - Status: 201 Created\n   - Returns: offline status with current cloud_config (includes workspace associations)\n   - Allows CFN to reconnect after reboot\n\n4. **Disabled CFN (ID locked)**: Rejects registration\n   - Status: 403 Forbidden\n   - CFN ID is locked and cannot be reused\n   - Admin must manually enable it first via PATCH /enable\n\n**Response includes:**\n- **cfn_id**: The CFN identifier\n- **cfn_name**: The CFN name\n- **status**: Current status (offline)\n- **cloud_config**: Cloud configuration for the CFN to apply locally\n  - workspaces: Associated workspaces with MAS, engines, agents\n  - memory_providers: Global memory providers\n  - updated_at: Configuration timestamp\n\nCFN must send heartbeat to change status from offline to online.",
-        "operationId": "create_cfn_node_api_cognitive_fabric_nodes_register_post",
+        "summary": "Create Cognitive Agent",
+        "description": "Create a new cognitive agent in workspace",
+        "operationId": "create_cognitive_agent_api_workspaces__workspace_id__cognitive_agents_post",
         "security": [
           {
             "HTTPBearer": []
@@ -926,19 +1328,12 @@
         ],
         "parameters": [
           {
-            "name": "X-API-Key",
-            "in": "header",
-            "required": false,
+            "name": "workspace_id",
+            "in": "path",
+            "required": true,
             "schema": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "X-Api-Key"
+              "type": "string",
+              "title": "Workspace Id"
             }
           }
         ],
@@ -947,7 +1342,7 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/CognitiveFabricNodeRegisterRequest"
+                "$ref": "#/components/schemas/CognitiveAgentCreate"
               }
             }
           }
@@ -958,72 +1353,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/CognitiveFabricNodeRegisterResponse"
-                }
-              }
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/cognitive-fabric-nodes": {
-      "post": {
-        "tags": [
-          "cognitive-fabric-nodes"
-        ],
-        "summary": "Create Cfn Node",
-        "description": "Register a new CFN node\n\n- **cfn_id**: Persistent CFN identifier (provided by CFN, immutable)\n- **cfn_name**: Human-readable CFN name (globally unique, can be updated later)\n- **cfn_config**: Optional current CFN configuration\n\nCFN is identifies to the management plane.\nRegistration creates the CFN record without workspace association.\nWorkspace association happens during workspace creation.\n\n**Behavior by CFN State:**\n\n1. **New CFN**: Creates new entry with no workspace associations\n   - Status: 201 Created\n   - Returns: offline status with empty cloud_config\n\n2. **Deleted CFN (ID reuse)**: Reuses deleted record\n   - Status: 201 Created\n   - Returns: offline status with empty cloud_config\n\n3. **Active CFN (reboot/reconnection)**: Refreshes config\n   - Status: 201 Created\n   - Returns: offline status with current cloud_config (includes workspace associations)\n   - Allows CFN to reconnect after reboot\n\n4. **Disabled CFN (ID locked)**: Rejects registration\n   - Status: 403 Forbidden\n   - CFN ID is locked and cannot be reused\n   - Admin must manually enable it first via PATCH /enable\n\n**Response includes:**\n- **cfn_id**: The CFN identifier\n- **cfn_name**: The CFN name\n- **status**: Current status (offline)\n- **cloud_config**: Cloud configuration for the CFN to apply locally\n  - workspaces: Associated workspaces with MAS, engines, agents\n  - memory_providers: Global memory providers\n  - updated_at: Configuration timestamp\n\nCFN must send heartbeat to change status from offline to online.",
-        "operationId": "create_cfn_node_api_cognitive_fabric_nodes_post",
-        "security": [
-          {
-            "HTTPBearer": []
-          }
-        ],
-        "parameters": [
-          {
-            "name": "X-API-Key",
-            "in": "header",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "X-Api-Key"
-            }
-          }
-        ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/CognitiveFabricNodeRegisterRequest"
-              }
-            }
-          }
-        },
-        "responses": {
-          "201": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/CognitiveFabricNodeRegisterResponse"
+                  "$ref": "#/components/schemas/CognitiveAgentDetail"
                 }
               }
             }
@@ -1042,11 +1372,11 @@
       },
       "get": {
         "tags": [
-          "cognitive-fabric-nodes"
+          "cognitive-agents"
         ],
-        "summary": "List Cfn Nodes",
-        "description": "List all CFN nodes, optionally filtered by workspace\n\n- **workspace_id**: Optional workspace filter\n- **status**: Optional status filter (online, offline, blocked)\n\nReturns all CFN nodes (enabled and disabled). Deleted CFNs are never included.",
-        "operationId": "list_cfn_nodes_api_cognitive_fabric_nodes_get",
+        "summary": "List Cognitive Agents",
+        "description": "Get list of all cognitive agents in workspace",
+        "operationId": "list_cognitive_agents_api_workspaces__workspace_id__cognitive_agents_get",
         "security": [
           {
             "HTTPBearer": []
@@ -1055,54 +1385,11 @@
         "parameters": [
           {
             "name": "workspace_id",
-            "in": "query",
-            "required": false,
+            "in": "path",
+            "required": true,
             "schema": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "description": "Filter by workspace ID",
+              "type": "string",
               "title": "Workspace Id"
-            },
-            "description": "Filter by workspace ID"
-          },
-          {
-            "name": "status",
-            "in": "query",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "description": "Filter by status (online, offline, blocked)",
-              "title": "Status"
-            },
-            "description": "Filter by status (online, offline, blocked)"
-          },
-          {
-            "name": "X-API-Key",
-            "in": "header",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "X-Api-Key"
             }
           }
         ],
@@ -1112,7 +1399,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/CognitiveFabricNodeList"
+                  "$ref": "#/components/schemas/CognitiveAgentList"
                 }
               }
             }
@@ -1130,14 +1417,14 @@
         }
       }
     },
-    "/api/cognitive-fabric-nodes/{cfn_id}": {
-      "put": {
+    "/api/workspaces/{workspace_id}/cognitive-agents/{cognitive_agent_id}": {
+      "get": {
         "tags": [
-          "cognitive-fabric-nodes"
+          "cognitive-agents"
         ],
-        "summary": "Update Cfn Node",
-        "description": "Update CFN node information\n\n- **cfn_id**: CFN identifier (immutable)\n- **cfn_name**: Optional updated CFN name (globally unique)\n- **cfn_config**: Optional updated CFN configuration\n\n**Response includes:**\n- Full CFN details (cfn_id, workspace_ids, cfn_name, cfn_config, status, last_seen, enabled, timestamps)\n- **cloud_config**: Regenerated cloud configuration for the CFN to apply\n  - workspace_ids: Associated workspaces\n  - workspaces: List of workspace details (id + name)\n  - updated_at: Configuration timestamp\n\nThe cloud_config is automatically regenerated with each update to ensure CFN has the latest configuration.",
-        "operationId": "update_cfn_node_api_cognitive_fabric_nodes__cfn_id__put",
+        "summary": "Get Cognitive Agent",
+        "description": "Get details of a specific cognitive agent",
+        "operationId": "get_cognitive_agent_api_workspaces__workspace_id__cognitive_agents__cognitive_agent_id__get",
         "security": [
           {
             "HTTPBearer": []
@@ -1145,28 +1432,76 @@
         ],
         "parameters": [
           {
-            "name": "cfn_id",
+            "name": "workspace_id",
             "in": "path",
             "required": true,
             "schema": {
               "type": "string",
-              "title": "Cfn Id"
+              "title": "Workspace Id"
             }
           },
           {
-            "name": "X-API-Key",
-            "in": "header",
-            "required": false,
+            "name": "cognitive_agent_id",
+            "in": "path",
+            "required": true,
             "schema": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
+              "type": "string",
+              "title": "Cognitive Agent Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CognitiveAgentDetail"
                 }
-              ],
-              "title": "X-Api-Key"
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "patch": {
+        "tags": [
+          "cognitive-agents"
+        ],
+        "summary": "Update Cognitive Agent",
+        "description": "Update an existing cognitive agent",
+        "operationId": "update_cognitive_agent_api_workspaces__workspace_id__cognitive_agents__cognitive_agent_id__patch",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "workspace_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Workspace Id"
+            }
+          },
+          {
+            "name": "cognitive_agent_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Cognitive Agent Id"
             }
           }
         ],
@@ -1175,7 +1510,7 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/CognitiveFabricNodeUpdateRequest"
+                "$ref": "#/components/schemas/CognitiveAgentUpdate"
               }
             }
           }
@@ -1186,7 +1521,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/CognitiveFabricNodeDetail"
+                  "$ref": "#/components/schemas/CognitiveAgentDetail"
                 }
               }
             }
@@ -1205,322 +1540,11 @@
       },
       "delete": {
         "tags": [
-          "cognitive-fabric-nodes"
+          "cognitive-agents"
         ],
-        "summary": "Delete Cfn Node",
-        "description": "Delete CFN node (hard delete)\n\n- **cfn_id**: CFN identifier\n\n**IMPORTANT:** A CFN must be disabled first before it can be deleted.\n\nDeleting a CFN marks it as deleted in the database and removes all\nworkspace associations. After deletion, the CFN ID can be reused to\ncreate a new CFN node.\n\n**Flow:**\n1. User clicks \"Disable\" in UI \u2192 CFN is disabled (PATCH /disable)\n2. \"Delete\" button appears in UI\n3. User clicks \"Delete\" \u2192 CFN is deleted (DELETE)\n4. CFN ID is now available for reuse\n\nNo response body (204 No Content).",
-        "operationId": "delete_cfn_node_api_cognitive_fabric_nodes__cfn_id__delete",
-        "security": [
-          {
-            "HTTPBearer": []
-          }
-        ],
-        "parameters": [
-          {
-            "name": "cfn_id",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "title": "Cfn Id"
-            }
-          },
-          {
-            "name": "X-API-Key",
-            "in": "header",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "X-Api-Key"
-            }
-          }
-        ],
-        "responses": {
-          "204": {
-            "description": "Successful Response"
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
-          }
-        }
-      },
-      "get": {
-        "tags": [
-          "cognitive-fabric-nodes"
-        ],
-        "summary": "Get Cfn Node",
-        "description": "Get detailed CFN node information\n\n- **cfn_id**: CFN identifier\n\nReturns full CFN details including:\n- cfn_id, cfn_name\n- workspace_ids (all associated workspaces)\n- cfn_config (node-reported configuration)\n- cloud_config (cloud-side configuration to be applied)\n- status (online, offline)\n- enabled flag (true if CFN can operate, false if disabled)\n- created_at, updated_at, last_seen timestamps\n\nThis endpoint retrieves information for both enabled and disabled CFNs.\nDeleted CFNs will return 404 Not Found.",
-        "operationId": "get_cfn_node_api_cognitive_fabric_nodes__cfn_id__get",
-        "security": [
-          {
-            "HTTPBearer": []
-          }
-        ],
-        "parameters": [
-          {
-            "name": "cfn_id",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "title": "Cfn Id"
-            }
-          },
-          {
-            "name": "X-API-Key",
-            "in": "header",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "X-Api-Key"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/CognitiveFabricNodeDetail"
-                }
-              }
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/cognitive-fabric-nodes/{cfn_id}/enable": {
-      "patch": {
-        "tags": [
-          "cognitive-fabric-nodes"
-        ],
-        "summary": "Enable Cfn Node",
-        "description": "Enable a disabled CFN node\n\n- **cfn_id**: CFN identifier\n\nThis is an admin operation to re-enable a disabled CFN.\nAfter enabling, the CFN can call /register to reconnect and resume operations.\n\n**Response includes:**\n- Full CFN details with enabled=True and status=offline (until heartbeat is sent)\n- **cloud_config**: Cloud configuration for the CFN to apply when it reconnects\n  - workspace_ids: Associated workspaces\n  - workspaces: List of workspace details (id + name)\n  - updated_at: Configuration timestamp",
-        "operationId": "enable_cfn_node_api_cognitive_fabric_nodes__cfn_id__enable_patch",
-        "security": [
-          {
-            "HTTPBearer": []
-          }
-        ],
-        "parameters": [
-          {
-            "name": "cfn_id",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "title": "Cfn Id"
-            }
-          },
-          {
-            "name": "X-API-Key",
-            "in": "header",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "X-Api-Key"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/CognitiveFabricNodeDetail"
-                }
-              }
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/cognitive-fabric-nodes/{cfn_id}/disable": {
-      "patch": {
-        "tags": [
-          "cognitive-fabric-nodes"
-        ],
-        "summary": "Disable Cfn Node",
-        "description": "Disable CFN node (soft disable, prepares for deletion)\n\n- **cfn_id**: CFN identifier\n\nDisabling a CFN stops heartbeats and prepares it for deletion.\nThe CFN will no longer be able to send heartbeats.\nThe CFN ID is LOCKED and cannot be reused while in disabled state.\n\nAfter disabling, the \"Delete\" button will appear in the UI.\nThe CFN can be re-enabled using the /enable endpoint, or permanently\ndeleted using the DELETE endpoint.\n\n**Response includes:**\n- Full CFN details with enabled=False\n- **cloud_config**: Cloud configuration (preserved from last state)",
-        "operationId": "disable_cfn_node_api_cognitive_fabric_nodes__cfn_id__disable_patch",
-        "security": [
-          {
-            "HTTPBearer": []
-          }
-        ],
-        "parameters": [
-          {
-            "name": "cfn_id",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "title": "Cfn Id"
-            }
-          },
-          {
-            "name": "X-API-Key",
-            "in": "header",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "X-Api-Key"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/CognitiveFabricNodeDetail"
-                }
-              }
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/cognitive-fabric-nodes/{cfn_id}/heartbeat": {
-      "put": {
-        "tags": [
-          "cognitive-fabric-nodes"
-        ],
-        "summary": "Cfn Heartbeat",
-        "description": "CFN heartbeat endpoint - updates last_seen timestamp\n\n- **cfn_id**: CFN identifier\n\nCFN nodes call this periodically (e.g., every 30 seconds) to indicate they are online.\nReturns the current status and last_seen timestamp.\n\nNote: This endpoint requires authentication but not write access.\nDisabled or deleted nodes will receive 403 Forbidden.",
-        "operationId": "cfn_heartbeat_api_cognitive_fabric_nodes__cfn_id__heartbeat_put",
-        "security": [
-          {
-            "HTTPBearer": []
-          }
-        ],
-        "parameters": [
-          {
-            "name": "cfn_id",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "title": "Cfn Id"
-            }
-          },
-          {
-            "name": "X-API-Key",
-            "in": "header",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "X-Api-Key"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/CognitiveFabricNodeHeartbeatResponse"
-                }
-              }
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/workspaces/workspaces/{workspace_id}/cognitive-engines": {
-      "get": {
-        "tags": [
-          "cognitive-engines"
-        ],
-        "summary": "List Cognitive Engines",
-        "description": "Get list of all cognitive engines in workspace",
-        "operationId": "list_cognitive_engines_api_workspaces_workspaces__workspace_id__cognitive_engines_get",
+        "summary": "Delete Cognitive Agent",
+        "description": "Delete a cognitive agent (soft delete)",
+        "operationId": "delete_cognitive_agent_api_workspaces__workspace_id__cognitive_agents__cognitive_agent_id__delete",
         "security": [
           {
             "HTTPBearer": []
@@ -1537,19 +1561,120 @@
             }
           },
           {
-            "name": "X-API-Key",
-            "in": "header",
-            "required": false,
+            "name": "cognitive_agent_id",
+            "in": "path",
+            "required": true,
             "schema": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
+              "type": "string",
+              "title": "Cognitive Agent Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": {
+                    "type": "string"
+                  },
+                  "title": "Response Delete Cognitive Agent Api Workspaces  Workspace Id  Cognitive Agents  Cognitive Agent Id  Delete"
                 }
-              ],
-              "title": "X-Api-Key"
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/workspaces/{workspace_id}/cognitive-engines": {
+      "post": {
+        "tags": [
+          "cognitive-engines"
+        ],
+        "summary": "Create Cognitive Engine",
+        "description": "Create a new cognitive engine in workspace",
+        "operationId": "create_cognitive_engine_api_workspaces__workspace_id__cognitive_engines_post",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "workspace_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Workspace Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CognitiveEngineCreate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CognitiveEngineDetail"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "get": {
+        "tags": [
+          "cognitive-engines"
+        ],
+        "summary": "List Cognitive Engines",
+        "description": "Get list of all cognitive engines in workspace",
+        "operationId": "list_cognitive_engines_api_workspaces__workspace_id__cognitive_engines_get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "workspace_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Workspace Id"
             }
           }
         ],
@@ -1577,14 +1702,14 @@
         }
       }
     },
-    "/api/memory-providers": {
+    "/api/workspaces/{workspace_id}/cognitive-engines/{cognitive_engine_id}": {
       "get": {
         "tags": [
-          "memory-providers"
+          "cognitive-engines"
         ],
-        "summary": "List Memory Providers",
-        "description": "Get list of all memory providers (shared across workspaces)",
-        "operationId": "list_memory_providers_api_memory_providers_get",
+        "summary": "Get Cognitive Engine",
+        "description": "Get details of a specific cognitive engine",
+        "operationId": "get_cognitive_engine_api_workspaces__workspace_id__cognitive_engines__cognitive_engine_id__get",
         "security": [
           {
             "HTTPBearer": []
@@ -1592,139 +1717,21 @@
         ],
         "parameters": [
           {
-            "name": "X-API-Key",
-            "in": "header",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "X-Api-Key"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/MemoryProviderList"
-                }
-              }
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/audits/": {
-      "post": {
-        "tags": [
-          "audits"
-        ],
-        "summary": "Create Audit",
-        "description": "Create a new audit entry\n\nNote: Audit entries are created automatically by the system.\nThis endpoint is for documentation purposes.",
-        "operationId": "create_audit_api_audits__post",
-        "responses": {
-          "201": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/AuditResponse"
-                }
-              }
-            }
-          }
-        }
-      },
-      "get": {
-        "tags": [
-          "audits"
-        ],
-        "summary": "List Audits",
-        "description": "List all audits with pagination",
-        "operationId": "list_audits_api_audits__get",
-        "parameters": [
-          {
-            "name": "skip",
-            "in": "query",
-            "required": false,
-            "schema": {
-              "type": "integer",
-              "minimum": 0,
-              "default": 0,
-              "title": "Skip"
-            }
-          },
-          {
-            "name": "limit",
-            "in": "query",
-            "required": false,
-            "schema": {
-              "type": "integer",
-              "maximum": 1000,
-              "minimum": 1,
-              "default": 100,
-              "title": "Limit"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/AuditListResponse"
-                }
-              }
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/audits/{audit_id}": {
-      "get": {
-        "tags": [
-          "audits"
-        ],
-        "summary": "Get Audit",
-        "description": "Get a specific audit entry by ID",
-        "operationId": "get_audit_api_audits__audit_id__get",
-        "parameters": [
-          {
-            "name": "audit_id",
+            "name": "workspace_id",
             "in": "path",
             "required": true,
             "schema": {
               "type": "string",
-              "title": "Audit Id"
+              "title": "Workspace Id"
+            }
+          },
+          {
+            "name": "cognitive_engine_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Cognitive Engine Id"
             }
           }
         ],
@@ -1734,7 +1741,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/AuditResponse"
+                  "$ref": "#/components/schemas/CognitiveEngineDetail"
                 }
               }
             }
@@ -1751,49 +1758,13 @@
           }
         }
       },
-      "delete": {
+      "patch": {
         "tags": [
-          "audits"
+          "cognitive-engines"
         ],
-        "summary": "Delete Audit",
-        "description": "Delete a specific audit by ID (soft delete)",
-        "operationId": "delete_audit_api_audits__audit_id__delete",
-        "parameters": [
-          {
-            "name": "audit_id",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "title": "Audit Id"
-            }
-          }
-        ],
-        "responses": {
-          "204": {
-            "description": "Successful Response"
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/iam/api-keys": {
-      "post": {
-        "tags": [
-          "iam"
-        ],
-        "summary": "Create Api Key",
-        "description": "Create a new API key\n\n- **name**: Human-readable name for the API key\n\nThe API key is linked to the current authenticated user and inherits their role.\nReturns the created API key information including the full key (only shown once).",
-        "operationId": "create_api_key_api_iam_api_keys_post",
+        "summary": "Update Cognitive Engine",
+        "description": "Update an existing cognitive engine",
+        "operationId": "update_cognitive_engine_api_workspaces__workspace_id__cognitive_engines__cognitive_engine_id__patch",
         "security": [
           {
             "HTTPBearer": []
@@ -1801,19 +1772,21 @@
         ],
         "parameters": [
           {
-            "name": "X-API-Key",
-            "in": "header",
-            "required": false,
+            "name": "workspace_id",
+            "in": "path",
+            "required": true,
             "schema": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "X-Api-Key"
+              "type": "string",
+              "title": "Workspace Id"
+            }
+          },
+          {
+            "name": "cognitive_engine_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Cognitive Engine Id"
             }
           }
         ],
@@ -1822,18 +1795,18 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/ApiKeyCreate"
+                "$ref": "#/components/schemas/CognitiveEngineUpdate"
               }
             }
           }
         },
         "responses": {
-          "201": {
+          "200": {
             "description": "Successful Response",
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/ApiKeyResponse"
+                  "$ref": "#/components/schemas/CognitiveEngineDetail"
                 }
               }
             }
@@ -1850,68 +1823,13 @@
           }
         }
       },
-      "get": {
-        "tags": [
-          "iam"
-        ],
-        "summary": "List Api Keys",
-        "description": "List API keys\n\n- Non-admin users see only their own API keys\n- Admin users see all API keys in the system\n\nReturns a list of API keys (without the full key value)",
-        "operationId": "list_api_keys_api_iam_api_keys_get",
-        "security": [
-          {
-            "HTTPBearer": []
-          }
-        ],
-        "parameters": [
-          {
-            "name": "X-API-Key",
-            "in": "header",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "X-Api-Key"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ApiKeyList"
-                }
-              }
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/iam/api-keys/{key_id}": {
       "delete": {
         "tags": [
-          "iam"
+          "cognitive-engines"
         ],
-        "summary": "Delete Api Key",
-        "description": "Delete an API key\n\n- **key_id**: UUID of the API key to delete\n\nUsers can only delete their own API keys unless they are admins.\nPerforms a soft delete of the API key.",
-        "operationId": "delete_api_key_api_iam_api_keys__key_id__delete",
+        "summary": "Delete Cognitive Engine",
+        "description": "Delete a cognitive engine (soft delete)",
+        "operationId": "delete_cognitive_engine_api_workspaces__workspace_id__cognitive_engines__cognitive_engine_id__delete",
         "security": [
           {
             "HTTPBearer": []
@@ -1919,76 +1837,21 @@
         ],
         "parameters": [
           {
-            "name": "key_id",
+            "name": "workspace_id",
             "in": "path",
             "required": true,
             "schema": {
               "type": "string",
-              "title": "Key Id"
+              "title": "Workspace Id"
             }
           },
           {
-            "name": "X-API-Key",
-            "in": "header",
-            "required": false,
+            "name": "cognitive_engine_id",
+            "in": "path",
+            "required": true,
             "schema": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "X-Api-Key"
-            }
-          }
-        ],
-        "responses": {
-          "204": {
-            "description": "Successful Response"
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/iam/roles": {
-      "get": {
-        "tags": [
-          "iam"
-        ],
-        "summary": "List Roles",
-        "description": "List all available IAM roles\n\nReturns a list of role names that can be assigned to API keys",
-        "operationId": "list_roles_api_iam_roles_get",
-        "security": [
-          {
-            "HTTPBearer": []
-          }
-        ],
-        "parameters": [
-          {
-            "name": "X-API-Key",
-            "in": "header",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "X-Api-Key"
+              "type": "string",
+              "title": "Cognitive Engine Id"
             }
           }
         ],
@@ -1998,11 +1861,11 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "array",
-                  "items": {
+                  "type": "object",
+                  "additionalProperties": {
                     "type": "string"
                   },
-                  "title": "Response List Roles Api Iam Roles Get"
+                  "title": "Response Delete Cognitive Engine Api Workspaces  Workspace Id  Cognitive Engines  Cognitive Engine Id  Delete"
                 }
               }
             }
@@ -2020,69 +1883,14 @@
         }
       }
     },
-    "/api/iam/users": {
-      "get": {
-        "tags": [
-          "iam"
-        ],
-        "summary": "List Iam Users",
-        "description": "List all users in the system\n\nReturns a list of all users with their basic information",
-        "operationId": "list_iam_users_api_iam_users_get",
-        "security": [
-          {
-            "HTTPBearer": []
-          }
-        ],
-        "parameters": [
-          {
-            "name": "X-API-Key",
-            "in": "header",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "X-Api-Key"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Users"
-                }
-              }
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/workspaces/{workspace_id}/invitations": {
+    "/api/workspaces/{workspace_id}/policies": {
       "post": {
         "tags": [
-          "workspace-invitations"
+          "policies"
         ],
-        "summary": "Create Invitation",
-        "description": "Create a workspace invitation (admin only)\n\n- **workspace_id**: UUID of the workspace\n- **invitee_username**: Username of user to invite\n- **role**: Role to assign (admin/viewer/guest)\n\nReturns the UUID of the created invitation",
-        "operationId": "create_invitation_api_workspaces__workspace_id__invitations_post",
+        "summary": "Create Policy",
+        "description": "Create a new policy in workspace",
+        "operationId": "create_policy_api_workspaces__workspace_id__policies_post",
         "security": [
           {
             "HTTPBearer": []
@@ -2097,22 +1905,6 @@
               "type": "string",
               "title": "Workspace Id"
             }
-          },
-          {
-            "name": "X-API-Key",
-            "in": "header",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "X-Api-Key"
-            }
           }
         ],
         "requestBody": {
@@ -2120,7 +1912,7 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/WorkspaceInvitationCreate"
+                "$ref": "#/components/schemas/PolicyCreate"
               }
             }
           }
@@ -2131,7 +1923,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/WorkspaceInvitationResponse"
+                  "$ref": "#/components/schemas/PolicyDetail"
                 }
               }
             }
@@ -2150,11 +1942,11 @@
       },
       "get": {
         "tags": [
-          "workspace-invitations"
+          "policies"
         ],
-        "summary": "List Workspace Invitations",
-        "description": "List all invitations for a workspace (admin only)\n\n- **workspace_id**: UUID of the workspace\n\nReturns a list of all invitations (pending, accepted, declined, expired)",
-        "operationId": "list_workspace_invitations_api_workspaces__workspace_id__invitations_get",
+        "summary": "List Policies",
+        "description": "Get list of all policies in workspace",
+        "operationId": "list_policies_api_workspaces__workspace_id__policies_get",
         "security": [
           {
             "HTTPBearer": []
@@ -2168,22 +1960,6 @@
             "schema": {
               "type": "string",
               "title": "Workspace Id"
-            }
-          },
-          {
-            "name": "X-API-Key",
-            "in": "header",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "X-Api-Key"
             }
           }
         ],
@@ -2193,7 +1969,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/WorkspaceInvitationList"
+                  "$ref": "#/components/schemas/PolicyList"
                 }
               }
             }
@@ -2211,261 +1987,14 @@
         }
       }
     },
-    "/api/workspaces/{workspace_id}/invitations/{invitation_id}": {
-      "delete": {
-        "tags": [
-          "workspace-invitations"
-        ],
-        "summary": "Cancel Invitation",
-        "description": "Cancel a pending invitation (admin only)\n\n- **workspace_id**: UUID of the workspace\n- **invitation_id**: UUID of the invitation\n\nReturns success message",
-        "operationId": "cancel_invitation_api_workspaces__workspace_id__invitations__invitation_id__delete",
-        "security": [
-          {
-            "HTTPBearer": []
-          }
-        ],
-        "parameters": [
-          {
-            "name": "workspace_id",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "title": "Workspace Id"
-            }
-          },
-          {
-            "name": "invitation_id",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "title": "Invitation Id"
-            }
-          },
-          {
-            "name": "X-API-Key",
-            "in": "header",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "X-Api-Key"
-            }
-          }
-        ],
-        "responses": {
-          "204": {
-            "description": "Successful Response"
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/invitations/pending": {
+    "/api/workspaces/{workspace_id}/policies/{policy_id}": {
       "get": {
         "tags": [
-          "workspace-invitations"
+          "policies"
         ],
-        "summary": "Get Pending Invitations",
-        "description": "Get all pending invitations for the current user\n\nReturns a list of pending invitations",
-        "operationId": "get_pending_invitations_api_invitations_pending_get",
-        "security": [
-          {
-            "HTTPBearer": []
-          }
-        ],
-        "parameters": [
-          {
-            "name": "X-API-Key",
-            "in": "header",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "X-Api-Key"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/WorkspaceInvitationList"
-                }
-              }
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/invitations/{invitation_id}/accept": {
-      "post": {
-        "tags": [
-          "workspace-invitations"
-        ],
-        "summary": "Accept Invitation",
-        "description": "Accept a workspace invitation\n\n- **invitation_id**: UUID of the invitation\n\nReturns success message with workspace details and assigned role",
-        "operationId": "accept_invitation_api_invitations__invitation_id__accept_post",
-        "security": [
-          {
-            "HTTPBearer": []
-          }
-        ],
-        "parameters": [
-          {
-            "name": "invitation_id",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "title": "Invitation Id"
-            }
-          },
-          {
-            "name": "X-API-Key",
-            "in": "header",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "X-Api-Key"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/WorkspaceInvitationAcceptResponse"
-                }
-              }
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/invitations/{invitation_id}/decline": {
-      "post": {
-        "tags": [
-          "workspace-invitations"
-        ],
-        "summary": "Decline Invitation",
-        "description": "Decline a workspace invitation\n\n- **invitation_id**: UUID of the invitation\n\nReturns success message",
-        "operationId": "decline_invitation_api_invitations__invitation_id__decline_post",
-        "security": [
-          {
-            "HTTPBearer": []
-          }
-        ],
-        "parameters": [
-          {
-            "name": "invitation_id",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "title": "Invitation Id"
-            }
-          },
-          {
-            "name": "X-API-Key",
-            "in": "header",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "X-Api-Key"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {}
-              }
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/workspaces/{workspace_id}/members": {
-      "get": {
-        "tags": [
-          "workspace-members"
-        ],
-        "summary": "List Members",
-        "description": "List all members of a workspace\n\n- **workspace_id**: UUID of the workspace\n\nReturns a list of all workspace members with their roles",
-        "operationId": "list_members_api_workspaces__workspace_id__members_get",
+        "summary": "Get Policy",
+        "description": "Get details of a specific policy",
+        "operationId": "get_policy_api_workspaces__workspace_id__policies__policy_id__get",
         "security": [
           {
             "HTTPBearer": []
@@ -2482,19 +2011,12 @@
             }
           },
           {
-            "name": "X-API-Key",
-            "in": "header",
-            "required": false,
+            "name": "policy_id",
+            "in": "path",
+            "required": true,
             "schema": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "X-Api-Key"
+              "type": "string",
+              "title": "Policy Id"
             }
           }
         ],
@@ -2504,76 +2026,10 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/WorkspaceMemberList"
+                  "$ref": "#/components/schemas/PolicyDetail"
                 }
               }
             }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/workspaces/{workspace_id}/members/{user_id}": {
-      "delete": {
-        "tags": [
-          "workspace-members"
-        ],
-        "summary": "Remove Member",
-        "description": "Remove a member from a workspace (admin only, cannot remove self or creator)\n\n- **workspace_id**: UUID of the workspace\n- **user_id**: UUID of the user to remove\n\nReturns success message",
-        "operationId": "remove_member_api_workspaces__workspace_id__members__user_id__delete",
-        "security": [
-          {
-            "HTTPBearer": []
-          }
-        ],
-        "parameters": [
-          {
-            "name": "workspace_id",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "title": "Workspace Id"
-            }
-          },
-          {
-            "name": "user_id",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "title": "User Id"
-            }
-          },
-          {
-            "name": "X-API-Key",
-            "in": "header",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "X-Api-Key"
-            }
-          }
-        ],
-        "responses": {
-          "204": {
-            "description": "Successful Response"
           },
           "422": {
             "description": "Validation Error",
@@ -2587,13 +2043,13 @@
           }
         }
       },
-      "put": {
+      "patch": {
         "tags": [
-          "workspace-members"
+          "policies"
         ],
-        "summary": "Update Member Role",
-        "description": "Update a member's role in a workspace (admin only)\n\n- **workspace_id**: UUID of the workspace\n- **user_id**: UUID of the user\n- **role**: New role to assign (admin/viewer/guest)\n\nReturns the updated member details",
-        "operationId": "update_member_role_api_workspaces__workspace_id__members__user_id__put",
+        "summary": "Update Policy",
+        "description": "Update an existing policy",
+        "operationId": "update_policy_api_workspaces__workspace_id__policies__policy_id__patch",
         "security": [
           {
             "HTTPBearer": []
@@ -2610,28 +2066,12 @@
             }
           },
           {
-            "name": "user_id",
+            "name": "policy_id",
             "in": "path",
             "required": true,
             "schema": {
               "type": "string",
-              "title": "User Id"
-            }
-          },
-          {
-            "name": "X-API-Key",
-            "in": "header",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "X-Api-Key"
+              "title": "Policy Id"
             }
           }
         ],
@@ -2640,7 +2080,7 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/WorkspaceMemberRoleUpdate"
+                "$ref": "#/components/schemas/PolicyUpdate"
               }
             }
           }
@@ -2651,7 +2091,66 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/WorkspaceMemberDetail"
+                  "$ref": "#/components/schemas/PolicyDetail"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "policies"
+        ],
+        "summary": "Delete Policy",
+        "description": "Delete a policy (soft delete)",
+        "operationId": "delete_policy_api_workspaces__workspace_id__policies__policy_id__delete",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "workspace_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Workspace Id"
+            }
+          },
+          {
+            "name": "policy_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Policy Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": {
+                    "type": "string"
+                  },
+                  "title": "Response Delete Policy Api Workspaces  Workspace Id  Policies  Policy Id  Delete"
                 }
               }
             }
@@ -2672,186 +2171,19 @@
   },
   "components": {
     "schemas": {
-      "ApiKeyCreate": {
+      "CognitiveAgentCreate": {
         "properties": {
-          "name": {
+          "cognitive_agent_id": {
             "type": "string",
-            "maxLength": 200,
-            "minLength": 1,
-            "title": "Name",
-            "description": "Human-readable name for the API key"
-          }
-        },
-        "type": "object",
-        "required": [
-          "name"
-        ],
-        "title": "ApiKeyCreate"
-      },
-      "ApiKeyList": {
-        "properties": {
-          "api_keys": {
-            "items": {
-              "$ref": "#/components/schemas/ApiKeyListItem"
-            },
-            "type": "array",
-            "title": "Api Keys"
+            "title": "Cognitive Agent Id",
+            "description": "Agent identifier"
           },
-          "total": {
-            "type": "integer",
-            "title": "Total"
-          }
-        },
-        "type": "object",
-        "required": [
-          "api_keys",
-          "total"
-        ],
-        "title": "ApiKeyList",
-        "example": {
-          "api_keys": [
-            {
-              "created_at": "2024-11-14T10:30:00Z",
-              "id": "550e8400-e29b-41d4-a716-446655440000",
-              "key_preview": "ioc_abc123...",
-              "name": "Production API Key",
-              "user_id": "550e8400-e29b-41d4-a716-446655440002"
-            }
-          ],
-          "total": 1
-        }
-      },
-      "ApiKeyListItem": {
-        "properties": {
-          "id": {
+          "cognitive_agent_name": {
             "type": "string",
-            "title": "Id",
-            "description": "Unique identifier for the API key"
+            "title": "Cognitive Agent Name",
+            "description": "Agent name"
           },
-          "key_preview": {
-            "type": "string",
-            "title": "Key Preview",
-            "description": "Preview of the API key (first few characters)"
-          },
-          "name": {
-            "type": "string",
-            "title": "Name",
-            "description": "Human-readable name for the API key"
-          },
-          "user_id": {
-            "type": "string",
-            "title": "User Id",
-            "description": "ID of the user who owns this API key"
-          },
-          "created_at": {
-            "type": "string",
-            "format": "date-time",
-            "title": "Created At",
-            "description": "Timestamp when the API key was created"
-          }
-        },
-        "type": "object",
-        "required": [
-          "id",
-          "key_preview",
-          "name",
-          "user_id",
-          "created_at"
-        ],
-        "title": "ApiKeyListItem",
-        "example": {
-          "created_at": "2024-11-14T10:30:00Z",
-          "id": "550e8400-e29b-41d4-a716-446655440000",
-          "key_preview": "ioc_abc123...",
-          "name": "Production API Key",
-          "user_id": "550e8400-e29b-41d4-a716-446655440002"
-        }
-      },
-      "ApiKeyResponse": {
-        "properties": {
-          "id": {
-            "type": "string",
-            "title": "Id",
-            "description": "Unique identifier for the API key"
-          },
-          "key": {
-            "type": "string",
-            "title": "Key",
-            "description": "Full API key (only returned on creation)"
-          },
-          "key_preview": {
-            "type": "string",
-            "title": "Key Preview",
-            "description": "Preview of the API key (first few characters)"
-          },
-          "name": {
-            "type": "string",
-            "title": "Name",
-            "description": "Human-readable name for the API key"
-          },
-          "user_id": {
-            "type": "string",
-            "title": "User Id",
-            "description": "ID of the user who owns this API key"
-          },
-          "created_at": {
-            "type": "string",
-            "format": "date-time",
-            "title": "Created At",
-            "description": "Timestamp when the API key was created"
-          }
-        },
-        "type": "object",
-        "required": [
-          "id",
-          "key",
-          "key_preview",
-          "name",
-          "user_id",
-          "created_at"
-        ],
-        "title": "ApiKeyResponse",
-        "example": {
-          "created_at": "2024-11-14T10:30:00Z",
-          "id": "550e8400-e29b-41d4-a716-446655440000",
-          "key": "ioc_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
-          "key_preview": "ioc_xxx...",
-          "name": "Production API Key",
-          "user_id": "550e8400-e29b-41d4-a716-446655440002"
-        }
-      },
-      "AuditListResponse": {
-        "properties": {
-          "total": {
-            "type": "integer",
-            "title": "Total",
-            "description": "Total number of audits"
-          },
-          "audits": {
-            "items": {
-              "$ref": "#/components/schemas/AuditResponse"
-            },
-            "type": "array",
-            "title": "Audits",
-            "description": "List of audit entries"
-          }
-        },
-        "type": "object",
-        "required": [
-          "total",
-          "audits"
-        ],
-        "title": "AuditListResponse",
-        "description": "Response model for listing audits"
-      },
-      "AuditResponse": {
-        "properties": {
-          "id": {
-            "type": "string",
-            "title": "Id",
-            "description": "Unique audit ID"
-          },
-          "request_id": {
+          "description": {
             "anyOf": [
               {
                 "type": "string"
@@ -2860,32 +2192,10 @@
                 "type": "null"
               }
             ],
-            "title": "Request Id",
-            "description": "Unique request ID"
+            "title": "Description",
+            "description": "Agent description"
           },
-          "resource_type": {
-            "type": "string",
-            "title": "Resource Type",
-            "description": "Type of the resource being audited"
-          },
-          "audit_type": {
-            "type": "string",
-            "title": "Audit Type",
-            "description": "Type of audit action"
-          },
-          "audit_resource_id": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Audit Resource Id",
-            "description": "ID of the resource being audited"
-          },
-          "audit_information": {
+          "config": {
             "anyOf": [
               {
                 "additionalProperties": true,
@@ -2895,10 +2205,33 @@
                 "type": "null"
               }
             ],
-            "title": "Audit Information",
-            "description": "Information about the audit as a JSON object"
+            "title": "Config",
+            "description": "Agent-specific configuration"
+          }
+        },
+        "type": "object",
+        "required": [
+          "cognitive_agent_id",
+          "cognitive_agent_name"
+        ],
+        "title": "CognitiveAgentCreate",
+        "description": "Schema for creating a cognitive agent"
+      },
+      "CognitiveAgentDetail": {
+        "properties": {
+          "cognitive_agent_id": {
+            "type": "string",
+            "title": "Cognitive Agent Id"
           },
-          "audit_extra_information": {
+          "workspace_id": {
+            "type": "string",
+            "title": "Workspace Id"
+          },
+          "cognitive_agent_name": {
+            "type": "string",
+            "title": "Cognitive Agent Name"
+          },
+          "description": {
             "anyOf": [
               {
                 "type": "string"
@@ -2907,50 +2240,28 @@
                 "type": "null"
               }
             ],
-            "title": "Audit Extra Information",
-            "description": "Additional audit information"
+            "title": "Description"
           },
-          "created_by": {
+          "config": {
             "anyOf": [
               {
-                "type": "string"
+                "additionalProperties": true,
+                "type": "object"
               },
               {
                 "type": "null"
               }
             ],
-            "title": "Created By",
-            "description": "User who created the audit"
+            "title": "Config"
           },
-          "updated_by": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Updated By",
-            "description": "User who last updated the audit"
-          },
-          "deleted_by": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Deleted By",
-            "description": "User who deleted the audit"
+          "enabled": {
+            "type": "boolean",
+            "title": "Enabled"
           },
           "created_at": {
             "type": "string",
             "format": "date-time",
-            "title": "Created At",
-            "description": "Timestamp when the audit was created"
+            "title": "Created At"
           },
           "updated_at": {
             "anyOf": [
@@ -2962,10 +2273,250 @@
                 "type": "null"
               }
             ],
-            "title": "Updated At",
-            "description": "Timestamp when the audit was last updated"
+            "title": "Updated At"
           },
-          "deleted_at": {
+          "created_by": {
+            "type": "string",
+            "title": "Created By"
+          },
+          "updated_by": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Updated By"
+          }
+        },
+        "type": "object",
+        "required": [
+          "cognitive_agent_id",
+          "workspace_id",
+          "cognitive_agent_name",
+          "description",
+          "config",
+          "enabled",
+          "created_at",
+          "updated_at",
+          "created_by",
+          "updated_by"
+        ],
+        "title": "CognitiveAgentDetail",
+        "description": "Schema for detailed cognitive agent information"
+      },
+      "CognitiveAgentList": {
+        "properties": {
+          "agents": {
+            "items": {
+              "$ref": "#/components/schemas/CognitiveAgentListItem"
+            },
+            "type": "array",
+            "title": "Agents",
+            "description": "List of cognitive agents"
+          },
+          "total": {
+            "type": "integer",
+            "title": "Total",
+            "description": "Total number of agents"
+          }
+        },
+        "type": "object",
+        "required": [
+          "agents",
+          "total"
+        ],
+        "title": "CognitiveAgentList",
+        "description": "Schema for cognitive agent list response"
+      },
+      "CognitiveAgentListItem": {
+        "properties": {
+          "cognitive_agent_id": {
+            "type": "string",
+            "title": "Cognitive Agent Id"
+          },
+          "workspace_id": {
+            "type": "string",
+            "title": "Workspace Id"
+          },
+          "cognitive_agent_name": {
+            "type": "string",
+            "title": "Cognitive Agent Name"
+          },
+          "description": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Description"
+          },
+          "config": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Config"
+          },
+          "enabled": {
+            "type": "boolean",
+            "title": "Enabled"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "cognitive_agent_id",
+          "workspace_id",
+          "cognitive_agent_name",
+          "description",
+          "config",
+          "enabled",
+          "created_at"
+        ],
+        "title": "CognitiveAgentListItem",
+        "description": "Schema for cognitive agent list item"
+      },
+      "CognitiveAgentUpdate": {
+        "properties": {
+          "cognitive_agent_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cognitive Agent Name",
+            "description": "Agent name"
+          },
+          "description": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Description",
+            "description": "Agent description"
+          },
+          "config": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Config",
+            "description": "Agent-specific configuration"
+          },
+          "enabled": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Enabled",
+            "description": "Whether agent is enabled"
+          }
+        },
+        "type": "object",
+        "title": "CognitiveAgentUpdate",
+        "description": "Schema for updating a cognitive agent"
+      },
+      "CognitiveEngineCreate": {
+        "properties": {
+          "cognitive_engine_id": {
+            "type": "string",
+            "title": "Cognitive Engine Id",
+            "description": "Engine identifier"
+          },
+          "cognitive_engine_name": {
+            "type": "string",
+            "title": "Cognitive Engine Name",
+            "description": "Engine name"
+          },
+          "config": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Config",
+            "description": "Engine-specific configuration"
+          }
+        },
+        "type": "object",
+        "required": [
+          "cognitive_engine_id",
+          "cognitive_engine_name"
+        ],
+        "title": "CognitiveEngineCreate",
+        "description": "Schema for creating a cognitive engine"
+      },
+      "CognitiveEngineDetail": {
+        "properties": {
+          "cognitive_engine_id": {
+            "type": "string",
+            "title": "Cognitive Engine Id"
+          },
+          "workspace_id": {
+            "type": "string",
+            "title": "Workspace Id"
+          },
+          "cognitive_engine_name": {
+            "type": "string",
+            "title": "Cognitive Engine Name"
+          },
+          "config": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Config"
+          },
+          "enabled": {
+            "type": "boolean",
+            "title": "Enabled"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          },
+          "updated_at": {
             "anyOf": [
               {
                 "type": "string",
@@ -2975,19 +2526,38 @@
                 "type": "null"
               }
             ],
-            "title": "Deleted At",
-            "description": "Timestamp when the audit was deleted"
+            "title": "Updated At"
+          },
+          "created_by": {
+            "type": "string",
+            "title": "Created By"
+          },
+          "updated_by": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Updated By"
           }
         },
         "type": "object",
         "required": [
-          "id",
-          "resource_type",
-          "audit_type",
-          "created_at"
+          "cognitive_engine_id",
+          "workspace_id",
+          "cognitive_engine_name",
+          "config",
+          "enabled",
+          "created_at",
+          "updated_at",
+          "created_by",
+          "updated_by"
         ],
-        "title": "AuditResponse",
-        "description": "Response model for audit entries"
+        "title": "CognitiveEngineDetail",
+        "description": "Schema for detailed cognitive engine information"
       },
       "CognitiveEngineList": {
         "properties": {
@@ -3061,27 +2631,21 @@
         "title": "CognitiveEngineListItem",
         "description": "Schema for cognitive engine list item"
       },
-      "CognitiveFabricNodeDetail": {
+      "CognitiveEngineUpdate": {
         "properties": {
-          "cfn_id": {
-            "type": "string",
-            "title": "Cfn Id",
-            "description": "Cognitive Fabric Node identifier"
+          "cognitive_engine_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cognitive Engine Name",
+            "description": "Engine name"
           },
-          "workspace_ids": {
-            "items": {
-              "type": "string"
-            },
-            "type": "array",
-            "title": "Workspace Ids",
-            "description": "Associated workspace identifiers"
-          },
-          "cfn_name": {
-            "type": "string",
-            "title": "Cfn Name",
-            "description": "Cognitive Fabric Node name"
-          },
-          "cfn_config": {
+          "config": {
             "anyOf": [
               {
                 "additionalProperties": true,
@@ -3091,118 +2655,25 @@
                 "type": "null"
               }
             ],
-            "title": "Cfn Config",
-            "description": "Node configuration"
-          },
-          "cloud_config": {
-            "anyOf": [
-              {
-                "additionalProperties": true,
-                "type": "object"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Cloud Config",
-            "description": "Cloud configuration"
-          },
-          "status": {
-            "$ref": "#/components/schemas/CognitiveFabricNodeStatus",
-            "description": "Current node status"
-          },
-          "last_seen": {
-            "type": "string",
-            "format": "date-time",
-            "title": "Last Seen",
-            "description": "Last heartbeat timestamp"
+            "title": "Config",
+            "description": "Engine-specific configuration"
           },
           "enabled": {
-            "type": "boolean",
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
             "title": "Enabled",
-            "description": "Whether node is enabled"
-          },
-          "created_at": {
-            "type": "string",
-            "format": "date-time",
-            "title": "Created At",
-            "description": "Creation timestamp"
-          },
-          "updated_at": {
-            "anyOf": [
-              {
-                "type": "string",
-                "format": "date-time"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Updated At",
-            "description": "Last update timestamp"
-          },
-          "created_by": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Created By",
-            "description": "Creator user ID"
-          },
-          "updated_by": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Updated By",
-            "description": "Last updater user ID"
+            "description": "Whether engine is enabled"
           }
         },
         "type": "object",
-        "required": [
-          "cfn_id",
-          "cfn_name",
-          "status",
-          "last_seen",
-          "enabled",
-          "created_at"
-        ],
-        "title": "CognitiveFabricNodeDetail",
-        "description": "Schema for detailed Cognitive Fabric Node information",
-        "example": {
-          "cfn_config": {
-            "max_connections": 100,
-            "memory_limit": "4GB"
-          },
-          "cfn_id": "cfn-persistent-id-123",
-          "cfn_name": "cfn-node-prod-1",
-          "cloud_config": {
-            "features": [
-              "reasoning",
-              "memory"
-            ],
-            "log_level": "INFO"
-          },
-          "created_at": "2026-01-30T10:00:00Z",
-          "created_by": "user-id",
-          "enabled": true,
-          "last_seen": "2026-01-30T12:34:56Z",
-          "status": "online",
-          "updated_at": "2026-01-30T12:00:00Z",
-          "updated_by": "user-id",
-          "workspace_ids": [
-            "workspace-uuid-1",
-            "workspace-uuid-2"
-          ]
-        }
+        "title": "CognitiveEngineUpdate",
+        "description": "Schema for updating a cognitive engine"
       },
       "CognitiveFabricNodeHeartbeatResponse": {
         "properties": {
@@ -3373,30 +2844,33 @@
         "description": "Schema for Cognitive Fabric Node registration request",
         "example": {
           "cfn_config": {
-            "max_connections": 100,
-            "memory_limit": "4GB"
+            "log_level": "info"
           },
           "cfn_id": "cfn-persistent-id-123",
           "cfn_name": "cfn-node-prod-1"
         }
       },
-      "CognitiveFabricNodeRegisterResponse": {
+      "CognitiveFabricNodeResponse": {
         "properties": {
           "cfn_id": {
             "type": "string",
             "title": "Cfn Id",
             "description": "Cognitive Fabric Node identifier"
           },
+          "workspace_ids": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Workspace Ids",
+            "description": "Associated workspace identifiers"
+          },
           "cfn_name": {
             "type": "string",
             "title": "Cfn Name",
             "description": "Cognitive Fabric Node name"
           },
-          "status": {
-            "$ref": "#/components/schemas/CognitiveFabricNodeStatus",
-            "description": "Current node status"
-          },
-          "cloud_config": {
+          "config": {
             "anyOf": [
               {
                 "additionalProperties": true,
@@ -3406,28 +2880,99 @@
                 "type": "null"
               }
             ],
-            "title": "Cloud Config",
-            "description": "Cloud configuration for node to apply"
+            "title": "Config",
+            "description": "Aggregated configuration including cfn_config"
+          },
+          "status": {
+            "$ref": "#/components/schemas/CognitiveFabricNodeStatus",
+            "description": "Current node status"
+          },
+          "last_seen": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Last Seen",
+            "description": "Last heartbeat timestamp"
+          },
+          "enabled": {
+            "type": "boolean",
+            "title": "Enabled",
+            "description": "Whether node is enabled"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At",
+            "description": "Creation timestamp"
+          },
+          "updated_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Updated At",
+            "description": "Last update timestamp"
+          },
+          "created_by": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Created By",
+            "description": "Creator user ID"
+          },
+          "updated_by": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Updated By",
+            "description": "Last updater user ID"
           }
         },
         "type": "object",
         "required": [
           "cfn_id",
           "cfn_name",
-          "status"
+          "status",
+          "last_seen",
+          "enabled",
+          "created_at"
         ],
-        "title": "CognitiveFabricNodeRegisterResponse",
-        "description": "Schema for Cognitive Fabric Node registration response",
+        "title": "CognitiveFabricNodeResponse",
+        "description": "Schema for Cognitive Fabric Node response (common response format)",
         "example": {
           "cfn_id": "cfn-persistent-id-123",
           "cfn_name": "cfn-node-prod-1",
-          "cloud_config": {
-            "log_level": "INFO",
+          "config": {
+            "cfn_config": {
+              "log_level": "info"
+            },
+            "cognitive_agents": [],
+            "cognitive_engines": [],
             "memory_providers": [],
-            "version": "1.0",
+            "policies": [],
             "workspaces": []
           },
-          "status": "offline"
+          "created_at": "2026-02-19T19:46:49.102012",
+          "created_by": "00000000-0000-0000-0000-000000000000",
+          "enabled": true,
+          "last_seen": "2026-02-19T19:46:49.185773",
+          "status": "offline",
+          "updated_at": "2026-02-19T19:46:49.102012",
+          "workspace_ids": []
         }
       },
       "CognitiveFabricNodeStatus": {
@@ -3474,8 +3019,7 @@
         "description": "Schema for updating Cognitive Fabric Node",
         "example": {
           "cfn_config": {
-            "max_connections": 200,
-            "memory_limit": "8GB"
+            "log_level": "debug"
           },
           "cfn_name": "cfn-node-prod-1-updated"
         }
@@ -3493,63 +3037,53 @@
         "type": "object",
         "title": "HTTPValidationError"
       },
-      "InvitationStatus": {
-        "type": "string",
-        "enum": [
-          "pending",
-          "accepted",
-          "declined",
-          "expired"
-        ],
-        "title": "InvitationStatus",
-        "description": "Invitation status values"
-      },
-      "LoginRequest": {
+      "MemoryProviderCreate": {
         "properties": {
-          "username": {
+          "memory_provider_id": {
             "type": "string",
-            "title": "Username",
-            "description": "Username"
+            "title": "Memory Provider Id",
+            "description": "Memory provider identifier"
           },
-          "password": {
+          "memory_provider_name": {
             "type": "string",
-            "title": "Password",
-            "description": "Password"
+            "title": "Memory Provider Name",
+            "description": "Memory provider name"
+          },
+          "provider_type": {
+            "type": "string",
+            "title": "Provider Type",
+            "description": "Provider type (internal, external)"
+          },
+          "provider": {
+            "type": "string",
+            "title": "Provider",
+            "description": "Provider name (e.g., ioc-memory-provider)"
+          },
+          "config": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Config",
+            "description": "Provider-specific configuration"
           }
         },
         "type": "object",
         "required": [
-          "username",
-          "password"
+          "memory_provider_id",
+          "memory_provider_name",
+          "provider_type",
+          "provider"
         ],
-        "title": "LoginRequest",
-        "description": "Schema for login request"
+        "title": "MemoryProviderCreate",
+        "description": "Schema for creating a memory provider"
       },
-      "MemoryProviderList": {
-        "properties": {
-          "providers": {
-            "items": {
-              "$ref": "#/components/schemas/MemoryProviderListItem"
-            },
-            "type": "array",
-            "title": "Providers",
-            "description": "List of memory providers"
-          },
-          "total": {
-            "type": "integer",
-            "title": "Total",
-            "description": "Total number of providers"
-          }
-        },
-        "type": "object",
-        "required": [
-          "providers",
-          "total"
-        ],
-        "title": "MemoryProviderList",
-        "description": "Schema for memory provider list response"
-      },
-      "MemoryProviderListItem": {
+      "MemoryProviderDetail": {
         "properties": {
           "memory_provider_id": {
             "type": "string",
@@ -3587,6 +3121,33 @@
             "type": "string",
             "format": "date-time",
             "title": "Created At"
+          },
+          "updated_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Updated At"
+          },
+          "created_by": {
+            "type": "string",
+            "title": "Created By"
+          },
+          "updated_by": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Updated By"
           }
         },
         "type": "object",
@@ -3597,10 +3158,105 @@
           "provider",
           "config",
           "enabled",
-          "created_at"
+          "created_at",
+          "updated_at",
+          "created_by",
+          "updated_by"
         ],
-        "title": "MemoryProviderListItem",
-        "description": "Schema for memory provider list item"
+        "title": "MemoryProviderDetail",
+        "description": "Schema for detailed memory provider information"
+      },
+      "MemoryProviderList": {
+        "properties": {
+          "providers": {
+            "items": {
+              "$ref": "#/components/schemas/MemoryProviderDetail"
+            },
+            "type": "array",
+            "title": "Providers",
+            "description": "List of memory providers"
+          },
+          "total": {
+            "type": "integer",
+            "title": "Total",
+            "description": "Total number of providers"
+          }
+        },
+        "type": "object",
+        "required": [
+          "providers",
+          "total"
+        ],
+        "title": "MemoryProviderList",
+        "description": "Schema for memory provider list response"
+      },
+      "MemoryProviderUpdate": {
+        "properties": {
+          "memory_provider_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Memory Provider Name",
+            "description": "Memory provider name"
+          },
+          "provider_type": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Provider Type",
+            "description": "Provider type (internal, external)"
+          },
+          "provider": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Provider",
+            "description": "Provider name (e.g., ioc-memory-provider)"
+          },
+          "config": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Config",
+            "description": "Provider-specific configuration"
+          },
+          "enabled": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Enabled",
+            "description": "Whether provider is enabled"
+          }
+        },
+        "type": "object",
+        "title": "MemoryProviderUpdate",
+        "description": "Schema for updating a memory provider"
       },
       "MultiAgenticSystem": {
         "properties": {
@@ -3880,136 +3536,69 @@
         "title": "MultiAgenticSystems",
         "description": "Schema for listing multi-agentic systems"
       },
-      "RefreshTokenRequest": {
+      "PolicyCreate": {
         "properties": {
-          "refresh_token": {
+          "policy_id": {
             "type": "string",
-            "title": "Refresh Token",
-            "description": "Refresh token"
+            "title": "Policy Id",
+            "description": "Policy identifier"
+          },
+          "policy_name": {
+            "type": "string",
+            "title": "Policy Name",
+            "description": "Policy name"
+          },
+          "config": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Config",
+            "description": "Policy-specific configuration"
           }
         },
         "type": "object",
         "required": [
-          "refresh_token"
+          "policy_id",
+          "policy_name"
         ],
-        "title": "RefreshTokenRequest",
-        "description": "Schema for token refresh request"
+        "title": "PolicyCreate",
+        "description": "Schema for creating a policy"
       },
-      "SignupRequest": {
+      "PolicyDetail": {
         "properties": {
-          "username": {
+          "policy_id": {
             "type": "string",
-            "maxLength": 100,
-            "minLength": 3,
-            "title": "Username",
-            "description": "Desired username"
+            "title": "Policy Id"
           },
-          "email": {
+          "workspace_id": {
             "type": "string",
-            "format": "email",
-            "title": "Email",
-            "description": "Email address"
+            "title": "Workspace Id"
           },
-          "password": {
+          "policy_name": {
             "type": "string",
-            "minLength": 8,
-            "title": "Password",
-            "description": "Password (minimum 8 characters)"
+            "title": "Policy Name"
           },
-          "domain": {
-            "type": "string",
-            "title": "Domain",
-            "description": "User domain",
-            "default": "ioc.local"
+          "config": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Config"
           },
-          "role": {
-            "type": "string",
-            "title": "Role",
-            "description": "User role",
-            "default": "admin"
-          }
-        },
-        "type": "object",
-        "required": [
-          "username",
-          "email",
-          "password"
-        ],
-        "title": "SignupRequest",
-        "description": "Schema for user sign-up request"
-      },
-      "TokenRefreshResponse": {
-        "properties": {
-          "access_token": {
-            "type": "string",
-            "title": "Access Token",
-            "description": "New JWT access token"
-          },
-          "token_type": {
-            "type": "string",
-            "title": "Token Type",
-            "description": "Token type",
-            "default": "bearer"
-          }
-        },
-        "type": "object",
-        "required": [
-          "access_token"
-        ],
-        "title": "TokenRefreshResponse",
-        "description": "Schema for token refresh response"
-      },
-      "TokenResponse": {
-        "properties": {
-          "access_token": {
-            "type": "string",
-            "title": "Access Token",
-            "description": "JWT access token"
-          },
-          "refresh_token": {
-            "type": "string",
-            "title": "Refresh Token",
-            "description": "JWT refresh token"
-          },
-          "token_type": {
-            "type": "string",
-            "title": "Token Type",
-            "description": "Token type",
-            "default": "bearer"
-          },
-          "user": {
-            "additionalProperties": true,
-            "type": "object",
-            "title": "User",
-            "description": "User information"
-          }
-        },
-        "type": "object",
-        "required": [
-          "access_token",
-          "refresh_token",
-          "user"
-        ],
-        "title": "TokenResponse",
-        "description": "Schema for token response"
-      },
-      "User": {
-        "properties": {
-          "id": {
-            "type": "string",
-            "title": "Id"
-          },
-          "username": {
-            "type": "string",
-            "title": "Username"
-          },
-          "domain": {
-            "type": "string",
-            "title": "Domain"
-          },
-          "role": {
-            "type": "string",
-            "title": "Role"
+          "enabled": {
+            "type": "boolean",
+            "title": "Enabled"
           },
           "created_at": {
             "type": "string",
@@ -4027,59 +3616,153 @@
               }
             ],
             "title": "Updated At"
+          },
+          "created_by": {
+            "type": "string",
+            "title": "Created By"
+          },
+          "updated_by": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Updated By"
           }
         },
         "type": "object",
         "required": [
-          "id",
-          "username",
-          "domain",
-          "role",
-          "created_at"
+          "policy_id",
+          "workspace_id",
+          "policy_name",
+          "config",
+          "enabled",
+          "created_at",
+          "updated_at",
+          "created_by",
+          "updated_by"
         ],
-        "title": "User",
-        "example": {
-          "created_at": "2024-11-14T10:30:00Z",
-          "domain": "ioc.local",
-          "id": "550e8400-e29b-41d4-a716-446655440000",
-          "role": "admin",
-          "updated_at": "2024-11-14T11:15:00Z",
-          "username": "admin"
-        }
+        "title": "PolicyDetail",
+        "description": "Schema for detailed policy information"
       },
-      "Users": {
+      "PolicyList": {
         "properties": {
-          "users": {
+          "policies": {
             "items": {
-              "$ref": "#/components/schemas/User"
+              "$ref": "#/components/schemas/PolicyListItem"
             },
             "type": "array",
-            "title": "Users"
+            "title": "Policies",
+            "description": "List of policies"
           },
           "total": {
             "type": "integer",
-            "title": "Total"
+            "title": "Total",
+            "description": "Total number of policies"
           }
         },
         "type": "object",
         "required": [
-          "users",
+          "policies",
           "total"
         ],
-        "title": "Users",
-        "example": {
-          "total": 1,
-          "users": [
-            {
-              "created_at": "2024-11-14T10:30:00Z",
-              "domain": "ioc.local",
-              "id": "550e8400-e29b-41d4-a716-446655440000",
-              "role": "admin",
-              "updated_at": "2024-11-14T11:15:00Z",
-              "username": "admin"
-            }
-          ]
-        }
+        "title": "PolicyList",
+        "description": "Schema for policy list response"
+      },
+      "PolicyListItem": {
+        "properties": {
+          "policy_id": {
+            "type": "string",
+            "title": "Policy Id"
+          },
+          "workspace_id": {
+            "type": "string",
+            "title": "Workspace Id"
+          },
+          "policy_name": {
+            "type": "string",
+            "title": "Policy Name"
+          },
+          "config": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Config"
+          },
+          "enabled": {
+            "type": "boolean",
+            "title": "Enabled"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "policy_id",
+          "workspace_id",
+          "policy_name",
+          "config",
+          "enabled",
+          "created_at"
+        ],
+        "title": "PolicyListItem",
+        "description": "Schema for policy list item"
+      },
+      "PolicyUpdate": {
+        "properties": {
+          "policy_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Policy Name",
+            "description": "Policy name"
+          },
+          "config": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Config",
+            "description": "Policy-specific configuration"
+          },
+          "enabled": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Enabled",
+            "description": "Whether policy is enabled"
+          }
+        },
+        "type": "object",
+        "title": "PolicyUpdate",
+        "description": "Schema for updating a policy"
       },
       "ValidationError": {
         "properties": {
@@ -4149,7 +3832,15 @@
           "name",
           "cfn_id"
         ],
-        "title": "WorkspaceCreate"
+        "title": "WorkspaceCreate",
+        "example": {
+          "cfn_id": "cfn-node-001",
+          "config": {
+            "setting1": "value1",
+            "setting2": "value2"
+          },
+          "name": "cfn-workspace-001"
+        }
       },
       "WorkspaceDetail": {
         "properties": {
@@ -4264,178 +3955,6 @@
           "updated_by": "user-456"
         }
       },
-      "WorkspaceInvitationAcceptResponse": {
-        "properties": {
-          "message": {
-            "type": "string",
-            "title": "Message"
-          },
-          "workspace_id": {
-            "type": "string",
-            "title": "Workspace Id"
-          },
-          "workspace_name": {
-            "type": "string",
-            "title": "Workspace Name"
-          },
-          "assigned_role": {
-            "type": "string",
-            "title": "Assigned Role"
-          }
-        },
-        "type": "object",
-        "required": [
-          "message",
-          "workspace_id",
-          "workspace_name",
-          "assigned_role"
-        ],
-        "title": "WorkspaceInvitationAcceptResponse",
-        "description": "Schema for invitation acceptance response"
-      },
-      "WorkspaceInvitationCreate": {
-        "properties": {
-          "invitee_username": {
-            "type": "string",
-            "title": "Invitee Username",
-            "description": "Username of user to invite"
-          },
-          "role": {
-            "type": "string",
-            "title": "Role",
-            "description": "Role to assign (admin/viewer/guest)"
-          }
-        },
-        "type": "object",
-        "required": [
-          "invitee_username",
-          "role"
-        ],
-        "title": "WorkspaceInvitationCreate",
-        "description": "Schema for creating a workspace invitation"
-      },
-      "WorkspaceInvitationDetail": {
-        "properties": {
-          "id": {
-            "type": "string",
-            "title": "Id"
-          },
-          "workspace_id": {
-            "type": "string",
-            "title": "Workspace Id"
-          },
-          "workspace_name": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Workspace Name",
-            "description": "Workspace name joined from workspace table"
-          },
-          "inviter_id": {
-            "type": "string",
-            "title": "Inviter Id"
-          },
-          "inviter_username": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Inviter Username",
-            "description": "Inviter username joined from user table"
-          },
-          "invitee_username": {
-            "type": "string",
-            "title": "Invitee Username"
-          },
-          "role": {
-            "type": "string",
-            "title": "Role"
-          },
-          "status": {
-            "$ref": "#/components/schemas/InvitationStatus"
-          },
-          "created_at": {
-            "type": "string",
-            "format": "date-time",
-            "title": "Created At"
-          },
-          "expires_at": {
-            "type": "string",
-            "format": "date-time",
-            "title": "Expires At"
-          },
-          "responded_at": {
-            "anyOf": [
-              {
-                "type": "string",
-                "format": "date-time"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Responded At"
-          }
-        },
-        "type": "object",
-        "required": [
-          "id",
-          "workspace_id",
-          "inviter_id",
-          "invitee_username",
-          "role",
-          "status",
-          "created_at",
-          "expires_at"
-        ],
-        "title": "WorkspaceInvitationDetail",
-        "description": "Schema for workspace invitation details"
-      },
-      "WorkspaceInvitationList": {
-        "properties": {
-          "invitations": {
-            "items": {
-              "$ref": "#/components/schemas/WorkspaceInvitationDetail"
-            },
-            "type": "array",
-            "title": "Invitations"
-          },
-          "total": {
-            "type": "integer",
-            "title": "Total"
-          }
-        },
-        "type": "object",
-        "required": [
-          "invitations",
-          "total"
-        ],
-        "title": "WorkspaceInvitationList",
-        "description": "Schema for list of workspace invitations"
-      },
-      "WorkspaceInvitationResponse": {
-        "properties": {
-          "id": {
-            "type": "string",
-            "title": "Id"
-          }
-        },
-        "type": "object",
-        "required": [
-          "id"
-        ],
-        "title": "WorkspaceInvitationResponse",
-        "description": "Schema for invitation creation response"
-      },
       "WorkspaceList": {
         "properties": {
           "workspaces": {
@@ -4523,42 +4042,6 @@
         ],
         "title": "WorkspaceMemberDetail",
         "description": "Schema for workspace member details"
-      },
-      "WorkspaceMemberList": {
-        "properties": {
-          "members": {
-            "items": {
-              "$ref": "#/components/schemas/WorkspaceMemberDetail"
-            },
-            "type": "array",
-            "title": "Members"
-          },
-          "total": {
-            "type": "integer",
-            "title": "Total"
-          }
-        },
-        "type": "object",
-        "required": [
-          "members",
-          "total"
-        ],
-        "title": "WorkspaceMemberList",
-        "description": "Schema for list of workspace members"
-      },
-      "WorkspaceMemberRoleUpdate": {
-        "properties": {
-          "role": {
-            "$ref": "#/components/schemas/WorkspaceRole",
-            "description": "New role to assign"
-          }
-        },
-        "type": "object",
-        "required": [
-          "role"
-        ],
-        "title": "WorkspaceMemberRoleUpdate",
-        "description": "Schema for updating a member's role"
       },
       "WorkspaceResponse": {
         "properties": {
