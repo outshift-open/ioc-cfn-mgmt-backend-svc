@@ -15,7 +15,8 @@ class MemoryProvider(Base):
 
     memory_provider_id = Column(String(255), primary_key=True, nullable=False)
     memory_provider_name = Column(String(255), nullable=False)
-    provider = Column(String(100), nullable=False)  # ioc-memory-provider, neo4j, etc.
+    provider_type = Column(String(50), nullable=False)  # vector_store, graph_db, etc.
+    provider = Column(String(100), nullable=False)  # ioc-memory-provider
     config = Column(JSONB, nullable=True)  # Provider-specific configuration
     enabled = Column(Boolean, nullable=False, default=True)
     created_at = Column(TIMESTAMP, nullable=False, default=lambda: datetime.now(timezone.utc))

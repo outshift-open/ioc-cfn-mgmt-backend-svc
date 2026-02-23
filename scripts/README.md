@@ -23,14 +23,14 @@ Interactive menu-driven script for managing and testing API endpoints using pred
 5. Multi-Agentic Systems (MAS) - create, list, get, delete
 
 **Prerequisites:**
-- Backend service running (default: `http://localhost:8000`)
+- Backend service running (default: `http://localhost:9000`)
 - `curl` installed
 - `jq` installed (optional, for better JSON formatting)
 
 **Usage:**
 
 ```bash
-# Using default URL (http://localhost:8000)
+# Using default URL (http://localhost:9000)
 ./scripts/sample.sh
 
 # Using custom base URL
@@ -65,7 +65,7 @@ sudo yum install jq
   IOC CFN Management - Interactive Menu
 ==========================================
 
-ℹ Base URL: http://localhost:8000
+ℹ Base URL: http://localhost:9000
 
 1. Cognitive Fabric Node (CFN)
 2. Workspaces

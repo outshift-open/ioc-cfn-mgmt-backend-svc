@@ -56,7 +56,7 @@ tasks:
       - task: deps
       - task: db-migrate-apply
       - task: generate-openapi-spec
-      - poetry run uvicorn server.main:app --host 0.0.0.0 --port 8000 --reload
+      - poetry run uvicorn server.main:app --host 0.0.0.0 --port 9000 --reload
     dir: "{{.SRC_DIR}}"
 
   run:

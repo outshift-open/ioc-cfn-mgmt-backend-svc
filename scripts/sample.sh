@@ -5,7 +5,7 @@
 set -e
 
 # Configuration
-BASE_URL="${BASE_URL:-http://localhost:8000}"
+BASE_URL="${BASE_URL:-http://localhost:9000}"
 API_PREFIX="/api"
 
 # Colors for output
@@ -157,14 +157,12 @@ create_cfn() {
     print_header "Create Cognitive Fabric Node"
     echo ""
     print_info "Using static values:"
-    echo "  CFN ID: sample-cfn-001"
     echo "  CFN Name: Sample CFN Node"
     echo "  Log Level: info"
     echo "  Memory: 4GB"
     echo ""
     print_info "Creating CFN..."
     api_call POST "/cognitive-fabric-nodes" '{
-  "cfn_id": "sample-cfn-001",
   "cfn_name": "Sample CFN Node",
   "cfn_config": {
     "log_level": "info",
@@ -182,13 +180,62 @@ list_cfns() {
     pause
 }
 
+# Helper function to get CFN ID by name
+get_cfn_id_by_name() {
+    local cfn_name=$1
+    local response=$(curl -s -X GET "${BASE_URL}${API_PREFIX}/cognitive-fabric-nodes" -H "Content-Type: application/json")
+
+    if command -v jq &> /dev/null; then
+        echo "$response" | jq -r ".nodes[] | select(.cfn_name == \"${cfn_name}\") | .cfn_id" 2>/dev/null | head -1
+    else
+        # Fallback without jq - this is a simplified approach
+        echo "$response" | grep -o '"cfn_id":"[^"]*"' | head -1 | cut -d'"' -f4
+    fi
+}
+
+# Helper function to check if CFN exists by name
+cfn_exists_by_name() {
+    local cfn_name=$1
+    local cfn_id=$(get_cfn_id_by_name "$cfn_name")
+
+    if [ -n "$cfn_id" ] && [ "$cfn_id" != "null" ]; then
+        echo "$cfn_id"
+        return 0
+    else
+        return 1
+    fi
+}
+
+# Helper function to get Memory Provider ID by name
+get_memory_provider_id_by_name() {
+    local mp_name=$1
+    local response=$(curl -s -X GET "${BASE_URL}${API_PREFIX}/memory-providers" -H "Content-Type: application/json")
+
+    if command -v jq &> /dev/null; then
+        echo "$response" | jq -r ".providers[] | select(.memory_provider_name == \"${mp_name}\") | .memory_provider_id" 2>/dev/null | head -1
+    else
+        # Fallback without jq
+        echo "$response" | grep -o '"memory_provider_id":"[^"]*"' | head -1 | cut -d'"' -f4
+    fi
+}
+
 get_cfn() {
     clear
     print_header "Get CFN Details"
     echo ""
-    print_info "Using CFN ID: sample-cfn-001"
+    print_info "Looking for CFN with name: Sample CFN Node"
+
+    cfn_id=$(get_cfn_id_by_name "Sample CFN Node")
+
+    if [ -z "$cfn_id" ] || [ "$cfn_id" = "null" ]; then
+        print_error "CFN 'Sample CFN Node' not found"
+        pause
+        return
+    fi
+
+    print_info "Using CFN ID: $cfn_id"
     echo ""
-    api_call GET "/cognitive-fabric-nodes/sample-cfn-001" ""
+    api_call GET "/cognitive-fabric-nodes/${cfn_id}" ""
     pause
 }
 
@@ -196,9 +243,19 @@ heartbeat_cfn() {
     clear
     print_header "Send CFN Heartbeat"
     echo ""
-    print_info "Using CFN ID: sample-cfn-001"
+    print_info "Looking for CFN with name: Sample CFN Node"
+
+    cfn_id=$(get_cfn_id_by_name "Sample CFN Node")
+
+    if [ -z "$cfn_id" ] || [ "$cfn_id" = "null" ]; then
+        print_error "CFN 'Sample CFN Node' not found"
+        pause
+        return
+    fi
+
+    print_info "Using CFN ID: $cfn_id"
     echo ""
-    api_call PUT "/cognitive-fabric-nodes/sample-cfn-001/heartbeat" ""
+    api_call PUT "/cognitive-fabric-nodes/${cfn_id}/heartbeat" ""
     pause
 }
 
@@ -206,9 +263,19 @@ disable_cfn() {
     clear
     print_header "Disable CFN"
     echo ""
-    print_info "Using CFN ID: sample-cfn-001"
+    print_info "Looking for CFN with name: Sample CFN Node"
+
+    cfn_id=$(get_cfn_id_by_name "Sample CFN Node")
+
+    if [ -z "$cfn_id" ] || [ "$cfn_id" = "null" ]; then
+        print_error "CFN 'Sample CFN Node' not found"
+        pause
+        return
+    fi
+
+    print_info "Using CFN ID: $cfn_id"
     echo ""
-    api_call PATCH "/cognitive-fabric-nodes/sample-cfn-001/disable" ""
+    api_call PATCH "/cognitive-fabric-nodes/${cfn_id}/disable" ""
     pause
 }
 
@@ -216,11 +283,21 @@ delete_cfn() {
     clear
     print_header "Delete CFN"
     echo ""
-    print_info "Using CFN ID: sample-cfn-001"
+    print_info "Looking for CFN with name: Sample CFN Node"
+
+    cfn_id=$(get_cfn_id_by_name "Sample CFN Node")
+
+    if [ -z "$cfn_id" ] || [ "$cfn_id" = "null" ]; then
+        print_error "CFN 'Sample CFN Node' not found"
+        pause
+        return
+    fi
+
+    print_info "Using CFN ID: $cfn_id"
     read -p "Are you sure? (yes/no): " confirm
     if [ "$confirm" = "yes" ]; then
         echo ""
-        api_call DELETE "/cognitive-fabric-nodes/sample-cfn-001" ""
+        api_call DELETE "/cognitive-fabric-nodes/${cfn_id}" ""
     else
         print_info "Cancelled"
     fi
@@ -258,17 +335,75 @@ create_workspace() {
     clear
     print_header "Create Workspace"
     echo ""
+
+    # Check if CFN exists by name
+    print_info "Checking if CFN 'Sample CFN Node' exists..."
+    cfn_id=$(cfn_exists_by_name "Sample CFN Node")
+    cfn_exists=$?
+
+    if [ $cfn_exists -ne 0 ]; then
+        print_error "CFN 'Sample CFN Node' not found!"
+        echo ""
+        read -p "Would you like to create it now? (yes/no): " create_cfn_answer
+
+        if [ "$create_cfn_answer" = "yes" ]; then
+            echo ""
+            print_info "Creating CFN 'Sample CFN Node'..."
+
+            # Temporarily disable exit-on-error for this call
+            set +e
+            cfn_response=$(api_call_silent POST "/cognitive-fabric-nodes" '{
+  "cfn_name": "Sample CFN Node",
+  "cfn_config": {
+    "log_level": "info",
+    "memory": "4GB"
+  }
+}')
+            cfn_exit_code=$?
+            set -e
+
+            if [ $cfn_exit_code -ne 0 ]; then
+                print_error "Failed to create CFN"
+                pause
+                return
+            fi
+
+            print_success "CFN created"
+            if command -v jq &> /dev/null; then
+                echo "$cfn_response" | jq '.'
+                cfn_id=$(echo "$cfn_response" | jq -r '.cfn_id // empty' 2>/dev/null)
+            else
+                echo "$cfn_response"
+                cfn_id=$(echo "$cfn_response" | grep -o '"cfn_id":"[^"]*"' | head -1 | cut -d'"' -f4)
+            fi
+
+            if [ -z "$cfn_id" ] || [ "$cfn_id" = "null" ]; then
+                print_error "Failed to extract CFN ID from response"
+                pause
+                return
+            fi
+            echo ""
+        else
+            print_info "Cancelled - create a CFN first"
+            pause
+            return
+        fi
+    else
+        print_success "CFN 'Sample CFN Node' found (ID: $cfn_id)"
+    fi
+
+    echo ""
     print_info "Using static values:"
     echo "  Workspace Name: Sample Workspace"
     echo "  Description: A sample workspace for testing"
-    echo "  CFN ID: sample-cfn-001"
+    echo "  CFN ID: $cfn_id"
     echo ""
     print_info "Creating workspace..."
-    api_call POST "/workspaces/create" '{
-  "name": "Sample Workspace",
-  "description": "A sample workspace for testing",
-  "cfn_id": "sample-cfn-001"
-}'
+    api_call POST "/workspaces/create" "{
+  \"name\": \"Sample Workspace\",
+  \"description\": \"A sample workspace for testing\",
+  \"cfn_id\": \"${cfn_id}\"
+}"
     pause
 }
 
@@ -373,19 +508,17 @@ create_memory_provider() {
     print_header "Create Memory Provider"
     echo ""
     print_info "Using static values:"
-    echo "  Memory Provider ID: sample-mp-001"
     echo "  Memory Provider Name: Sample Memory Provider"
     echo "  Provider Type: vector_store"
-    echo "  Provider: chromadb"
+    echo "  Provider: ioc-memory-provider"
     echo "  Host: localhost"
     echo "  Port: 8001"
     echo ""
     print_info "Creating memory provider..."
     api_call POST "/memory-providers" '{
-  "memory_provider_id": "sample-mp-001",
   "memory_provider_name": "Sample Memory Provider",
   "provider_type": "vector_store",
-  "provider": "chromadb",
+  "provider": "ioc-memory-provider",
   "config": {
     "host": "localhost",
     "port": 8001
@@ -406,9 +539,19 @@ get_memory_provider() {
     clear
     print_header "Get Memory Provider Details"
     echo ""
-    print_info "Using Memory Provider ID: sample-mp-001"
+    print_info "Looking for Memory Provider with name: Sample Memory Provider"
+
+    mp_id=$(get_memory_provider_id_by_name "Sample Memory Provider")
+
+    if [ -z "$mp_id" ] || [ "$mp_id" = "null" ]; then
+        print_error "Memory Provider 'Sample Memory Provider' not found"
+        pause
+        return
+    fi
+
+    print_info "Using Memory Provider ID: $mp_id"
     echo ""
-    api_call GET "/memory-providers/sample-mp-001" ""
+    api_call GET "/memory-providers/${mp_id}" ""
     pause
 }
 
@@ -416,11 +559,21 @@ delete_memory_provider() {
     clear
     print_header "Delete Memory Provider"
     echo ""
-    print_info "Using Memory Provider ID: sample-mp-001"
+    print_info "Looking for Memory Provider with name: Sample Memory Provider"
+
+    mp_id=$(get_memory_provider_id_by_name "Sample Memory Provider")
+
+    if [ -z "$mp_id" ] || [ "$mp_id" = "null" ]; then
+        print_error "Memory Provider 'Sample Memory Provider' not found"
+        pause
+        return
+    fi
+
+    print_info "Using Memory Provider ID: $mp_id"
     read -p "Are you sure? (yes/no): " confirm
     if [ "$confirm" = "yes" ]; then
         echo ""
-        api_call DELETE "/memory-providers/sample-mp-001" ""
+        api_call DELETE "/memory-providers/${mp_id}" ""
     else
         print_info "Cancelled"
     fi
@@ -1200,31 +1353,72 @@ quick_sample() {
     echo ""
     print_info "Creating CFN..."
 
-    # Check if CFN already exists
-    cfn_check=$(curl -s -o /dev/null -w "%{http_code}" -X GET "${BASE_URL}${API_PREFIX}/cognitive-fabric-nodes/sample-cfn-001" -H "Content-Type: application/json")
+    # Check if CFN already exists by name
+    cfn_id=$(cfn_exists_by_name "Sample CFN Node")
+    cfn_exists=$?
 
-    if [ "$cfn_check" = "200" ]; then
-        print_info "CFN already exists (sample-cfn-001)"
+    if [ $cfn_exists -eq 0 ]; then
+        print_success "CFN already exists (ID: $cfn_id)"
     else
-        api_call POST "/cognitive-fabric-nodes" '{
-  "cfn_id": "sample-cfn-001",
+        # Temporarily disable exit-on-error for this call
+        set +e
+        cfn_response=$(api_call_silent POST "/cognitive-fabric-nodes" '{
   "cfn_name": "Sample CFN Node",
   "cfn_config": {
     "log_level": "info",
     "memory": "4GB"
   }
-}'
+}')
+        cfn_exit_code=$?
+        set -e
+
+        if [ $cfn_exit_code -ne 0 ]; then
+            print_error "Failed to create CFN"
+            echo "$cfn_response"
+            pause
+            return
+        fi
+
+        print_success "CFN created"
+        if command -v jq &> /dev/null; then
+            echo "$cfn_response" | jq '.'
+            cfn_id=$(echo "$cfn_response" | jq -r '.cfn_id // empty' 2>/dev/null)
+        else
+            echo "$cfn_response"
+            cfn_id=$(echo "$cfn_response" | grep -o '"cfn_id":"[^"]*"' | head -1 | cut -d'"' -f4)
+        fi
+
+        if [ -z "$cfn_id" ] || [ "$cfn_id" = "null" ]; then
+            print_error "Failed to extract CFN ID from response"
+            pause
+            return
+        fi
     fi
+
+    print_info "Using CFN ID: $cfn_id"
 
     echo ""
     print_info "Creating Workspace..."
-    ws_response=$(api_call_silent POST "/workspaces/create" '{
-  "name": "Sample Workspace",
-  "description": "A sample workspace",
-  "cfn_id": "sample-cfn-001"
-}')
+
+    # Temporarily disable exit-on-error for this call
+    set +e
+    ws_response=$(api_call_silent POST "/workspaces/create" "{
+  \"name\": \"Sample Workspace\",
+  \"description\": \"A sample workspace\",
+  \"cfn_id\": \"${cfn_id}\"
+}")
+    ws_exit_code=$?
+    set -e
+
+    if [ $ws_exit_code -ne 0 ]; then
+        print_error "Failed to create workspace"
+        echo "$ws_response"
+        pause
+        return
+    fi
 
     # Display the response
+    print_success "Workspace created"
     if command -v jq &> /dev/null; then
         echo "$ws_response" | jq '.'
     else
@@ -1262,20 +1456,23 @@ quick_sample() {
 
     echo ""
     print_info "Sending heartbeat..."
-    api_call PUT "/cognitive-fabric-nodes/sample-cfn-001/heartbeat" ""
+    api_call PUT "/cognitive-fabric-nodes/${cfn_id}/heartbeat" "" || {
+        print_error "Failed to send heartbeat, but continuing..."
+    }
 
     echo ""
     print_info "Creating Memory Provider..."
     api_call POST "/memory-providers" '{
-  "memory_provider_id": "sample-mp-001",
   "memory_provider_name": "Sample Memory Provider",
   "provider_type": "vector_store",
-  "provider": "chromadb",
+  "provider": "ioc-memory-provider",
   "config": {
     "host": "localhost",
     "port": 8001
   }
-}'
+}' || {
+        print_error "Failed to create memory provider, but continuing..."
+    }
 
     echo ""
     print_info "Creating Cognitive Engine..."
@@ -1286,7 +1483,9 @@ quick_sample() {
     "model": "claude-opus-4-6",
     "temperature": 0.7
   }
-}'
+}' || {
+        print_error "Failed to create cognitive engine, but continuing..."
+    }
 
     echo ""
     print_info "Creating Cognitive Agent..."
@@ -1297,7 +1496,9 @@ quick_sample() {
   "config": {
     "capabilities": ["reasoning", "planning"]
   }
-}'
+}' || {
+        print_error "Failed to create cognitive agent, but continuing..."
+    }
 
     echo ""
     print_info "Creating Policy..."
@@ -1308,7 +1509,9 @@ quick_sample() {
     "rules": ["rule1", "rule2"],
     "enforcement_level": "strict"
   }
-}'
+}' || {
+        print_error "Failed to create policy, but continuing..."
+    }
 
     echo ""
     print_info "Creating Multi-Agentic System..."
@@ -1323,10 +1526,12 @@ quick_sample() {
     }
   },
   "config": {}
-}'
+}' || {
+        print_error "Failed to create MAS, but continuing..."
+    }
 
     echo ""
-    print_success "Quick sample data created successfully!"
+    print_success "Quick sample data setup completed!"
     print_info "Workspace ID: ${ws_id}"
     pause
 }

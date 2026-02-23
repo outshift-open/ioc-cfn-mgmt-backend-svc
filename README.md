@@ -59,7 +59,7 @@ poetry install
 task dev
 ```
 
-**API Documentation:** http://localhost:8000/docs
+**API Documentation:** http://localhost:9000/docs
 
 ## Development
 
@@ -88,7 +88,7 @@ task docker-compose-db-up            # Databases only
 
 ## API Endpoints
 
-**API Documentation:** http://localhost:8000/docs
+**API Documentation:** http://localhost:9000/docs
 
 **IAM (Identity and Access Management):**
 - API Keys: `GET|POST|DELETE /api/iam/api-keys`

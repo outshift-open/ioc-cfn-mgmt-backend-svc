@@ -3023,10 +3023,15 @@
             "title": "Memory Provider Name",
             "description": "Memory provider name"
           },
+          "provider_type": {
+            "type": "string",
+            "title": "Provider Type",
+            "description": "Provider type (e.g., vector_store, graph_db)"
+          },
           "provider": {
             "type": "string",
             "title": "Provider",
-            "description": "Provider name (e.g., ioc-memory-provider)"
+            "description": "Provider name (ioc-memory-provider)"
           },
           "config": {
             "anyOf": [
@@ -3045,6 +3050,7 @@
         "type": "object",
         "required": [
           "memory_provider_name",
+          "provider_type",
           "provider"
         ],
         "title": "MemoryProviderCreate",
@@ -3059,6 +3065,10 @@
           "memory_provider_name": {
             "type": "string",
             "title": "Memory Provider Name"
+          },
+          "provider_type": {
+            "type": "string",
+            "title": "Provider Type"
           },
           "provider": {
             "type": "string",
@@ -3117,6 +3127,7 @@
         "required": [
           "memory_provider_id",
           "memory_provider_name",
+          "provider_type",
           "provider",
           "config",
           "enabled",
@@ -3166,6 +3177,18 @@
             "title": "Memory Provider Name",
             "description": "Memory provider name"
           },
+          "provider_type": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Provider Type",
+            "description": "Provider type (e.g., vector_store, graph_db)"
+          },
           "provider": {
             "anyOf": [
               {
@@ -3176,7 +3199,7 @@
               }
             ],
             "title": "Provider",
-            "description": "Provider name (e.g., ioc-memory-provider)"
+            "description": "Provider name (ioc-memory-provider)"
           },
           "config": {
             "anyOf": [

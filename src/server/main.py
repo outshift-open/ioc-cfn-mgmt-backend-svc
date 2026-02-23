@@ -130,5 +130,5 @@ if __name__ == "__main__":
     version = get_app_version()
     logger.info(f"Starting up the '{service_name}' FastAPI app! Version: '{version}'")
 
-    port = int(os.environ.get("PORT", 8000))
+    port = int(os.environ.get("PORT", 9000))
     uvicorn.run(app, host="0.0.0.0", port=port)
