@@ -22,6 +22,11 @@ services:
       timeout: 5s
       retries: 5
 
+  # AgensGraph - Backing Graph Database for IoC Knowledge Memory Service
+  # Graph per Workspace and MAS. Name of the graph is <graph_workspace_id_mas_id>
+  # Port Mapping: 5456:5432
+  #   - Host Port: 5456 (to avoid conflicts with local PostgreSQL on 5432)
+  #   - Container Port: 5432 (PostgreSQL default, cannot be changed without config)
   ioc-graph-db:
     image: skaiworldwide/agensgraph:v2.16.0-alpine3.22
     platform: linux/amd64
@@ -48,6 +53,10 @@ services:
       retries: 5
       start_period: 30s
 
+  # AgensGraph Viewer - Web UI for AgensGraph Database
+  # Port Mapping: 5457:3000
+  #   - Host Port: 5457 (accessible from your machine)
+  #   - Container Port: 3000 (AGViewer's default internal port)
   ioc-graph-db-viewer:
     image: skaiworldwide/agviewer:latest
     profiles:
@@ -60,7 +69,7 @@ services:
       DB_PASSWORD: ${AGENSGRAPH_PASSWORD}
       DB_NAME: ${AGENSGRAPH_DB:-ioc-graph-db}
     ports:
-      - "${AGENSGRAPH_PORT_UI:-3000}:3000"
+      - "${AGENSGRAPH_PORT_UI:-5457}:3000"
     restart: unless-stopped
     depends_on:
       - ioc-graph-db
@@ -68,7 +77,13 @@ services:
   ### End Database Services ###
 
   ### Application Services ###
-  ioc-cfn-mgmt-backend-svc:
+  # Port Mapping Format: "HOST_PORT:CONTAINER_PORT"
+  # - HOST_PORT: The port on your local machine (what you connect to)
+  # - CONTAINER_PORT: The port the service listens on inside the container
+
+  # Mgmt. Plane Backend Service - FastAPI backend for workspaces, users, CFN nodes
+  # Port Mapping: 9000:9000 (same port inside and outside container)
+  ioc-cfn-mgmt-plane-svc:
     build:
       context: .
       dockerfile: Dockerfile
@@ -79,7 +94,7 @@ services:
     ports:
       - "9000:9000"
     environment:
-      - SERVICE_NAME=ioc-cfn-mgmt-backend-svc
+      - SERVICE_NAME=ioc-cfn-mgmt-plane-svc
       - APPLICATION_VERSION=dev
       - LOG_LEVEL=${LOG_LEVEL:-INFO}
       - ADMIN_USER_PASSWORD=${ADMIN_USER_PASSWORD}
@@ -88,64 +103,41 @@ services:
       - POSTGRES_DB=${POSTGRES_DB:-ioc}
       - POSTGRES_USER=${POSTGRES_USER}
       - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+      - PORT=9000
     restart: unless-stopped
     depends_on:
       ioc-mgmt-relational-db:
         condition: service_healthy
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://ioc-cfn-mgmt-backend-svc:9000/health"]
+      test: ["CMD", "curl", "-f", "http://ioc-cfn-mgmt-plane-svc:9000/health"]
       interval: 30s
       timeout: 10s
       retries: 3
       start_period: 40s
 
-  ioc-cfn-mgmt-ui-svc:
+  # Mgmt. Plane UI - Next.js frontend for management plane
+  # Port Mapping: 9001:9001 (same port inside and outside container)
+  ioc-cfn-mgmt-plane-ui:
     image: ghcr.io/cisco-eti/ioc-cfn-mgmt-ui-svc:latest
     platform: ${DOCKER_DEFAULT_PLATFORM}
     profiles:
       - full-stack
     ports:
-      - "3000:3000"
+      - "9001:9001"
     environment:
       - NODE_ENV=production
-      - CFN_UI_API_BASE_URL=http://ioc-cfn-mgmt-backend-svc:9000
+      - PORT=9001
+      - CFN_UI_API_BASE_URL=http://ioc-cfn-mgmt-plane-svc:9000
       - NEXT_PUBLIC_CFN_UI_API_BASE_URL=http://localhost:9000
-      - NEXTAUTH_URL=${NEXTAUTH_URL}
+      - NEXTAUTH_URL=${NEXTAUTH_URL:-http://localhost:9001}
       - NEXTAUTH_SECRET=${NEXTAUTH_SECRET}
     restart: unless-stopped
     depends_on:
-      ioc-cfn-mgmt-backend-svc:
+      ioc-cfn-mgmt-plane-svc:
         condition: service_healthy
 
-  ioc-knowledge-memory-svc:
-    image: ghcr.io/cisco-eti/ioc-knowledge-memory-svc:2026-02-19-ad94a98
-    platform: linux/amd64
-    profiles:
-      - full-stack
-    ports:
-      - "8001:8001"
-    environment:
-      - SERVICE_NAME=ioc-knowledge-memory-svc
-      - APPLICATION_VERSION=dev
-      - LOG_LEVEL=${LOG_LEVEL:-INFO}
-      - AGENSGRAPH_HOST=ioc-graph-db
-      - AGENSGRAPH_DB=${AGENSGRAPH_DB:-ioc-graph-db}
-      - AGENSGRAPH_USER=${AGENSGRAPH_USER}
-      - AGENSGRAPH_PASSWORD=${AGENSGRAPH_PASSWORD}
-      - AGENSGRAPH_PORT=5432
-    restart: unless-stopped
-    depends_on:
-      ioc-graph-db:
-        condition: service_healthy
-      ioc-graph-db-viewer:
-        condition: service_started
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8001/health"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-      start_period: 40s
-
+  # CFN Service - Cognitive Fabric Node service
+  # Port Mapping: 9002:9002 (same port inside and outside container)
   ioc-cfn-svc:
     image: ghcr.io/cisco-eti/ioc-cfn-svc:latest
     build:
@@ -161,15 +153,15 @@ services:
       - full-stack
     restart: unless-stopped
     ports:
-      - "9010:9010"
+      - "9002:9002"
     environment:
-      PORT: "9010"
+      PORT: "9002"
       APP_NAME: "ioc-cfn-svc"
-      MGMT_URL: http://ioc-cfn-mgmt-backend-svc:9000
+      MGMT_URL: http://ioc-cfn-mgmt-plane-svc:9000
       CFN_NAME: ${CFN_NAME:-cfn-new}
       HEARTBEAT_INTERVAL_SECONDS: ${HEARTBEAT_INTERVAL_SECONDS:-10}
       MCP_ENABLED: ${MCP_ENABLED:-false}
-      MCP_PORT: ${MCP_PORT:-9010}
+      MCP_PORT: ${MCP_PORT:-9002}
       DB_HOST: ioc-mgmt-relational-db
       DB_PORT: ${POSTGRES_PORT:-5432}
       DB_NAME: ${DB_NAME:-cfn_cp}
@@ -179,8 +171,98 @@ services:
     depends_on:
       ioc-mgmt-relational-db:
         condition: service_healthy
-      ioc-cfn-mgmt-backend-svc:
+      ioc-cfn-mgmt-plane-svc:
         condition: service_healthy
+
+  # IoC Knowledge Memory Service - Memory and knowledge graph management
+  # Port Mapping: 9003:9003 (same port inside and outside container)
+  ioc-knowledge-memory-svc:
+    image: ghcr.io/cisco-eti/ioc-knowledge-memory-svc:2026-02-23-a752ce4
+    platform: linux/amd64
+    profiles:
+      - full-stack
+    ports:
+      - "9003:9003"
+    environment:
+      - SERVICE_NAME=ioc-knowledge-memory-svc
+      - APPLICATION_VERSION=dev
+      - LOG_LEVEL=${LOG_LEVEL:-INFO}
+      - PORT=9003
+      - AGENSGRAPH_HOST=ioc-graph-db
+      - AGENSGRAPH_DB=${AGENSGRAPH_DB:-ioc-graph-db}
+      - AGENSGRAPH_USER=${AGENSGRAPH_USER}
+      - AGENSGRAPH_PASSWORD=${AGENSGRAPH_PASSWORD}
+      - AGENSGRAPH_PORT=5432
+    restart: unless-stopped
+    depends_on:
+      ioc-graph-db:
+        condition: service_healthy
+      ioc-graph-db-viewer:
+        condition: service_started
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9003/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  # Default (Built-in) Cognitive Agents (Functions) - Knowledge Management
+  # Port Mapping: 9004:9004 (same port inside and outside container)
+  # TODO: Add service configuration when image is available
+  # ioc-cfn-ca-knowledge-mgmt:
+  #   image: ghcr.io/cisco-eti/ioc-cfn-ca-knowledge-mgmt:latest
+  #   platform: ${DOCKER_DEFAULT_PLATFORM}
+  #   profiles:
+  #     - full-stack
+  #   ports:
+  #     - "9004:9004"
+  #   environment:
+  #     - SERVICE_NAME=ioc-cfn-ca-knowledge-mgmt
+  #     - APPLICATION_VERSION=dev
+  #     - LOG_LEVEL=${LOG_LEVEL:-INFO}
+  #     - PORT=9004
+  #     - MGMT_URL=http://ioc-cfn-mgmt-plane-svc:9000
+  #     - MEMORY_SVC_URL=http://ioc-knowledge-memory-svc:9003
+  #   restart: unless-stopped
+  #   depends_on:
+  #     ioc-cfn-mgmt-plane-svc:
+  #       condition: service_healthy
+  #     ioc-knowledge-memory-svc:
+  #       condition: service_healthy
+  #   healthcheck:
+  #     test: ["CMD", "curl", "-f", "http://localhost:9004/health"]
+  #     interval: 30s
+  #     timeout: 10s
+  #     retries: 3
+  #     start_period: 40s
+
+  # Default (Built-in) Cognitive Agents (Functions) - Semantic Negotiation
+  # Port Mapping: 9005:9005 (same port inside and outside container)
+  # TODO: Add service configuration when image is available
+  # ioc-cfn-ca-semantic-negotiation:
+  #   image: ghcr.io/cisco-eti/ioc-cfn-ca-semantic-negotiation:latest
+  #   platform: ${DOCKER_DEFAULT_PLATFORM}
+  #   profiles:
+  #     - full-stack
+  #   ports:
+  #     - "9005:9005"
+  #   environment:
+  #     - SERVICE_NAME=ioc-cfn-ca-semantic-negotiation
+  #     - APPLICATION_VERSION=dev
+  #     - LOG_LEVEL=${LOG_LEVEL:-INFO}
+  #     - PORT=9005
+  #     - MGMT_URL=http://ioc-cfn-mgmt-plane-svc:9000
+  #   restart: unless-stopped
+  #   depends_on:
+  #     ioc-cfn-mgmt-plane-svc:
+  #       condition: service_healthy
+  #   healthcheck:
+  #     test: ["CMD", "curl", "-f", "http://localhost:9005/health"]
+  #     interval: 30s
+  #     timeout: 10s
+  #     retries: 3
+  #     start_period: 40s
+
   ### End Application Services ###
 
 volumes:

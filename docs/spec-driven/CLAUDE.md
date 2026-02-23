@@ -3,28 +3,28 @@
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
 ## User specific instructions
-- Make changes in backend service: ioc-cfn-mgmt-backend-svconly
-- Do not modify frontend service: ioc-cfn-mgmt-ui-svc
+- Make changes in backend service: ioc-cfn-mgmt-plane-svc only
+- Do not modify frontend service: ioc-cfn-mgmt-plane-ui
 
 ## Repository Overview
 
 This is a multi-service TKF (Trusted Knowledge Fabric) platform with two main services:
 
-1. **ioc-cfn-mgmt-ui-svc** - Next.js frontend (port 3000)
-2. **ioc-cfn-mgmt-backend** - FastAPI backend service (port 8000)
+1. **ioc-cfn-mgmt-plane-ui** - Next.js frontend (port 9001)
+2. **ioc-cfn-mgmt-plane** - FastAPI backend service (port 9000)
 
 ### Service Architecture
 
 ```
 ┌─────────────────────┐
-│  ioc-cfn-mgmt-ui-svc  │  Next.js 15 + TypeScript
-│     Port 3000       │  (Frontend UI)
+│  ioc-cfn-mgmt-plane-ui  │  Next.js 15 + TypeScript
+│     Port 9001       │  (Frontend UI)
 └──────────┬──────────┘
            │
            ▼
 ┌────────────────────────┐
-│ ioc-cfn-mgmt-backend-svc  │  FastAPI + Python 3.10+
-│      Port 8000         │  (Backend Service)
+│ ioc-cfn-mgmt-plane-svc  │  FastAPI + Python 3.10+
+│      Port 9000         │  (Backend Service)
 └────────┬───────────────┘
          │
          ▼
@@ -39,10 +39,10 @@ The UI connects directly to the Backend service, which manages workspaces, users
 
 ## Development Commands
 
-### ioc-cfn-mgmt-ui-svc (Next.js Frontend)
+### ioc-cfn-mgmt-plane-ui (Next.js Frontend)
 
 ```bash
-cd ioc-cfn-mgmt-ui-svc
+cd ioc-cfn-mgmt-plane-ui
 
 # Install dependencies
 npm install
@@ -65,12 +65,12 @@ npm run build:clean   # Clean build
 
 **Test credentials:** Username: `admin`, Password: `admin`
 
-### ioc-cfn-mgmt-backend-svc(Backend Service)
+### ioc-cfn-mgmt-plane-svc(Backend Service)
 
 Uses **Task** and **Poetry**. Requires PostgreSQL database.
 
 ```bash
-cd ioc-cfn-mgmt-backend
+cd ioc-cfn-mgmt-plane
 
 # Setup - Option 1: With local databases
 task run             # Installs deps, applies migrations, generates DEK, runs server
@@ -104,7 +104,7 @@ task test            # Run all tests
 - DELETE endpoints return 204 (No Content) status code on success, not 200
 - The virtual environment is located at `.venv/` in the backend directory
 
-**API Documentation:** http://localhost:8000/docs
+**API Documentation:** http://localhost:9000/docs
 
 **Key endpoints:**
 
@@ -159,7 +159,7 @@ task test            # Run all tests
 ```bash
 # API key in header identifies the user
 curl -H "X-API-Key: ioc_xxx..." \
-  GET http://localhost:8000/api/workspaces/workspace-123/multi-agentic-systems
+  GET http://localhost:9000/api/workspaces/workspace-123/multi-agentic-systems
 
 # User must be member of workspace-123 or be an admin
 ```
@@ -492,7 +492,7 @@ Result: Alice sees only WS1 in her workspace list, even though she's a
 
 ## High-Level Architecture
 
-### Frontend Architecture (ioc-cfn-mgmt-ui-svc)
+### Frontend Architecture (ioc-cfn-mgmt-plane-ui)
 
 - **Framework:** Next.js 15 with App Router (app directory structure)
 - **Routes:**
@@ -511,9 +511,9 @@ Result: Alice sees only WS1 in her workspace list, even though she's a
   - `src/types/` - TypeScript type definitions
   - `src/utils/` - Utility functions
 
-**Environment:** Set `CFN_UI_API_BASE_URL` to point to the Backend service (default: http://localhost:8000)
+**Environment:** Set `CFN_UI_API_BASE_URL` to point to the Backend service (default: http://localhost:9000)
 
-### Backend Service Architecture (ioc-cfn-mgmt-backend)
+### Backend Service Architecture (ioc-cfn-mgmt-plane)
 
 - **Framework:** FastAPI with PostgreSQL database
 - **Core modules:**
@@ -687,11 +687,11 @@ from .user import user_service, UserService
 
 ## Prerequisites
 
-### ioc-cfn-mgmt-ui-svc
+### ioc-cfn-mgmt-plane-ui
 - Node.js >= 13.8.0
 - npm >= 6.14.4
 
-### Backend Service (ioc-cfn-mgmt-backend)
+### Backend Service (ioc-cfn-mgmt-plane)
 - Python 3.10+
 - Poetry: `curl -sSL https://install.python-poetry.org | python3 -`
 - Task (go-task):
@@ -706,11 +706,11 @@ from .user import user_service, UserService
 ## Service Communication
 
 The services communicate directly:
-1. Frontend (port 3000) → Backend Service (port 8000)
+1. Frontend (port 9001) → Backend Service (port 9000)
 2. Backend Service → PostgreSQL Database (port 5432)
 
 Configure service URLs via environment variables:
-- Frontend: `CFN_UI_API_BASE_URL` (points to Backend service, default: http://localhost:8000)
+- Frontend: `CFN_UI_API_BASE_URL` (points to Backend service, default: http://localhost:9000)
 
 ## Deployment
 
@@ -726,10 +726,10 @@ task helm-lint
 task helm-template
 
 # Install
-helm install ioc-cfn-mgmt-backend-svc./deploy/charts/ioc-cfn-mgmt-backend-svc--namespace tkf-platform
+helm install ioc-cfn-mgmt-plane-svc./deploy/charts/ioc-cfn-mgmt-plane-svc--namespace tkf-platform
 
 # Upgrade
-helm upgrade ioc-cfn-mgmt-backend-svc./deploy/charts/ioc-cfn-mgmt-backend
+helm upgrade ioc-cfn-mgmt-plane-svc./deploy/charts/ioc-cfn-mgmt-plane
 ```
 
 Configure health probes to use `/api/internal/diagnostics/health` endpoint.
@@ -817,7 +817,7 @@ The architecture maintains these two key principles:
 **CFN Onboarding Flow:**
 
 When deploying a CFN, it must be configured with three pieces of information:
-1. **Management Endpoint**: The backend service endpoint (e.g., `http://localhost:8000`)
+1. **Management Endpoint**: The backend service endpoint (e.g., `http://localhost:9000`)
 2. **API Key**: User-scoped API key for authentication
 3. **Workspace ID**: The workspace this CFN belongs to
 
@@ -829,7 +829,7 @@ cfn_id: "cfn-node-001"
 cfn_name: "production-cfn-1"
 
 # Management connection
-mgmt_endpoint: "http://localhost:8000"
+mgmt_endpoint: "http://localhost:9000"
 api_key: "ioc_[your-api-key]"
 workspace_id: "ws-abc-123"  # CFN is deployed with workspace ID
 
@@ -932,7 +932,7 @@ cfn_config:
 
 **Step 1: Apply Database Migration**
 ```bash
-cd ioc-cfn-mgmt-backend-svc
+cd ioc-cfn-mgmt-plane-svc
 task docker-compose-db-up
 task db-migrate-apply
 ```
@@ -945,7 +945,7 @@ poetry run pytest tests/test_cognitive_fabric_node.py -v
 
 **Step 3: Start the Service**
 ```bash
-task dev  # Service starts on http://localhost:8000
+task dev  # Service starts on http://localhost:9000
 ```
 
 #### API Examples
@@ -956,7 +956,7 @@ export API_KEY="your-api-key"
 export WS_ID="your-workspace-id"
 
 # CFN calls this from its configured management endpoint
-curl -X POST "http://localhost:8000/api/workspaces/$WS_ID/cognitive-fabric-node" \
+curl -X POST "http://localhost:9000/api/workspaces/$WS_ID/cognitive-fabric-node" \
   -H "X-API-Key: $API_KEY" \
   -H "Content-Type: application/json" \
   -d '{
@@ -968,37 +968,37 @@ curl -X POST "http://localhost:8000/api/workspaces/$WS_ID/cognitive-fabric-node"
 
 **Send Heartbeat**
 ```bash
-curl -X PUT "http://localhost:8000/api/workspaces/$WS_ID/cognitive-fabric-node/cfn-node-001/heartbeat" \
+curl -X PUT "http://localhost:9000/api/workspaces/$WS_ID/cognitive-fabric-node/cfn-node-001/heartbeat" \
   -H "X-API-Key: $API_KEY"
 ```
 
 **List CFN Nodes**
 ```bash
-curl "http://localhost:8000/api/workspaces/$WS_ID/cognitive-fabric-node" \
+curl "http://localhost:9000/api/workspaces/$WS_ID/cognitive-fabric-node" \
   -H "X-API-Key: $API_KEY"
 ```
 
 **Disable a CFN Node**
 ```bash
-curl -X PATCH "http://localhost:8000/api/workspaces/$WS_ID/cognitive-fabric-node/cfn-node-001/disable" \
+curl -X PATCH "http://localhost:9000/api/workspaces/$WS_ID/cognitive-fabric-node/cfn-node-001/disable" \
   -H "X-API-Key: $API_KEY"
 ```
 
 **Delete a CFN Node**
 ```bash
 # CFN must be disabled first
-curl -X DELETE "http://localhost:8000/api/workspaces/$WS_ID/cognitive-fabric-node/cfn-node-001" \
+curl -X DELETE "http://localhost:9000/api/workspaces/$WS_ID/cognitive-fabric-node/cfn-node-001" \
   -H "X-API-Key: $API_KEY"
 ```
 
 **Re-enable and Reconnect a Disabled CFN**
 ```bash
 # Step 1: Admin enables the CFN
-curl -X PATCH "http://localhost:8000/api/workspaces/$WS_ID/cognitive-fabric-node/cfn-node-001/enable" \
+curl -X PATCH "http://localhost:9000/api/workspaces/$WS_ID/cognitive-fabric-node/cfn-node-001/enable" \
   -H "X-API-Key: $API_KEY"
 
 # Step 2: CFN reconnects using create endpoint
-curl -X POST "http://localhost:8000/api/workspaces/$WS_ID/cognitive-fabric-node" \
+curl -X POST "http://localhost:9000/api/workspaces/$WS_ID/cognitive-fabric-node" \
   -H "X-API-Key: $API_KEY" \
   -H "Content-Type: application/json" \
   -d '{

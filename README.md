@@ -45,8 +45,8 @@ task run                     # installs deps, applies db migrations, then runs
 task docker-compose-full-stack-up    # Start complete stack (application + databases + cfn-svc)
 ```
 
-> **Note:** The full-stack profile includes `ioc-cfn-svc` (port 9010), which depends on both
-> `ioc-cfn-mgmt-backend-svc` and PostgreSQL. It shares database credentials
+> **Note:** The full-stack profile includes `ioc-cfn-svc` (port 9002), which depends on both
+> `ioc-cfn-mgmt-plane-svc` and PostgreSQL. It shares database credentials
 > (`POSTGRES_USER`, `POSTGRES_PASSWORD`, `POSTGRES_PORT`) from `env.conf` and uses a
 > separate database (`DB_NAME=cfn_cp`).
 

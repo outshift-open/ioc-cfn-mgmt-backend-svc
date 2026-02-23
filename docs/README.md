@@ -35,9 +35,9 @@ This will regenerate `openapi/openapi.json` based on the current API implementat
 
 Once the application is running, view the interactive API documentation at:
 
-- **Swagger UI**: http://localhost:8000/api/docs
-- **ReDoc**: http://localhost:8000/api/redoc
-- **OpenAPI JSON**: http://localhost:8000/api/openapi.json
+- **Swagger UI**: http://localhost:9000/api/docs
+- **ReDoc**: http://localhost:9000/api/redoc
+- **OpenAPI JSON**: http://localhost:9000/api/openapi.json
 
 ## Using the OpenAPI Spec
 
@@ -53,7 +53,7 @@ The `openapi/openapi.json` file can be used with:
 1. Open Postman
 2. Click "Import"
 3. Choose "Link" tab
-4. Paste: `http://localhost:8000/api/openapi.json`
+4. Paste: `http://localhost:9000/api/openapi.json`
 5. Click "Import"
 
 ## Additional Documentation

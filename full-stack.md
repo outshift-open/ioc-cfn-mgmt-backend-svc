@@ -34,5 +34,22 @@ Volumes are preserved when stopping services. To remove volumes, use:
 task docker-compose-full-stack-down-with-volumes
 ```
 
-- Start UI
-IOC UI: http://localhost:3000 (username and password are defined in env.conf)
+## Service Endpoints
+
+Once all services are running, access them at:
+
+- **IOC Management UI**: http://localhost:9001 (username and password are defined in env.conf)
+- **IOC Management API**: http://localhost:9000/docs
+- **CFN Service**: http://localhost:9002
+- **Knowledge Memory Service**: http://localhost:9003
+- **AgensGraph Database**: localhost:5456
+- **AgensGraph Viewer**: http://localhost:5457
+
+### Future Services (Currently Commented Out)
+
+The following services are defined in docker-compose.yml but commented out pending image availability:
+
+- **Cognitive Agent - Knowledge Management**: Port 9004 (when enabled)
+- **Cognitive Agent - Semantic Negotiation**: Port 9005 (when enabled)
+
+To enable these services, uncomment their definitions in docker-compose.yml.

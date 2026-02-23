@@ -512,7 +512,7 @@ create_memory_provider() {
     echo "  Provider Type: vector_store"
     echo "  Provider: ioc-memory-provider"
     echo "  Host: localhost"
-    echo "  Port: 8001"
+    echo "  Port: 9003"
     echo ""
     print_info "Creating memory provider..."
     api_call POST "/memory-providers" '{
@@ -521,7 +521,7 @@ create_memory_provider() {
   "provider": "ioc-memory-provider",
   "config": {
     "host": "localhost",
-    "port": 8001
+    "port": 9003
   }
 }'
     pause
@@ -1468,7 +1468,7 @@ quick_sample() {
   "provider": "ioc-memory-provider",
   "config": {
     "host": "localhost",
-    "port": 8001
+    "port": 9003
   }
 }' || {
         print_error "Failed to create memory provider, but continuing..."
