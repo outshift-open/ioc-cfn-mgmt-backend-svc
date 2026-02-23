@@ -1,4 +1,4 @@
-"""Diagnostic API endpoints for IOC Management Backend standard diagnostics."""
+"""Diagnostic API endpoints for IoC Management Backend standard diagnostics."""
 
 import datetime
 import os
@@ -33,11 +33,11 @@ class LogLevelUpdate(BaseModel):
 
 
 ################################################
-# IOC Management Backend Standard Diagnostic API Endpoints
+# IoC Management Backend Standard Diagnostic API Endpoints
 ################################################
 @app.get("/api/internal/diagnostics/health")
 async def ioc_health():
-    """IOC standard health endpoint for liveness probe.
+    """IoC standard health endpoint for liveness probe.
     Returns a simple status for k8s liveness probe and also includes
     detailed service state information.
 
@@ -65,7 +65,7 @@ async def ioc_health():
 
 @app.get("/api/internal/diagnostics/info")
 async def ioc_info():
-    """IOC Management Backend standard info endpoint with git commit information.
+    """IoC Management Backend standard info endpoint with git commit information.
 
     Returns:
         Dictionary with git commit information

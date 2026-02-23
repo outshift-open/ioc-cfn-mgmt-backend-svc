@@ -1,11 +1,11 @@
 [project]
-name = "ioc-cfn-mgmt-backend-svc"
+name = "ioc-cfn-mgmt-plane-svc"
 version = "0.1.0"
-description = "IOC CFN Management Backend Service"
+description = "IoC CFN Management Backend Service"
 readme = "README.md"
 requires-python = ">=3.10,<4.0.0"
 authors = [
-    {name = "IOC Team"}
+    {name = "IoC Team"}
 ]
 dynamic = ["dependencies"]
 

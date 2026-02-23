@@ -1,5 +1,5 @@
 """
-Tests for workspace endpoints in ioc-cfn-mgmt-backend.
+Tests for workspace endpoints in ioc-cfn-mgmt-plane.
 """
 import hashlib
 import uuid

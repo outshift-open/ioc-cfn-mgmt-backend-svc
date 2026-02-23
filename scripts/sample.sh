@@ -1,5 +1,5 @@
 #!/bin/bash
-# Interactive REST API script for ioc-cfn-mgmt-backend-svc
+# Interactive REST API script for ioc-cfn-mgmt-plane-svc
 # Provides menu-driven interface to create, list, and delete sample resources
 
 set -e
@@ -1541,7 +1541,7 @@ main_menu() {
     while true; do
         clear
         print_header "=========================================="
-        print_header "  IOC CFN Management - Interactive Menu"
+        print_header "  IoC CFN Management - Interactive Menu"
         print_header "=========================================="
         echo ""
         print_info "Base URL: $BASE_URL"

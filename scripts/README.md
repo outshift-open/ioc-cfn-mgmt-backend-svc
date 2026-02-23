@@ -1,6 +1,6 @@
 # Scripts
 
-This directory contains utility scripts for the IOC CFN Management Backend Service.
+This directory contains utility scripts for the IoC CFN Management Backend Service.
 
 ## Available Scripts
 
@@ -62,7 +62,7 @@ sudo yum install jq
 
 ```
 ==========================================
-  IOC CFN Management - Interactive Menu
+  IoC CFN Management - Interactive Menu
 ==========================================
 
 ℹ Base URL: http://localhost:9000

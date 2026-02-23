@@ -1,4 +1,4 @@
-# Default values for configserver-chart.
+# Default values for ioc-cfn-mgmt-plane-svc chart.
 # This is a YAML-formatted file.
 #
 # This file provides project specific variables and is joined with another value file
@@ -26,7 +26,7 @@ ingress:
     nginx.ingress.kubernetes.io/rewrite-target: /
     cert-manager.io/cluster-issuer: letsencrypt
 
-serviceName: ioc-cfn-mgmt-backend
+serviceName: ioc-cfn-mgmt-plane-svc
 namespace: ioc-cfn
 dockerPreamable: 626007623524.dkr.ecr.us-east-2.amazonaws.com
 servicePort: "5000"
@@ -76,7 +76,7 @@ configmap:
   CONFIGMAP_TEST: "test_static_value"
   CONFIGMAP_DEFAULT_EXAMPLE: "default_value_foo"
   CONFIGMAP_OVERLAY_EXAMPLE: "default_value_bar"
-  SERVICE_NAME: "ioc-cfn-mgmt-backend-svc"
+  SERVICE_NAME: "ioc-cfn-mgmt-plane-svc"
   LOG_LEVEL: "INFO"
   # desired simulated uptime for mocked upstream dependencies to demonstrate service health endpoint
   MOCK_DB_UPTIME: "99.9"

@@ -1,8 +1,8 @@
-# IOC - Full Stack
+# IoC - Full Stack
 Run the full stack (UI + Backend + DB) using docker-compose.
 
 ## Prerequisites
-Authenticate github to access and pull Docker images from GitHub Container Registry (GHCR) where IOC images are hosted.
+Authenticate github to access and pull Docker images from GitHub Container Registry (GHCR) where IoC images are hosted.
 
 Authorise cisco-eti docker hub account to pull images:
 - go to https://github.com/settings/tokens
@@ -38,8 +38,8 @@ task docker-compose-full-stack-down-with-volumes
 
 Once all services are running, access them at:
 
-- **IOC Management UI**: http://localhost:9001 (username and password are defined in env.conf)
-- **IOC Management API**: http://localhost:9000/docs
+- **IoC Management UI**: http://localhost:9001 (username and password are defined in env.conf)
+- **IoC Management API**: http://localhost:9000/docs
 - **CFN Service**: http://localhost:9002
 - **Knowledge Memory Service**: http://localhost:9003
 - **AgensGraph Database**: localhost:5456

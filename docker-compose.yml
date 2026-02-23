@@ -87,7 +87,7 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
-    image: ghcr.io/cisco-eti/ioc-cfn-mgmt-backend-svc:latest
+    image: ghcr.io/cisco-eti/ioc-cfn-mgmt-plane-svc:latest
     platform: ${DOCKER_DEFAULT_PLATFORM}
     profiles:
       - full-stack

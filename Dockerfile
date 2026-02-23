@@ -1,7 +1,7 @@
 FROM ghcr.io/cisco-eti/sre-python-docker:v3.11.9-hardened-debian-12
 
 # Link this container image to the GitHub repository
-LABEL org.opencontainers.image.source=https://github.com/cisco-eti/ioc-cfn-mgmt-backend-svc
+LABEL org.opencontainers.image.source=https://github.com/cisco-eti/ioc-cfn-mgmt-plane-svc
 
 # Install curl for health checks, wget for atlas installation, postgresql-client for database seeding, and build essentials for regopy
 # libatomic1 is required for regopy on some architectures

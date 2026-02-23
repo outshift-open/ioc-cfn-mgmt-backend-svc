@@ -10,7 +10,7 @@ import os
 import tomllib
 from typing import Any, Dict, Optional, Tuple
 
-# Valid log levels for IOC CFN Management Backend Service
+# Valid log levels for IoC CFN Management Backend Service
 VALID_LOG_LEVELS = [
     "DEBUG",
     "INFO",
@@ -21,7 +21,7 @@ VALID_LOG_LEVELS = [
     "TRACE",
 ]
 
-# Mapping of IOC CFN Management Backend Service log levels to Python logging levels
+# Mapping of IoC CFN Management Backend Service log levels to Python logging levels
 LOG_LEVEL_MAP = {
     "TRACE": "DEBUG",  # Map TRACE to DEBUG for Python logging
     "WARN": "WARNING",  # Map WARN to WARNING for consistency
@@ -118,7 +118,7 @@ def validate_log_level(log_level: str) -> Tuple[bool, Optional[str], Optional[st
     """
     log_level_upper = log_level.upper()
 
-    # Check if it's a valid IOC CFN Management Backend Service log level
+    # Check if it's a valid IoC CFN Management Backend Service log level
     if log_level_upper not in VALID_LOG_LEVELS:
         return False, None, f"Invalid log level: {log_level}"
 

@@ -1,5 +1,5 @@
 """
-Tests for Multi-Agent System endpoints in ioc-cfn-mgmt-backend.
+Tests for Multi-Agent System endpoints in ioc-cfn-mgmt-plane.
 """
 import pytest
 

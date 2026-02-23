@@ -1,10 +1,10 @@
-# Contributing to ioc-cfn-mgmt-backend
+# Contributing to ioc-cfn-mgmt-plane
 
-Thank you for your interest in contributing to the IOC CFN Management Backend Service!
+Thank you for your interest in contributing to the IoC CFN Management Plane Service!
 
 ## General Guidelines
 
-- For pushing git tags/branches to this repo, please reach out to [IOC team](mailto:ccs-dev-team@cisco.com)
+- For pushing git tags/branches to this repo, please reach out to [IoC team](mailto:ccs-dev-team@cisco.com)
 
 ## Development Setup
 
@@ -20,7 +20,7 @@ Thank you for your interest in contributing to the IOC CFN Management Backend Se
 ```bash
 # Clone the repository
 git clone <repository-url>
-cd ioc-cfn-mgmt-backend-svc
+cd ioc-cfn-mgmt-plane-svc
 
 # Start databases
 task docker-compose-db-up

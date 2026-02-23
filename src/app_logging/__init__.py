@@ -1,5 +1,5 @@
 """
-Application logging module for IOC CFN Management Backend Service.
+Application logging module for IoC CFN Management Backend Service.
 
 Provides centralized logging configuration and utilities for managing
 log levels dynamically at runtime.

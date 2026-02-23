@@ -76,7 +76,7 @@ async def lifespan(app: FastAPI):
 app = FastAPI(
     title=f"{service_name} API",
     version=get_app_version(),
-    description="IOC CFN Management Backend Service API",
+    description="IoC CFN Management Backend Service API",
     docs_url="/api/docs",
     openapi_url="/api/openapi.json",
     lifespan=lifespan,

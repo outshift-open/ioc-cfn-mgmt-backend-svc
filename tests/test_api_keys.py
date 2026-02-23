@@ -1,5 +1,5 @@
 """
-Tests for API key endpoints in ioc-cfn-mgmt-backend.
+Tests for API key endpoints in ioc-cfn-mgmt-plane.
 """
 import pytest
 

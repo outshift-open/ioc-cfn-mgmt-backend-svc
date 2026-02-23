@@ -1,6 +1,6 @@
 # Documentation Directory
 
-This directory contains all documentation for the IOC CFN Management Backend Service.
+This directory contains all documentation for the IoC CFN Management Backend Service.
 
 ## Directory Structure
 
