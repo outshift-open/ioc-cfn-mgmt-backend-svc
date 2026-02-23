@@ -9,7 +9,6 @@ from pydantic import BaseModel, Field
 class CognitiveAgentCreate(BaseModel):
     """Schema for creating a cognitive agent"""
 
-    cognitive_agent_id: str = Field(..., description="Agent identifier")
     cognitive_agent_name: str = Field(..., description="Agent name")
     description: Optional[str] = Field(None, description="Agent description")
     config: Optional[dict] = Field(None, description="Agent-specific configuration")

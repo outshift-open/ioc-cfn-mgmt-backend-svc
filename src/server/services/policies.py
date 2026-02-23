@@ -52,10 +52,7 @@ class PolicyService:
                     if existing_policy.workspace_id == workspace_id:
                         raise HTTPException(
                             status_code=status.HTTP_409_CONFLICT,
-                            detail=(
-                                f"Policy with ID '{policy_data.policy_id}' "
-                                f"already exists in this workspace"
-                            ),
+                            detail=(f"Policy with ID '{policy_data.policy_id}' " f"already exists in this workspace"),
                         )
                     else:
                         raise HTTPException(

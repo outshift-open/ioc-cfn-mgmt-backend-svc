@@ -11,7 +11,7 @@ class CognitiveFabricNode(Base):
     cfn_id = Column(String(255), primary_key=True, nullable=False)
 
     # Required fields
-    cfn_name = Column(String(255), nullable=False, unique=True)
+    cfn_name = Column(String(255), nullable=False)
 
     # Optional fields
     cfn_config = Column(JSONB, nullable=True)

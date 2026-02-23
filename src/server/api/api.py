@@ -28,11 +28,7 @@ api_router.include_router(policy_router, prefix="/workspaces", tags=["policies"]
 # hidden endpoints
 api_router.include_router(auth_router, prefix="/auth", tags=["authentication"], include_in_schema=False)
 api_router.include_router(audits_router, prefix="/audits", tags=["audits"], include_in_schema=False)
-api_router.include_router(
-    iam_router, prefix="/iam",
-    tags=["iam"],
-    include_in_schema=False
-)
+api_router.include_router(iam_router, prefix="/iam", tags=["iam"], include_in_schema=False)
 api_router.include_router(
     workspace_invitations_router,
     prefix="",

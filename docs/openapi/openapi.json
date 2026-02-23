@@ -2173,11 +2173,6 @@
     "schemas": {
       "CognitiveAgentCreate": {
         "properties": {
-          "cognitive_agent_id": {
-            "type": "string",
-            "title": "Cognitive Agent Id",
-            "description": "Agent identifier"
-          },
           "cognitive_agent_name": {
             "type": "string",
             "title": "Cognitive Agent Name",
@@ -2211,7 +2206,6 @@
         },
         "type": "object",
         "required": [
-          "cognitive_agent_id",
           "cognitive_agent_name"
         ],
         "title": "CognitiveAgentCreate",
@@ -2449,11 +2443,6 @@
       },
       "CognitiveEngineCreate": {
         "properties": {
-          "cognitive_engine_id": {
-            "type": "string",
-            "title": "Cognitive Engine Id",
-            "description": "Engine identifier"
-          },
           "cognitive_engine_name": {
             "type": "string",
             "title": "Cognitive Engine Name",
@@ -2475,7 +2464,6 @@
         },
         "type": "object",
         "required": [
-          "cognitive_engine_id",
           "cognitive_engine_name"
         ],
         "title": "CognitiveEngineCreate",
@@ -2807,19 +2795,12 @@
       },
       "CognitiveFabricNodeRegisterRequest": {
         "properties": {
-          "cfn_id": {
-            "type": "string",
-            "maxLength": 255,
-            "minLength": 1,
-            "title": "Cfn Id",
-            "description": "Persistent CFN identifier (provided by CFN, immutable)"
-          },
           "cfn_name": {
             "type": "string",
             "maxLength": 255,
             "minLength": 1,
             "title": "Cfn Name",
-            "description": "Human-readable CFN name (can be updated)"
+            "description": "Human-readable CFN name (unique identifier)"
           },
           "cfn_config": {
             "anyOf": [
@@ -2837,7 +2818,6 @@
         },
         "type": "object",
         "required": [
-          "cfn_id",
           "cfn_name"
         ],
         "title": "CognitiveFabricNodeRegisterRequest",
@@ -2846,7 +2826,6 @@
           "cfn_config": {
             "log_level": "info"
           },
-          "cfn_id": "cfn-persistent-id-123",
           "cfn_name": "cfn-node-prod-1"
         }
       },
@@ -3039,20 +3018,10 @@
       },
       "MemoryProviderCreate": {
         "properties": {
-          "memory_provider_id": {
-            "type": "string",
-            "title": "Memory Provider Id",
-            "description": "Memory provider identifier"
-          },
           "memory_provider_name": {
             "type": "string",
             "title": "Memory Provider Name",
             "description": "Memory provider name"
-          },
-          "provider_type": {
-            "type": "string",
-            "title": "Provider Type",
-            "description": "Provider type (internal, external)"
           },
           "provider": {
             "type": "string",
@@ -3075,9 +3044,7 @@
         },
         "type": "object",
         "required": [
-          "memory_provider_id",
           "memory_provider_name",
-          "provider_type",
           "provider"
         ],
         "title": "MemoryProviderCreate",
@@ -3092,10 +3059,6 @@
           "memory_provider_name": {
             "type": "string",
             "title": "Memory Provider Name"
-          },
-          "provider_type": {
-            "type": "string",
-            "title": "Provider Type"
           },
           "provider": {
             "type": "string",
@@ -3154,7 +3117,6 @@
         "required": [
           "memory_provider_id",
           "memory_provider_name",
-          "provider_type",
           "provider",
           "config",
           "enabled",
@@ -3203,18 +3165,6 @@
             ],
             "title": "Memory Provider Name",
             "description": "Memory provider name"
-          },
-          "provider_type": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Provider Type",
-            "description": "Provider type (internal, external)"
           },
           "provider": {
             "anyOf": [

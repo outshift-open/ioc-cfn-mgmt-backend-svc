@@ -18,22 +18,15 @@ class CognitiveFabricNodeRegisterRequest(BaseModel):
     model_config = ConfigDict(
         json_schema_extra={
             "example": {
-                "cfn_id": "cfn-persistent-id-123",
                 "cfn_name": "cfn-node-prod-1",
                 "cfn_config": {"log_level": "info"},
             }
         }
     )
 
-    cfn_id: str = Field(
-        ...,
-        description="Persistent CFN identifier (provided by CFN, immutable)",
-        min_length=1,
-        max_length=255,
-    )
     cfn_name: str = Field(
         ...,
-        description="Human-readable CFN name (can be updated)",
+        description="Human-readable CFN name (unique identifier)",
         min_length=1,
         max_length=255,
     )

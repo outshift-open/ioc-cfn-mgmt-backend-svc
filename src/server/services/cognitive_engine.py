@@ -1,5 +1,6 @@
 """Cognitive Engine service - Business logic for Cognitive Engine operations"""
 
+import uuid
 from datetime import datetime, timezone
 
 from fastapi import HTTPException, status
@@ -31,44 +32,39 @@ class CognitiveEngineService:
             CognitiveEngineDetail with the created engine
 
         Raises:
-            HTTPException: If engine with same ID already exists or creation fails
+            HTTPException: If engine with same name already exists in workspace or creation fails
         """
         try:
             db = RelationalDB()
             session = db.get_session()
 
             try:
-                # Check if engine with same ID already exists (globally unique)
+                # Check if engine with same name already exists in this workspace
                 existing_engine = (
                     session.query(CognitiveEngineModel)
                     .filter(
-                        CognitiveEngineModel.cognitive_engine_id == engine_data.cognitive_engine_id,
+                        CognitiveEngineModel.workspace_id == workspace_id,
+                        CognitiveEngineModel.cognitive_engine_name == engine_data.cognitive_engine_name,
                         CognitiveEngineModel.deleted_at.is_(None),
                     )
                     .first()
                 )
 
                 if existing_engine:
-                    if existing_engine.workspace_id == workspace_id:
-                        raise HTTPException(
-                            status_code=status.HTTP_409_CONFLICT,
-                            detail=(
-                                f"Cognitive engine with ID '{engine_data.cognitive_engine_id}' "
-                                f"already exists in this workspace"
-                            ),
-                        )
-                    else:
-                        raise HTTPException(
-                            status_code=status.HTTP_409_CONFLICT,
-                            detail=(
-                                f"Cognitive engine with ID '{engine_data.cognitive_engine_id}' "
-                                f"already exists in another workspace (globally unique constraint)"
-                            ),
-                        )
+                    raise HTTPException(
+                        status_code=status.HTTP_409_CONFLICT,
+                        detail=(
+                            f"Cognitive engine with name '{engine_data.cognitive_engine_name}' "
+                            f"already exists in this workspace"
+                        ),
+                    )
+
+                # Generate unique ID for the engine
+                cognitive_engine_id = str(uuid.uuid4())
 
                 # Create new engine
                 new_engine = CognitiveEngineModel(
-                    cognitive_engine_id=engine_data.cognitive_engine_id,
+                    cognitive_engine_id=cognitive_engine_id,
                     workspace_id=workspace_id,
                     cognitive_engine_name=engine_data.cognitive_engine_name,
                     config=engine_data.config,

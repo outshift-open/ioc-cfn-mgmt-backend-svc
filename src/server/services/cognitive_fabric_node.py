@@ -1,5 +1,6 @@
 """Cognitive Fabric Node service - Business logic for Cognitive Fabric Node operations"""
 
+import uuid
 from datetime import datetime, timedelta, timezone
 from typing import List, Optional
 
@@ -50,23 +51,22 @@ class CognitiveFabricNodeService:
         Create a new Cognitive Fabric Node or refresh an active one
 
         CFN nodes are like IoT devices - they always call this endpoint.
-        The service handles 4 scenarios:
-        1. New CFN: Create new CFN entry
-        2. Deleted CFN (ID reuse): Update deleted record to create new CFN with same ID
-        3. Active CFN reconnection: Refresh config (allows reboot/reconciliation)
-        4. Disabled CFN: Return 403 Forbidden (requires manual re-enable)
+        The service handles 3 scenarios:
+        1. New CFN: Create new CFN entry with generated UUID
+        2. Active CFN reconnection: Refresh config (allows reboot/reconciliation)
+        3. Disabled CFN: Return 403 Forbidden (requires manual re-enable)
 
         Workspace association is done during workspace creation.
 
         Args:
-            cfn_data: CFN registration data (cfn_id, cfn_name, cfn_config)
+            cfn_data: CFN registration data (cfn_name, cfn_config)
             user_id: User creating the CFN
 
         Returns:
             CognitiveFabricNodeResponse with config
 
         Raises:
-            HTTPException: 409 if name/id conflict, 403 if disabled
+            HTTPException: 409 if name conflict, 403 if disabled
         """
 
         try:
@@ -74,48 +74,8 @@ class CognitiveFabricNodeService:
             session = db.get_session()
 
             try:
-                # Check if cfn_id exists (including disabled/deleted)
+                # Check if cfn_name exists (only among non-deleted CFNs)
                 existing_cfn = (
-                    session.query(CognitiveFabricNodeModel)
-                    .filter(CognitiveFabricNodeModel.cfn_id == cfn_data.cfn_id)
-                    .first()
-                )
-
-                if existing_cfn:
-                    # Scenario 1: CFN is fully deleted (deleted_at is set) - ID can be reused
-                    if existing_cfn.deleted_at is not None:
-                        # Check if new name conflicts with another ACTIVE CFN (globally unique)
-                        conflicting_name = (
-                            session.query(CognitiveFabricNodeModel)
-                            .filter(
-                                CognitiveFabricNodeModel.cfn_name == cfn_data.cfn_name,
-                                CognitiveFabricNodeModel.deleted_at.is_(None),
-                                CognitiveFabricNodeModel.cfn_id != cfn_data.cfn_id,
-                            )
-                            .first()
-                        )
-                        if conflicting_name:
-                            raise HTTPException(
-                                status_code=status.HTTP_409_CONFLICT,
-                                detail=f"CFN with name '{cfn_data.cfn_name}' already exists",
-                            )
-
-                        return self._reuse_deleted_cfn(session, existing_cfn, cfn_data, user_id)
-
-                    # Scenario 2a: CFN is disabled (but not deleted) - ID is LOCKED
-                    elif not existing_cfn.enabled:
-                        raise HTTPException(
-                            status_code=status.HTTP_403_FORBIDDEN,
-                            detail="CFN node has been disabled. Contact workspace admin to re-enable it first.",
-                        )
-
-                    # Scenario 2b: CFN is active - Allow reboot/reconnection (refresh config)
-                    else:
-                        return self._refresh_cfn(session, existing_cfn, cfn_data, user_id)
-
-                # Scenario 3: New CFN - Create new entry
-                # Check if cfn_name already exists globally
-                existing_name = (
                     session.query(CognitiveFabricNodeModel)
                     .filter(
                         CognitiveFabricNodeModel.cfn_name == cfn_data.cfn_name,
@@ -123,18 +83,27 @@ class CognitiveFabricNodeService:
                     )
                     .first()
                 )
-                if existing_name:
-                    raise HTTPException(
-                        status_code=status.HTTP_409_CONFLICT,
-                        detail=f"CFN with name '{cfn_data.cfn_name}' already exists",
-                    )
+
+                if existing_cfn:
+                    # Scenario 1: CFN is disabled (but not deleted)
+                    if not existing_cfn.enabled:
+                        raise HTTPException(
+                            status_code=status.HTTP_403_FORBIDDEN,
+                            detail="CFN node has been disabled. Contact workspace admin to re-enable it first.",
+                        )
+
+                    # Scenario 2: CFN is active - Allow reboot/reconnection (refresh config)
+                    return self._refresh_cfn(session, existing_cfn, cfn_data, user_id)
+
+                # Scenario 3: New CFN - Create new entry with generated UUID
+                cfn_id = str(uuid.uuid4())
 
                 # Generate config (no workspaces initially)
-                config = self.generate_config(cfn_data.cfn_id, [], cfn_data.cfn_config)
+                config = self.generate_config(cfn_id, [], cfn_data.cfn_config)
 
                 # Create new CFN record with offline status
                 new_cfn = CognitiveFabricNodeModel(
-                    cfn_id=cfn_data.cfn_id,
+                    cfn_id=cfn_id,
                     cfn_name=cfn_data.cfn_name,
                     cfn_config=cfn_data.cfn_config,
                     config=config,
@@ -187,11 +156,6 @@ class CognitiveFabricNodeService:
                     raise HTTPException(
                         status_code=status.HTTP_409_CONFLICT,
                         detail=f"CFN with name '{cfn_data.cfn_name}' already exists",
-                    )
-                elif "cognitive_fabric_node_pkey" in error_str:
-                    raise HTTPException(
-                        status_code=status.HTTP_409_CONFLICT,
-                        detail=f"CFN with id '{cfn_data.cfn_id}' is already registered",
                     )
                 raise HTTPException(
                     status_code=status.HTTP_400_BAD_REQUEST,
@@ -302,75 +266,6 @@ class CognitiveFabricNodeService:
 
         return response
 
-    def _reuse_deleted_cfn(
-        self,
-        session,
-        cfn: CognitiveFabricNodeModel,
-        cfn_data: CognitiveFabricNodeRegisterRequest,
-        user_id: str,
-    ) -> CognitiveFabricNodeResponse:
-        """
-        Reuse a deleted CFN ID by updating the existing deleted record (internal method)
-
-        Args:
-            session: Database session
-            cfn: Existing CFN model instance (deleted, deleted_at is set)
-            cfn_data: CFN registration data
-            user_id: User performing registration
-
-        Returns:
-            CognitiveFabricNodeResponse with config
-
-        Raises:
-            HTTPException: 409 if name conflict
-        """
-        # Update the deleted CFN to create a "new" CFN with the same ID
-        cfn.cfn_name = cfn_data.cfn_name
-        cfn.cfn_config = cfn_data.cfn_config
-        cfn.status = CognitiveFabricNodeStatus.OFFLINE.value
-        cfn.last_seen = datetime.now(timezone.utc)
-        cfn.enabled = True
-        cfn.deleted_at = None
-        cfn.updated_at = datetime.now(timezone.utc)
-        cfn.updated_by = user_id
-        cfn.created_at = datetime.now(timezone.utc)
-        cfn.created_by = user_id
-
-        # No workspace associations initially (done during workspace creation)
-        cfn.config = self.generate_config(cfn.cfn_id, [], cfn.cfn_config)
-
-        session.commit()
-        session.refresh(cfn)
-
-        response = CognitiveFabricNodeResponse(
-            cfn_id=cfn.cfn_id,
-            workspace_ids=[],
-            cfn_name=cfn.cfn_name,
-            config=cfn.config,
-            status=CognitiveFabricNodeStatus(cfn.status),
-            last_seen=cfn.last_seen,
-            enabled=cfn.enabled,
-            created_at=cfn.created_at,
-            updated_at=cfn.updated_at,
-            created_by=cfn.created_by,
-            updated_by=cfn.updated_by,
-        )
-
-        # Audit logging
-        audit_service.create_audit(
-            AuditRequest(
-                resource_type=ResourceType.COGNITIVE_FABRIC_NODE,
-                audit_type=AuditEventType.RESOURCE_CREATED,
-                audit_resource_id=cfn.cfn_id,
-                created_by=user_id,
-                audit_information=cfn_data.model_dump(),
-                audit_extra_information="CFN ID reused after deletion (new CFN created with same ID)",
-                created_at=cfn.created_at,
-            )
-        )
-
-        return response
-
     def _refresh_cfn(
         self,
         session,
@@ -383,37 +278,17 @@ class CognitiveFabricNodeService:
 
         Args:
             session: Database session
-            cfn: Existing CFN model instance (active)
+            cfn: Existing CFN model instance (active, found by name)
             cfn_data: CFN registration data
             user_id: User performing re-registration
 
         Returns:
             CognitiveFabricNodeResponse with config
-
-        Raises:
-            HTTPException: 409 if name conflict
         """
-        # Check if cfn_name conflicts with another active CFN (globally unique)
-        if cfn_data.cfn_name != cfn.cfn_name:
-            existing_name = (
-                session.query(CognitiveFabricNodeModel)
-                .filter(
-                    CognitiveFabricNodeModel.cfn_name == cfn_data.cfn_name,
-                    CognitiveFabricNodeModel.cfn_id != cfn_data.cfn_id,
-                    CognitiveFabricNodeModel.deleted_at.is_(None),
-                )
-                .first()
-            )
-            if existing_name:
-                raise HTTPException(
-                    status_code=status.HTTP_409_CONFLICT,
-                    detail=f"CFN with name '{cfn_data.cfn_name}' already exists",
-                )
-
-        # Update CFN config and refresh (keep existing workspace associations)
-        cfn.cfn_name = cfn_data.cfn_name
+        # Update CFN config and refresh (keep existing workspace associations and status)
+        # Name is already validated (cfn was found by this name)
         cfn.cfn_config = cfn_data.cfn_config
-        cfn.status = CognitiveFabricNodeStatus.OFFLINE.value
+        # Keep existing status (don't reset to offline on refresh)
         cfn.last_seen = datetime.now(timezone.utc)
         cfn.updated_at = datetime.now(timezone.utc)
         cfn.updated_by = user_id
@@ -1208,11 +1083,7 @@ class CognitiveFabricNodeService:
         except Exception:
             providers_payload = []
 
-        return {
-            "cfn_config": cfn_config or {},
-            "workspaces": workspaces_payload,
-            "memory_providers": providers_payload
-        }
+        return {"cfn_config": cfn_config or {}, "workspaces": workspaces_payload, "memory_providers": providers_payload}
 
     def mark_stale_nodes_offline(self, threshold_minutes: int = 2) -> int:
         """

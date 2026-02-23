@@ -62,12 +62,12 @@ class AuthzService:
             Dict[str, Any]: The result of the policy evaluation.
         """
         self.logger.debug("Evaluating authorization policy with input: %s", input_data)
-        
+
         # Lock to prevent concurrent access to regopy interpreter (prevents segfaults)
         with self._interpreter_lock:
             self._interpreter.set_input(Input(input_data))
             result = self._interpreter.query("data.authz.allow")
-        
+
         self.logger.debug("Authorization policy evaluation result: %s", result)
 
         # Parse the result from JSON string representation

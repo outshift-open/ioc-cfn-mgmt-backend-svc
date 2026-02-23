@@ -425,11 +425,12 @@ class TestWorkspaceEndpoints:
         user_client.headers = {"X-API-Key": user_api_key}
 
         # Register CFN first
-        cfn_resp = user_client.post("/api/cognitive-fabric-nodes", json={"cfn_id": "cfn-creator-test", "cfn_name": "creator-cfn-node"})
+        cfn_resp = user_client.post("/api/cognitive-fabric-nodes", json={"cfn_name": "creator-cfn-node"})
         assert cfn_resp.status_code == 201
+        cfn_id = cfn_resp.json()["cfn_id"]
 
         # User creates a workspace (automatically added as workspace admin)
-        user_ws_resp = user_client.post("/api/workspaces/create", json={"name": "Creator Workspace", "cfn_id": "cfn-creator-test"})
+        user_ws_resp = user_client.post("/api/workspaces/create", json={"name": "Creator Workspace", "cfn_id": cfn_id})
         assert user_ws_resp.status_code == 201
         user_ws_id = user_ws_resp.json()["id"]
 
@@ -542,18 +543,21 @@ class TestWorkspaceEndpoints:
         user2_client.headers = {"X-API-Key": user2_api_key}
 
         # Create CFNs for each workspace
-        user1_cfn_resp = user1_client.post("/api/cognitive-fabric-nodes", json={"cfn_id": "cfn-super-admin-user1", "cfn_name": "user1-super-admin-cfn"})
+        user1_cfn_resp = user1_client.post("/api/cognitive-fabric-nodes", json={"cfn_name": "user1-super-admin-cfn"})
         assert user1_cfn_resp.status_code == 201
-        user2_cfn_resp = user2_client.post("/api/cognitive-fabric-nodes", json={"cfn_id": "cfn-super-admin-user2", "cfn_name": "user2-super-admin-cfn"})
+        user1_cfn_id = user1_cfn_resp.json()["cfn_id"]
+        
+        user2_cfn_resp = user2_client.post("/api/cognitive-fabric-nodes", json={"cfn_name": "user2-super-admin-cfn"})
         assert user2_cfn_resp.status_code == 201
+        user2_cfn_id = user2_cfn_resp.json()["cfn_id"]
 
         # User1 creates a workspace
-        user1_ws_resp = user1_client.post("/api/workspaces/create", json={"name": "User1 Workspace", "cfn_id": "cfn-super-admin-user1"})
+        user1_ws_resp = user1_client.post("/api/workspaces/create", json={"name": "User1 Workspace", "cfn_id": user1_cfn_id})
         assert user1_ws_resp.status_code == 201
         user1_ws_id = user1_ws_resp.json()["id"]
 
         # User2 creates a workspace
-        user2_ws_resp = user2_client.post("/api/workspaces/create", json={"name": "User2 Workspace", "cfn_id": "cfn-super-admin-user2"})
+        user2_ws_resp = user2_client.post("/api/workspaces/create", json={"name": "User2 Workspace", "cfn_id": user2_cfn_id})
         assert user2_ws_resp.status_code == 201
         user2_ws_id = user2_ws_resp.json()["id"]
 

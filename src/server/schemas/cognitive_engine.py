@@ -9,7 +9,6 @@ from pydantic import BaseModel, Field
 class CognitiveEngineCreate(BaseModel):
     """Schema for creating a cognitive engine"""
 
-    cognitive_engine_id: str = Field(..., description="Engine identifier")
     cognitive_engine_name: str = Field(..., description="Engine name")
     config: Optional[dict] = Field(None, description="Engine-specific configuration")
 

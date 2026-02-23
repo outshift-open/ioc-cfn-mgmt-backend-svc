@@ -15,7 +15,6 @@ class MemoryProvider(Base):
 
     memory_provider_id = Column(String(255), primary_key=True, nullable=False)
     memory_provider_name = Column(String(255), nullable=False)
-    provider_type = Column(String(50), nullable=False)  # internal, external
     provider = Column(String(100), nullable=False)  # ioc-memory-provider, neo4j, etc.
     config = Column(JSONB, nullable=True)  # Provider-specific configuration
     enabled = Column(Boolean, nullable=False, default=True)
