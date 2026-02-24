@@ -16,11 +16,16 @@ class CognitiveFabricNode(Base):
     # Optional fields
     cfn_config = Column(JSONB, nullable=True)
     config = Column(JSONB, nullable=True)
+    ip_address = Column(String(45), nullable=True)
+    port = Column(String(5), nullable=True)
 
     # Status tracking
     status = Column(String(50), nullable=False, server_default=text("'online'"))
     last_seen = Column(DateTime, nullable=False, server_default=text("CURRENT_TIMESTAMP"))
     enabled = Column(Boolean, nullable=False, server_default="true")
+
+    # Config change tracking
+    config_timestamp = Column(DateTime, nullable=False, server_default=text("CURRENT_TIMESTAMP"))
 
     # Timestamp fields
     created_at = Column(DateTime, nullable=False, server_default=text("CURRENT_TIMESTAMP"))

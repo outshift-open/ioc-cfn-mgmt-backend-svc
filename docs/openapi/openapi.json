@@ -467,7 +467,7 @@
           "cognitive-fabric-nodes"
         ],
         "summary": "Cfn Heartbeat",
-        "description": "CFN heartbeat endpoint - updates last_seen timestamp\n\n- **cfn_id**: CFN identifier\n\nCFN nodes call this periodically (e.g., every 30 seconds) to indicate they are online.\nReturns the current status and last_seen timestamp.\n\nNote: This endpoint requires authentication but not write access.\nDisabled or deleted nodes will receive 403 Forbidden.",
+        "description": "CFN heartbeat endpoint - updates last_seen timestamp and returns config_timestamp\n\n- **cfn_id**: CFN identifier\n\nCFN nodes call this periodically (e.g., every 30 seconds) to indicate they are online.\nReturns the current status, last_seen timestamp, and config_timestamp.\n\nCFN compares the returned config_timestamp with its stored value.\nIf timestamps differ, CFN should call GET /cognitive-fabric-nodes/{cfn_id} to fetch updated config.\n\nNote: This endpoint requires authentication but not write access.\nDisabled or deleted nodes will receive 403 Forbidden.",
         "operationId": "cfn_heartbeat_api_cognitive_fabric_nodes__cfn_id__heartbeat_put",
         "security": [
           {
@@ -2674,16 +2674,24 @@
             "format": "date-time",
             "title": "Last Seen",
             "description": "Last heartbeat timestamp"
+          },
+          "config_timestamp": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Config Timestamp",
+            "description": "Current config timestamp for change detection"
           }
         },
         "type": "object",
         "required": [
           "status",
-          "last_seen"
+          "last_seen",
+          "config_timestamp"
         ],
         "title": "CognitiveFabricNodeHeartbeatResponse",
         "description": "Schema for heartbeat response",
         "example": {
+          "config_timestamp": "2026-01-30T12:34:56Z",
           "last_seen": "2026-01-30T12:34:56Z",
           "status": "online"
         }
@@ -2814,6 +2822,33 @@
             ],
             "title": "Cfn Config",
             "description": "CFN configuration used by the node"
+          },
+          "ip_address": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 45
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ip Address",
+            "description": "IP address of the CFN node"
+          },
+          "port": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "maximum": 65535.0,
+                "minimum": 1.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Port",
+            "description": "Port number of the CFN node"
           }
         },
         "type": "object",
@@ -2826,7 +2861,9 @@
           "cfn_config": {
             "log_level": "info"
           },
-          "cfn_name": "cfn-node-prod-1"
+          "cfn_name": "cfn-node-prod-1",
+          "ip_address": "192.168.1.100",
+          "port": 8080
         }
       },
       "CognitiveFabricNodeResponse": {
@@ -2876,6 +2913,30 @@
             "type": "boolean",
             "title": "Enabled",
             "description": "Whether node is enabled"
+          },
+          "ip_address": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ip Address",
+            "description": "IP address of the CFN node"
+          },
+          "port": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Port",
+            "description": "Port number of the CFN node"
           },
           "created_at": {
             "type": "string",
@@ -2941,6 +3002,7 @@
             },
             "cognitive_agents": [],
             "cognitive_engines": [],
+            "config_timestamp": "2026-01-31T01:29:22Z",
             "memory_providers": [],
             "policies": [],
             "workspaces": []
@@ -2991,6 +3053,33 @@
             ],
             "title": "Cfn Config",
             "description": "Updated CFN configuration"
+          },
+          "ip_address": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 45
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ip Address",
+            "description": "Updated IP address of the CFN node"
+          },
+          "port": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "maximum": 65535.0,
+                "minimum": 1.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Port",
+            "description": "Updated port number of the CFN node"
           }
         },
         "type": "object",
@@ -3000,7 +3089,9 @@
           "cfn_config": {
             "log_level": "debug"
           },
-          "cfn_name": "cfn-node-prod-1-updated"
+          "cfn_name": "cfn-node-prod-1-updated",
+          "ip_address": "192.168.1.101",
+          "port": 8081
         }
       },
       "HTTPValidationError": {

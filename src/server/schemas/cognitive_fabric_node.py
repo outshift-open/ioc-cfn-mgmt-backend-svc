@@ -20,6 +20,8 @@ class CognitiveFabricNodeRegisterRequest(BaseModel):
             "example": {
                 "cfn_name": "cfn-node-prod-1",
                 "cfn_config": {"log_level": "info"},
+                "ip_address": "192.168.1.100",
+                "port": 8080,
             }
         }
     )
@@ -34,6 +36,17 @@ class CognitiveFabricNodeRegisterRequest(BaseModel):
         None,
         description="CFN configuration used by the node",
     )
+    ip_address: Optional[str] = Field(
+        None,
+        description="IP address of the CFN node",
+        max_length=45,
+    )
+    port: Optional[int] = Field(
+        None,
+        description="Port number of the CFN node",
+        ge=1,
+        le=65535,
+    )
 
 
 class CognitiveFabricNodeUpdateRequest(BaseModel):
@@ -44,6 +57,8 @@ class CognitiveFabricNodeUpdateRequest(BaseModel):
             "example": {
                 "cfn_name": "cfn-node-prod-1-updated",
                 "cfn_config": {"log_level": "debug"},
+                "ip_address": "192.168.1.101",
+                "port": 8081,
             }
         }
     )
@@ -58,6 +73,17 @@ class CognitiveFabricNodeUpdateRequest(BaseModel):
         None,
         description="Updated CFN configuration",
     )
+    ip_address: Optional[str] = Field(
+        None,
+        description="Updated IP address of the CFN node",
+        max_length=45,
+    )
+    port: Optional[int] = Field(
+        None,
+        description="Updated port number of the CFN node",
+        ge=1,
+        le=65535,
+    )
 
 
 class CognitiveFabricNodeResponse(BaseModel):
@@ -70,6 +96,7 @@ class CognitiveFabricNodeResponse(BaseModel):
                 "workspace_ids": [],
                 "cfn_name": "cfn-node-prod-1",
                 "config": {
+                    "config_timestamp": "2026-01-31T01:29:22Z",
                     "cfn_config": {"log_level": "info"},
                     "policies": [],
                     "workspaces": [],
@@ -95,6 +122,8 @@ class CognitiveFabricNodeResponse(BaseModel):
     status: CognitiveFabricNodeStatus = Field(..., description="Current node status")
     last_seen: datetime = Field(..., description="Last heartbeat timestamp")
     enabled: bool = Field(..., description="Whether node is enabled")
+    ip_address: Optional[str] = Field(None, description="IP address of the CFN node")
+    port: Optional[int] = Field(None, description="Port number of the CFN node")
     created_at: datetime = Field(..., description="Creation timestamp")
     updated_at: Optional[datetime] = Field(None, description="Last update timestamp")
     created_by: Optional[str] = Field(None, description="Creator user ID")
@@ -161,9 +190,11 @@ class CognitiveFabricNodeHeartbeatResponse(BaseModel):
             "example": {
                 "status": "online",
                 "last_seen": "2026-01-30T12:34:56Z",
+                "config_timestamp": "2026-01-30T12:34:56Z",
             }
         }
     )
 
     status: CognitiveFabricNodeStatus = Field(..., description="Current node status")
     last_seen: datetime = Field(..., description="Last heartbeat timestamp")
+    config_timestamp: datetime = Field(..., description="Current config timestamp for change detection")

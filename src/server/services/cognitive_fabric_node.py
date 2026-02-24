@@ -46,6 +46,87 @@ class CognitiveFabricNodeService:
         )
         return [ws.id for ws in workspaces]
 
+    def update_config_for_workspace(self, workspace_id: str) -> None:
+        """
+        Update config_timestamp and regenerate config for all CFNs serving this workspace.
+
+        Called when workspace resources change (MAS, etc.)
+
+        Args:
+            workspace_id: ID of the workspace whose resources changed
+        """
+        try:
+            db = RelationalDB()
+            session = db.get_session()
+
+            try:
+                # Find the workspace and its CFN
+                workspace = (
+                    session.query(WorkspaceModel)
+                    .filter(WorkspaceModel.id == workspace_id, WorkspaceModel.deleted_at.is_(None))
+                    .first()
+                )
+
+                if not workspace or not workspace.cfn_id:
+                    return  # No CFN associated, nothing to update
+
+                # Get the CFN
+                cfn = (
+                    session.query(CognitiveFabricNodeModel)
+                    .filter(CognitiveFabricNodeModel.cfn_id == workspace.cfn_id)
+                    .first()
+                )
+
+                if cfn:
+                    now = datetime.now(timezone.utc)
+                    cfn.config_timestamp = now
+
+                    # Regenerate config
+                    workspace_ids = self._get_workspace_ids(session, cfn.cfn_id)
+                    cfn.config = self.generate_config(cfn.cfn_id, workspace_ids, cfn.cfn_config, now)
+
+                    session.commit()
+
+            finally:
+                session.close()
+
+        except Exception:
+            # Silently fail to avoid breaking the calling operation
+            pass
+
+    def update_config_for_all_cfns(self) -> None:
+        """
+        Update config_timestamp and regenerate config for all CFNs.
+
+        Called when global resources change (cognitive agents, memory providers, etc.)
+        """
+        try:
+            db = RelationalDB()
+            session = db.get_session()
+
+            try:
+                # Get all non-deleted CFNs
+                cfns = (
+                    session.query(CognitiveFabricNodeModel).filter(CognitiveFabricNodeModel.deleted_at.is_(None)).all()
+                )
+
+                now = datetime.now(timezone.utc)
+                for cfn in cfns:
+                    cfn.config_timestamp = now
+
+                    # Regenerate config
+                    workspace_ids = self._get_workspace_ids(session, cfn.cfn_id)
+                    cfn.config = self.generate_config(cfn.cfn_id, workspace_ids, cfn.cfn_config, now)
+
+                session.commit()
+
+            finally:
+                session.close()
+
+        except Exception:
+            # Silently fail to avoid breaking the calling operation
+            pass
+
     def create(self, cfn_data: CognitiveFabricNodeRegisterRequest, user_id: str) -> CognitiveFabricNodeResponse:
         """
         Create a new Cognitive Fabric Node or refresh an active one
@@ -98,10 +179,12 @@ class CognitiveFabricNodeService:
                 # Scenario 3: New CFN - Create new entry with generated UUID
                 cfn_id = str(uuid.uuid4())
 
-                # Generate config (no workspaces initially)
-                config = self.generate_config(cfn_id, [], cfn_data.cfn_config)
-
                 # Create new CFN record with offline status
+                now = datetime.now(timezone.utc)
+
+                # Generate config (no workspaces initially)
+                config = self.generate_config(cfn_id, [], cfn_data.cfn_config, now)
+
                 new_cfn = CognitiveFabricNodeModel(
                     cfn_id=cfn_id,
                     cfn_name=cfn_data.cfn_name,
@@ -109,7 +192,10 @@ class CognitiveFabricNodeService:
                     config=config,
                     status=CognitiveFabricNodeStatus.OFFLINE.value,
                     enabled=True,
-                    last_seen=datetime.now(timezone.utc),
+                    last_seen=now,
+                    config_timestamp=now,
+                    ip_address=cfn_data.ip_address,
+                    port=str(cfn_data.port) if cfn_data.port else None,
                     created_by=user_id,
                 )
 
@@ -128,6 +214,8 @@ class CognitiveFabricNodeService:
                     status=CognitiveFabricNodeStatus(new_cfn.status),
                     last_seen=new_cfn.last_seen,
                     enabled=new_cfn.enabled,
+                    ip_address=new_cfn.ip_address,
+                    port=int(new_cfn.port) if new_cfn.port else None,
                     created_at=new_cfn.created_at,
                     updated_at=new_cfn.updated_at,
                     created_by=new_cfn.created_by,
@@ -221,18 +309,20 @@ class CognitiveFabricNodeService:
                 )
 
         # Re-activate the CFN with offline status
+        now = datetime.now(timezone.utc)
         cfn.cfn_name = cfn_data.cfn_name
         cfn.cfn_config = cfn_data.cfn_config
         cfn.status = CognitiveFabricNodeStatus.OFFLINE.value
-        cfn.last_seen = datetime.now(timezone.utc)
+        cfn.last_seen = now
         cfn.enabled = True
         cfn.deleted_at = None
-        cfn.updated_at = datetime.now(timezone.utc)
+        cfn.updated_at = now
         cfn.updated_by = user_id
 
         # Regenerate config with existing workspace associations
         workspace_ids = self._get_workspace_ids(session, cfn.cfn_id)
-        cfn.config = self.generate_config(cfn.cfn_id, workspace_ids, cfn.cfn_config)
+        cfn.config = self.generate_config(cfn.cfn_id, workspace_ids, cfn.cfn_config, now)
+        cfn.config_timestamp = now  # Config regenerated
 
         session.commit()
         session.refresh(cfn)
@@ -245,6 +335,8 @@ class CognitiveFabricNodeService:
             status=CognitiveFabricNodeStatus(cfn.status),
             last_seen=cfn.last_seen,
             enabled=cfn.enabled,
+            ip_address=cfn.ip_address,
+            port=int(cfn.port) if cfn.port else None,
             created_at=cfn.created_at,
             updated_at=cfn.updated_at,
             created_by=cfn.created_by,
@@ -287,14 +379,21 @@ class CognitiveFabricNodeService:
         """
         # Update CFN config and refresh (keep existing workspace associations and status)
         # Name is already validated (cfn was found by this name)
+        now = datetime.now(timezone.utc)
         cfn.cfn_config = cfn_data.cfn_config
+        # Update ip_address and port if provided
+        if cfn_data.ip_address is not None:
+            cfn.ip_address = cfn_data.ip_address
+        if cfn_data.port is not None:
+            cfn.port = str(cfn_data.port)
         # Keep existing status (don't reset to offline on refresh)
-        cfn.last_seen = datetime.now(timezone.utc)
-        cfn.updated_at = datetime.now(timezone.utc)
+        cfn.last_seen = now
+        cfn.updated_at = now
         cfn.updated_by = user_id
 
         workspace_ids = self._get_workspace_ids(session, cfn.cfn_id)
         cfn.config = self.generate_config(cfn.cfn_id, workspace_ids, cfn.cfn_config)
+        cfn.config_timestamp = now  # Config regenerated
 
         session.commit()
         session.refresh(cfn)
@@ -307,6 +406,8 @@ class CognitiveFabricNodeService:
             status=CognitiveFabricNodeStatus(cfn.status),
             last_seen=cfn.last_seen,
             enabled=cfn.enabled,
+            ip_address=cfn.ip_address,
+            port=int(cfn.port) if cfn.port else None,
             created_at=cfn.created_at,
             updated_at=cfn.updated_at,
             created_by=cfn.created_by,
@@ -385,16 +486,31 @@ class CognitiveFabricNodeService:
                     cfn.cfn_name = cfn_data.cfn_name
 
                 # Update config if provided
+                config_changed = False
                 if cfn_data.cfn_config is not None:
                     cfn.cfn_config = cfn_data.cfn_config
+                    config_changed = True
+
+                # Update ip_address and port if provided
+                if cfn_data.ip_address is not None:
+                    cfn.ip_address = cfn_data.ip_address
+                if cfn_data.port is not None:
+                    cfn.port = str(cfn_data.port)
 
                 # Regenerate config
                 workspace_ids = self._get_workspace_ids(session, cfn_id)
-                cfn.config = self.generate_config(cfn_id, workspace_ids, cfn.cfn_config)
 
                 # Update metadata
-                cfn.updated_at = datetime.now(timezone.utc)
+                now = datetime.now(timezone.utc)
+                cfn.updated_at = now
                 cfn.updated_by = user_id
+
+                # Update config_timestamp if config changed
+                if config_changed or cfn_data.cfn_name is not None:
+                    cfn.config_timestamp = now
+
+                # Generate config with timestamp
+                cfn.config = self.generate_config(cfn_id, workspace_ids, cfn.cfn_config, cfn.config_timestamp)
 
                 session.commit()
                 session.refresh(cfn)
@@ -407,6 +523,8 @@ class CognitiveFabricNodeService:
                     status=CognitiveFabricNodeStatus(cfn.status),
                     last_seen=cfn.last_seen,
                     enabled=cfn.enabled,
+                    ip_address=cfn.ip_address,
+                    port=int(cfn.port) if cfn.port else None,
                     created_at=cfn.created_at,
                     updated_at=cfn.updated_at,
                     created_by=cfn.created_by,
@@ -524,6 +642,8 @@ class CognitiveFabricNodeService:
                     status=CognitiveFabricNodeStatus(cfn.status),
                     last_seen=cfn.last_seen,
                     enabled=cfn.enabled,
+                    ip_address=cfn.ip_address,
+                    port=int(cfn.port) if cfn.port else None,
                     created_at=cfn.created_at,
                     updated_at=cfn.updated_at,
                     created_by=cfn.created_by,
@@ -709,6 +829,8 @@ class CognitiveFabricNodeService:
                     status=CognitiveFabricNodeStatus(cfn.status),
                     last_seen=cfn.last_seen,
                     enabled=cfn.enabled,
+                    ip_address=cfn.ip_address,
+                    port=int(cfn.port) if cfn.port else None,
                     created_at=cfn.created_at,
                     updated_at=cfn.updated_at,
                     created_by=cfn.created_by,
@@ -758,7 +880,7 @@ class CognitiveFabricNodeService:
             cfn_id: CFN identifier
 
         Returns:
-            CognitiveFabricNodeHeartbeatResponse with status and last_seen
+            CognitiveFabricNodeHeartbeatResponse with status, last_seen, and config_timestamp
 
         Raises:
             HTTPException: 404 if not found, 403 if blocked
@@ -807,6 +929,7 @@ class CognitiveFabricNodeService:
                 return CognitiveFabricNodeHeartbeatResponse(
                     status=CognitiveFabricNodeStatus(cfn.status),
                     last_seen=cfn.last_seen,
+                    config_timestamp=cfn.config_timestamp,
                 )
 
             except HTTPException:
@@ -952,6 +1075,8 @@ class CognitiveFabricNodeService:
                     status=CognitiveFabricNodeStatus(cfn.status),
                     last_seen=cfn.last_seen,
                     enabled=cfn.enabled,
+                    ip_address=cfn.ip_address,
+                    port=int(cfn.port) if cfn.port else None,
                     created_at=cfn.created_at,
                     updated_at=cfn.updated_at,
                     created_by=cfn.created_by,
@@ -969,7 +1094,9 @@ class CognitiveFabricNodeService:
                 detail=f"Failed to retrieve CFN node: {str(e)}",
             )
 
-    def generate_config(self, cfn_id: str, workspace_ids: List[str] = None, cfn_config: dict = None) -> dict:
+    def generate_config(
+        self, cfn_id: str, workspace_ids: List[str] = None, cfn_config: dict = None, config_timestamp: datetime = None
+    ) -> dict:
         """
         Generate configuration for CFN
 
@@ -979,9 +1106,10 @@ class CognitiveFabricNodeService:
             cfn_id: CFN identifier
             workspace_ids: List of workspace IDs (if None, fetches from join table)
             cfn_config: CFN-specific configuration to include in the config
+            config_timestamp: Timestamp when config was last modified
 
         Returns:
-            Dictionary with configuration including cfn_config
+            Dictionary with configuration including cfn_config and config_timestamp
         """
         if workspace_ids is None:
             db = RelationalDB()
@@ -1083,7 +1211,14 @@ class CognitiveFabricNodeService:
         except Exception:
             providers_payload = []
 
-        return {"cfn_config": cfn_config or {}, "workspaces": workspaces_payload, "memory_providers": providers_payload}
+        return {
+            "config_timestamp": (
+                config_timestamp.isoformat() if config_timestamp else datetime.now(timezone.utc).isoformat()
+            ),
+            "cfn_config": cfn_config or {},
+            "workspaces": workspaces_payload,
+            "memory_providers": providers_payload,
+        }
 
     def mark_stale_nodes_offline(self, threshold_minutes: int = 2) -> int:
         """

@@ -75,6 +75,11 @@ class MemoryProviderService:
                 session.commit()
                 session.refresh(new_provider)
 
+                # Update all CFN configs since memory providers are global
+                from server.services.cognitive_fabric_node import cognitive_fabric_node_service
+
+                cognitive_fabric_node_service.update_config_for_all_cfns()
+
                 return MemoryProviderDetail(
                     memory_provider_id=new_provider.memory_provider_id,
                     memory_provider_name=new_provider.memory_provider_name,
@@ -259,6 +264,11 @@ class MemoryProviderService:
                 session.commit()
                 session.refresh(provider)
 
+                # Update all CFN configs since memory providers are global
+                from server.services.cognitive_fabric_node import cognitive_fabric_node_service
+
+                cognitive_fabric_node_service.update_config_for_all_cfns()
+
                 return MemoryProviderDetail(
                     memory_provider_id=provider.memory_provider_id,
                     memory_provider_name=provider.memory_provider_name,
@@ -323,6 +333,11 @@ class MemoryProviderService:
                 provider.updated_at = datetime.now(timezone.utc)
 
                 session.commit()
+
+                # Update all CFN configs since memory providers are global
+                from server.services.cognitive_fabric_node import cognitive_fabric_node_service
+
+                cognitive_fabric_node_service.update_config_for_all_cfns()
 
                 return {
                     "message": f"Memory provider '{memory_provider_id}' deleted successfully",

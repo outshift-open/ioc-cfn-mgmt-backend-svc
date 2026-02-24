@@ -204,6 +204,28 @@ class WorkspaceService:
                 session.commit()
                 session.refresh(new_workspace)
 
+                if workspace_data.cfn_id:
+                    from server.services.cognitive_fabric_node import cognitive_fabric_node_service
+
+                    cfn = (
+                        session.query(CognitiveFabricNodeModel)
+                        .filter(CognitiveFabricNodeModel.cfn_id == workspace_data.cfn_id)
+                        .first()
+                    )
+                    if cfn:
+                        now = datetime.now(timezone.utc)
+                        cfn.config_timestamp = now
+                        workspace_ids = (
+                            session.query(WorkspaceModel.id)
+                            .filter(WorkspaceModel.cfn_id == workspace_data.cfn_id, WorkspaceModel.deleted_at.is_(None))
+                            .all()
+                        )
+                        ws_ids = [ws.id for ws in workspace_ids]
+                        cfn.config = cognitive_fabric_node_service.generate_config(
+                            cfn.cfn_id, ws_ids, cfn.cfn_config, now
+                        )
+                        session.commit()
+
                 # Automatically add creator as workspace admin
                 from server.services.workspace_member import workspace_member_service
 
@@ -487,6 +509,7 @@ class WorkspaceService:
                     workspace.name = workspace_data.name  # type: ignore[assignment]
 
                 # Handle CFN reassignment
+                old_cfn_id = workspace.cfn_id
                 if workspace_data.cfn_id is not None:
                     # Validate new CFN exists and is enabled
                     from server.database.relational_db.models.cognitive_fabric_node import (
@@ -520,6 +543,59 @@ class WorkspaceService:
 
                 session.commit()
                 session.refresh(workspace)
+
+                # Update CFN config_timestamp if workspace's CFN association changed
+                if workspace_data.cfn_id is not None and old_cfn_id != workspace_data.cfn_id:
+                    from server.database.relational_db.models.cognitive_fabric_node import (
+                        CognitiveFabricNode as CognitiveFabricNodeModel,
+                    )
+                    from server.services.cognitive_fabric_node import cognitive_fabric_node_service
+
+                    now = datetime.now(timezone.utc)
+
+                    # Update old CFN if it existed (workspace removed from it)
+                    if old_cfn_id:
+                        old_cfn = (
+                            session.query(CognitiveFabricNodeModel)
+                            .filter(CognitiveFabricNodeModel.cfn_id == old_cfn_id)
+                            .first()
+                        )
+                        if old_cfn:
+                            old_cfn.config_timestamp = now
+                            # Regenerate config without removed workspace
+                            old_workspace_ids = (
+                                session.query(WorkspaceModel.id)
+                                .filter(WorkspaceModel.cfn_id == old_cfn_id, WorkspaceModel.deleted_at.is_(None))
+                                .all()
+                            )
+                            old_ws_ids = [ws.id for ws in old_workspace_ids]
+                            old_cfn.config = cognitive_fabric_node_service.generate_config(
+                                old_cfn.cfn_id, old_ws_ids, old_cfn.cfn_config, now
+                            )
+
+                    # Update new CFN (workspace added to it)
+                    if workspace_data.cfn_id:
+                        new_cfn = (
+                            session.query(CognitiveFabricNodeModel)
+                            .filter(CognitiveFabricNodeModel.cfn_id == workspace_data.cfn_id)
+                            .first()
+                        )
+                        if new_cfn:
+                            new_cfn.config_timestamp = now
+                            # Regenerate config with added workspace
+                            new_workspace_ids = (
+                                session.query(WorkspaceModel.id)
+                                .filter(
+                                    WorkspaceModel.cfn_id == workspace_data.cfn_id, WorkspaceModel.deleted_at.is_(None)
+                                )
+                                .all()
+                            )
+                            new_ws_ids = [ws.id for ws in new_workspace_ids]
+                            new_cfn.config = cognitive_fabric_node_service.generate_config(
+                                new_cfn.cfn_id, new_ws_ids, new_cfn.cfn_config, now
+                            )
+
+                    session.commit()
 
                 # Get creator username
                 from server.database.relational_db.models.user import User as UserModel
@@ -648,7 +724,39 @@ class WorkspaceService:
                 workspace.deleted_at = datetime.now(timezone.utc)  # type: ignore[assignment]
                 message = "Workspace deleted successfully"
 
+                # Track CFN ID before deletion
+                deleted_workspace_cfn_id = workspace.cfn_id
+
                 session.commit()
+
+                # Update CFN config_timestamp if workspace was associated with a CFN
+                if deleted_workspace_cfn_id:
+                    from server.database.relational_db.models.cognitive_fabric_node import (
+                        CognitiveFabricNode as CognitiveFabricNodeModel,
+                    )
+                    from server.services.cognitive_fabric_node import cognitive_fabric_node_service
+
+                    cfn = (
+                        session.query(CognitiveFabricNodeModel)
+                        .filter(CognitiveFabricNodeModel.cfn_id == deleted_workspace_cfn_id)
+                        .first()
+                    )
+                    if cfn:
+                        now = datetime.now(timezone.utc)
+                        cfn.config_timestamp = now
+                        # Regenerate config without deleted workspace
+                        workspace_ids = (
+                            session.query(WorkspaceModel.id)
+                            .filter(
+                                WorkspaceModel.cfn_id == deleted_workspace_cfn_id, WorkspaceModel.deleted_at.is_(None)
+                            )
+                            .all()
+                        )
+                        ws_ids = [ws.id for ws in workspace_ids]
+                        cfn.config = cognitive_fabric_node_service.generate_config(
+                            cfn.cfn_id, ws_ids, cfn.cfn_config, now
+                        )
+                        session.commit()
 
                 # add to audits table
                 audit_service.create_audit(

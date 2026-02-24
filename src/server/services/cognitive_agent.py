@@ -77,6 +77,11 @@ class CognitiveAgentService:
                 session.commit()
                 session.refresh(new_agent)
 
+                # Update all CFN configs since agents are global
+                from server.services.cognitive_fabric_node import cognitive_fabric_node_service
+
+                cognitive_fabric_node_service.update_config_for_all_cfns()
+
                 return CognitiveAgentDetail(
                     cognitive_agent_id=new_agent.cognitive_agent_id,
                     workspace_id=new_agent.workspace_id,
@@ -267,6 +272,11 @@ class CognitiveAgentService:
                 session.commit()
                 session.refresh(agent)
 
+                # Update all CFN configs since agents are global
+                from server.services.cognitive_fabric_node import cognitive_fabric_node_service
+
+                cognitive_fabric_node_service.update_config_for_all_cfns()
+
                 return CognitiveAgentDetail(
                     cognitive_agent_id=agent.cognitive_agent_id,
                     workspace_id=agent.workspace_id,
@@ -333,6 +343,11 @@ class CognitiveAgentService:
                 agent.updated_at = datetime.now(timezone.utc)
 
                 session.commit()
+
+                # Update all CFN configs since agents are global
+                from server.services.cognitive_fabric_node import cognitive_fabric_node_service
+
+                cognitive_fabric_node_service.update_config_for_all_cfns()
 
                 return {
                     "message": f"Cognitive agent '{cognitive_agent_id}' deleted successfully",

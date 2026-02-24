@@ -5,11 +5,13 @@ LABEL org.opencontainers.image.source=https://github.com/cisco-eti/ioc-cfn-mgmt-
 
 # Install curl for health checks, wget for atlas installation, postgresql-client for database seeding, and build essentials for regopy
 # libatomic1 is required for regopy on some architectures
+# python3-dev is required to build greenlet from source when wheels aren't available
 RUN apt-get update && apt-get install -y \
     curl \
     wget \
     postgresql-client \
     build-essential \
+    python3-dev \
     libatomic1 \
     && rm -rf /var/lib/apt/lists/*
 

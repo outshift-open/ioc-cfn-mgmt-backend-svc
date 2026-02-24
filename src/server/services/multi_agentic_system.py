@@ -67,6 +67,11 @@ class MultiAgenticSystemService:
                     name=new_mas.name,
                 )
 
+                # Update CFN config for this workspace
+                from server.services.cognitive_fabric_node import cognitive_fabric_node_service
+
+                cognitive_fabric_node_service.update_config_for_workspace(workspace_id)
+
                 # add to audits table
                 audit_service.create_audit(
                     AuditRequest(
@@ -267,6 +272,11 @@ class MultiAgenticSystemService:
                 session.commit()
                 session.refresh(mas)
 
+                # Update CFN config for this workspace
+                from server.services.cognitive_fabric_node import cognitive_fabric_node_service
+
+                cognitive_fabric_node_service.update_config_for_workspace(workspace_id)
+
                 response = MultiAgenticSystemSchema(
                     id=mas.id,
                     workspace_id=mas.workspace_id,
@@ -348,6 +358,11 @@ class MultiAgenticSystemService:
                     message = "Multi-agentic system deleted successfully"
 
                 session.commit()
+
+                # Update CFN config for this workspace
+                from server.services.cognitive_fabric_node import cognitive_fabric_node_service
+
+                cognitive_fabric_node_service.update_config_for_workspace(workspace_id)
 
                 # add to audits table
                 audit_service.create_audit(

@@ -175,6 +175,8 @@ def registered_cfn(client):
     cfn_data = {
         "cfn_name": cfn_name,
         "cfn_config": {"memory": "4GB", "max_connections": 100},
+        "ip_address": "192.168.1.100",
+        "port": 8080,
     }
     cfn_response = client.post("/api/cognitive-fabric-nodes/register", json=cfn_data)
     assert cfn_response.status_code == 201
@@ -187,6 +189,8 @@ def created_cfn(client, sample_cfn):
     cfn_data = {
         "cfn_name": "Test CFN Node",
         "cfn_config": {"memory": "4GB", "max_connections": 100},
+        "ip_address": "192.168.1.100",
+        "port": 8080,
     }
     cfn_response = client.post("/api/cognitive-fabric-nodes/register", json=cfn_data)
     assert cfn_response.status_code == 201

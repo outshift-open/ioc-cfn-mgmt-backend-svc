@@ -1,3 +1,5 @@
-h1:UxoGB7FaKLAGtbfPAbYHq66ZrARo341bEteHRL/2LkI=
+h1:tb2ZuFltcTw0hfrnbPPKhwST7FRHc68kXX2a0zqEGds=
 20260128000001_consolidated_schema.sql h1:RpOMNdr1rBCf/Emv7+LKZyukuXnyhvDjzpYo818H0MU=
 20260219000001_add_workspace_scoped_agents_and_policies.sql h1:opnySsjBQ1imDOTtgjnTW/7q4GidlmxoeHzoSueKXrw=
+20260223000001_add_config_timestamp_to_cfn.sql h1:rnlTFU25zxguKhXEi901K0sdqHG5dwGFOYpg4iP7/Yc=
+20260223000002_add_ip_port_to_cfn.sql h1:wrCFQZwc4gOfW1MTswS3IpMHpfLh7+CPiCikHH28pPQ=

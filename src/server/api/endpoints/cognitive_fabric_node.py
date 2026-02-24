@@ -184,12 +184,15 @@ def cfn_heartbeat(
     auth_user: dict = Depends(get_auth_user),
 ):
     """
-    CFN heartbeat endpoint - updates last_seen timestamp
+    CFN heartbeat endpoint - updates last_seen timestamp and returns config_timestamp
 
     - **cfn_id**: CFN identifier
 
     CFN nodes call this periodically (e.g., every 30 seconds) to indicate they are online.
-    Returns the current status and last_seen timestamp.
+    Returns the current status, last_seen timestamp, and config_timestamp.
+
+    CFN compares the returned config_timestamp with its stored value.
+    If timestamps differ, CFN should call GET /cognitive-fabric-nodes/{cfn_id} to fetch updated config.
 
     Note: This endpoint requires authentication but not write access.
     Disabled or deleted nodes will receive 403 Forbidden.
