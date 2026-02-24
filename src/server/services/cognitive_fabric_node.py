@@ -1212,7 +1212,14 @@ class CognitiveFabricNodeService:
             except Exception:
                 providers_payload = []
 
-            return {"workspaces": workspaces_payload, "memory_providers": providers_payload}
+            return {
+                "config_timestamp": (
+                    config_timestamp.isoformat() if config_timestamp else datetime.now(timezone.utc).isoformat()
+                ),
+                "cfn_config": cfn_config or {},
+                "workspaces": workspaces_payload,
+                "memory_providers": providers_payload,
+            }
 
         finally:
             session.close()

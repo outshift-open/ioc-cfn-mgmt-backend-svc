@@ -546,7 +546,7 @@ class TestWorkspaceEndpoints:
         user1_cfn_resp = user1_client.post("/api/cognitive-fabric-nodes", json={"cfn_name": "user1-super-admin-cfn"})
         assert user1_cfn_resp.status_code == 201
         user1_cfn_id = user1_cfn_resp.json()["cfn_id"]
-        
+
         user2_cfn_resp = user2_client.post("/api/cognitive-fabric-nodes", json={"cfn_name": "user2-super-admin-cfn"})
         assert user2_cfn_resp.status_code == 201
         user2_cfn_id = user2_cfn_resp.json()["cfn_id"]
