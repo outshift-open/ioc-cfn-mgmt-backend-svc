@@ -16,7 +16,7 @@ class Workspace(Base):
     cfn_id = Column(
         String(255),
         ForeignKey("cognitive_fabric_node.cfn_id", ondelete="RESTRICT"),
-        nullable=False,  # Every workspace must be assigned to a CFN
+        nullable=True,  # Nullable to support default workspace without CFN
     )
 
     # Optional fields

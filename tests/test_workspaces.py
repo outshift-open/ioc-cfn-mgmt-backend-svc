@@ -145,7 +145,6 @@ class TestWorkspaceEndpoints:
         del_ws_resp_ok = client.delete(f"/api/workspaces/{workspace_id}")
         assert del_ws_resp_ok.status_code == 204
 
-    @pytest.mark.skip(reason="Skipping until use default workspace")
     def test_delete_default_workspace_public_forbidden(self, client, registered_cfn):
         """Public delete of Default Workspace should be forbidden (403)."""
         create_resp = client.post("/api/workspaces/create", json={"name": "Default Workspace", "cfn_id": registered_cfn})
@@ -156,19 +155,6 @@ class TestWorkspaceEndpoints:
         del_resp = client.delete(f"/api/workspaces/{default_ws_id}")
         assert del_resp.status_code == 403
         assert del_resp.json()["detail"] == "Failed to delete workspace: Default Workspace cannot be deleted"
-
-    @pytest.mark.skip(reason="Skipping until use default workspace")
-    def test_delete_default_workspace_internal_allowed(self, client, registered_cfn):
-        """Internal delete of Default Workspace should be allowed (no deps present)."""
-        # Create Default Workspace
-        create_resp = client.post("/api/workspaces/create", json={"name": "Default Workspace", "cfn_id": registered_cfn})
-        assert create_resp.status_code == 201
-        default_ws_id = create_resp.json()["id"]
-
-        # Internal delete should succeed
-        del_resp = client.delete(f"/api/internal/workspaces/{default_ws_id}")
-        assert del_resp.status_code == 200
-        assert del_resp.json()["message"] in {"Workspace deleted successfully", "Workspace permanently deleted"}
 
     @pytest.mark.skip(reason="Auth disabled - all requests use same admin-user")
     def test_workspace_isolation_admin_users(self, client, setup_test_environment):

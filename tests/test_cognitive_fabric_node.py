@@ -998,6 +998,38 @@ class TestCognitiveFabricNodeConfigTimestamp:
         refreshed_ts = datetime.fromisoformat(refreshed_config_timestamp.replace("Z", "+00:00"))
         assert refreshed_ts > initial_ts
 
+    def test_config_timestamp_format_consistency(self, client):
+        """Test that config_timestamp format is the same during registration and heartbeat"""
+        # Register CFN
+        cfn_data = {"cfn_name": "format-test-node", "cfn_config": {"version": "1.0"}}
+        register_response = client.post("/api/cognitive-fabric-nodes", json=cfn_data)
+        assert register_response.status_code == 201
+        cfn_id = register_response.json()["cfn_id"]
+
+        # Get config_timestamp from registration response (embedded in config)
+        registration_config = register_response.json()["config"]
+        assert "config_timestamp" in registration_config
+        registration_config_timestamp = registration_config["config_timestamp"]
+
+        # Send heartbeat to get config_timestamp as top-level field
+        heartbeat_response = client.put(f"/api/cognitive-fabric-nodes/{cfn_id}/heartbeat")
+        assert heartbeat_response.status_code == 200
+        heartbeat_config_timestamp = heartbeat_response.json()["config_timestamp"]
+
+        # Both timestamps should use the same format
+        # Check if both end with 'Z' (UTC indicator) or both end with '+00:00'
+        assert (
+            registration_config_timestamp.endswith("Z") == heartbeat_config_timestamp.endswith("Z")
+        ), f"Format mismatch: registration={registration_config_timestamp}, heartbeat={heartbeat_config_timestamp}"
+
+        # Verify both are parseable as ISO format
+        registration_ts = datetime.fromisoformat(registration_config_timestamp.replace("Z", "+00:00"))
+        heartbeat_ts = datetime.fromisoformat(heartbeat_config_timestamp.replace("Z", "+00:00"))
+
+        # They should be the same timestamp (or very close)
+        time_diff = abs((heartbeat_ts - registration_ts).total_seconds())
+        assert time_diff < 1.0, f"Timestamps differ by {time_diff} seconds"
+
 
 # Pytest fixtures
 

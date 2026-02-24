@@ -22,9 +22,9 @@ class WorkspaceCreate(BaseModel):
         min_length=1,
         max_length=100,
     )
-    cfn_id: str = Field(
-        ...,
-        description="CFN identifier to associate with this workspace (required)",
+    cfn_id: Optional[str] = Field(
+        None,
+        description="CFN identifier to associate with this workspace (optional for default workspace)",
         min_length=1,
         max_length=255,
     )

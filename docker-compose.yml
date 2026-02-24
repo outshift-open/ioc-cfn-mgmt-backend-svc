@@ -87,7 +87,7 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
-    image: ghcr.io/cisco-eti/ioc-cfn-mgmt-plane-svc:latest
+    # image: ghcr.io/cisco-eti/ioc-cfn-mgmt-plane-svc:latest
     platform: ${DOCKER_DEFAULT_PLATFORM}
     profiles:
       - full-stack
@@ -104,6 +104,7 @@ services:
       - POSTGRES_USER=${POSTGRES_USER}
       - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
       - PORT=9000
+      - CFN_DEV_MODE=${CFN_DEV_MODE}
     restart: unless-stopped
     depends_on:
       ioc-mgmt-relational-db:

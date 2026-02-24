@@ -927,10 +927,22 @@ class CognitiveFabricNodeService:
                 session.commit()
                 session.refresh(cfn)
 
+                # Ensure timestamps have timezone info for consistent ISO format serialization
+                last_seen = (
+                    cfn.last_seen.replace(tzinfo=timezone.utc)
+                    if cfn.last_seen and cfn.last_seen.tzinfo is None
+                    else cfn.last_seen
+                )
+                config_ts = (
+                    cfn.config_timestamp.replace(tzinfo=timezone.utc)
+                    if cfn.config_timestamp and cfn.config_timestamp.tzinfo is None
+                    else cfn.config_timestamp
+                )
+
                 return CognitiveFabricNodeHeartbeatResponse(
                     status=CognitiveFabricNodeStatus(cfn.status),
-                    last_seen=cfn.last_seen,
-                    config_timestamp=cfn.config_timestamp,
+                    last_seen=last_seen,
+                    config_timestamp=config_ts,
                 )
 
             except HTTPException:
@@ -1214,7 +1226,9 @@ class CognitiveFabricNodeService:
 
             return {
                 "config_timestamp": (
-                    config_timestamp.isoformat() if config_timestamp else datetime.now(timezone.utc).isoformat()
+                    config_timestamp.isoformat().replace("+00:00", "Z")
+                    if config_timestamp
+                    else datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")
                 ),
                 "cfn_config": cfn_config or {},
                 "workspaces": workspaces_payload,

@@ -177,6 +177,10 @@ class WorkspaceService:
                     "cfn_id": workspace_data.cfn_id,
                 }
 
+                # Add workspace_id if provided (for admin default workspace)
+                if workspace_id:
+                    workspace_kwargs["id"] = workspace_id
+
                 # Check if workspace name already exists for the user to prevent duplicates
                 existing_workspace = (
                     session.query(WorkspaceModel)
@@ -656,11 +660,13 @@ class WorkspaceService:
         workspace_id: str,
         user_id: str = None,
         user_role: str = None,
+        allow_default_delete: bool = False,
     ) -> dict:
         """Delete a workspace (soft delete only).
 
         If user_id and user_role are provided, verifies the user has access to the workspace.
         Super admins have access to all workspaces. Regular users must be workspace admins or creators.
+        Blocks deletion of the Default Workspace unless allow_default_delete is True.
         """
         try:
             db = RelationalDB()
@@ -682,6 +688,13 @@ class WorkspaceService:
                     raise HTTPException(
                         status_code=status.HTTP_404_NOT_FOUND,
                         detail="Workspace not found",
+                    )
+
+                # Block deletion of the Default Workspace (only allow via internal API)
+                if (not allow_default_delete) and (workspace.name == self.DEFAULT_WORKSPACE_NAME):
+                    raise HTTPException(
+                        status_code=status.HTTP_403_FORBIDDEN,
+                        detail="Failed to delete workspace: Default Workspace cannot be deleted",
                     )
 
                 # Check access if user info is provided

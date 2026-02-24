@@ -3825,11 +3825,18 @@
             "description": "Name of the workspace"
           },
           "cfn_id": {
-            "type": "string",
-            "maxLength": 255,
-            "minLength": 1,
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 255,
+                "minLength": 1
+              },
+              {
+                "type": "null"
+              }
+            ],
             "title": "Cfn Id",
-            "description": "CFN identifier to associate with this workspace (required)"
+            "description": "CFN identifier to associate with this workspace (optional for default workspace)"
           },
           "config": {
             "additionalProperties": true,
@@ -3840,8 +3847,7 @@
         },
         "type": "object",
         "required": [
-          "name",
-          "cfn_id"
+          "name"
         ],
         "title": "WorkspaceCreate",
         "example": {

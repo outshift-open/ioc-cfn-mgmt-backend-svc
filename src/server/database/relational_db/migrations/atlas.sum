@@ -1,6 +1,7 @@
-h1:l7CVyCX/7qH1nLdi9b1IgnBNtGHSFsHH2yvp2IGlhqw=
+h1:DcdVFrywnDxWOa6Wlh9r/GZLUtUFGEY8aq6P5kB3R9Q=
 20260128000001_consolidated_schema.sql h1:tcjjOfWdNpe6+/lcG9JyugKTnKU8Z/W4sO+Bm/MtOOM=
 20260219000001_add_workspace_scoped_agents_and_policies.sql h1:dGFSTXopeJkPc3Rj/Y5ye4OFdfEoWcrAlsOVJ9W8/hc=
 20260223000001_add_config_timestamp_to_cfn.sql h1:q8IVcnpoQijlca+bALYzrkbkkhyd3blJuulylNMa3qo=
 20260223000002_add_ip_port_to_cfn.sql h1:qRoYQLPlft7e4uKADlYqr7HaRuBju1mXRCAktgi/lxA=
 20260224000001_fix_memory_provider_schema.sql h1:DiYPg8cNTlqKHS15Y4zNuL2/ZNpiLM4Mv1rjre6xwKk=
+20260224000002_make_workspace_cfn_id_nullable.sql h1:zP5c+5xenltulcxmDoGtxpf+sY5Vp3SU4Cx4tMUy1ko=

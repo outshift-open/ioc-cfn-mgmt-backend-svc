@@ -154,3 +154,6 @@ uv.lock.bak
 
 # VS Code
 .vscode
+
+# Simulator
+simulator
