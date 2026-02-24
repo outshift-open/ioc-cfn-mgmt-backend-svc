@@ -203,6 +203,8 @@ CREATE TABLE "memory_provider" (
   PRIMARY KEY ("memory_provider_id")
 );
 
+CREATE UNIQUE INDEX "idx_mp_name_unique" ON "memory_provider" ("memory_provider_name") WHERE "deleted_at" IS NULL;
+
 -- ====================
 -- Table: workspace_memory_provider (Many-to-many join)
 -- ====================
