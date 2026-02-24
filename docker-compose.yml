@@ -177,7 +177,7 @@ services:
   # IoC Knowledge Memory Service - Memory and knowledge graph management
   # Port Mapping: 9003:9003 (same port inside and outside container)
   ioc-knowledge-memory-svc:
-    image: ghcr.io/cisco-eti/ioc-knowledge-memory-svc:2026-02-23-a752ce4
+    image: ghcr.io/cisco-eti/ioc-knowledge-memory-svc:2026-02-24-8a2b038
     platform: linux/amd64
     profiles:
       - full-stack
@@ -193,6 +193,7 @@ services:
       - AGENSGRAPH_USER=${AGENSGRAPH_USER}
       - AGENSGRAPH_PASSWORD=${AGENSGRAPH_PASSWORD}
       - AGENSGRAPH_PORT=5432
+      - MEMORY_PROVIDER_REGISTRATION_URL=http://ioc-cfn-mgmt-plane-svc:9000
     restart: unless-stopped
     depends_on:
       ioc-graph-db:
