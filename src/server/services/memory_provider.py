@@ -64,8 +64,6 @@ class MemoryProviderService:
                 new_provider = MemoryProviderModel(
                     memory_provider_id=memory_provider_id,
                     memory_provider_name=provider_data.memory_provider_name,
-                    provider_type=provider_data.provider_type,
-                    provider=provider_data.provider,
                     config=provider_data.config,
                     enabled=True,
                     created_by=user_id,
@@ -83,8 +81,6 @@ class MemoryProviderService:
                 return MemoryProviderDetail(
                     memory_provider_id=new_provider.memory_provider_id,
                     memory_provider_name=new_provider.memory_provider_name,
-                    provider_type=new_provider.provider_type,
-                    provider=new_provider.provider,
                     config=new_provider.config,
                     enabled=new_provider.enabled,
                     created_at=new_provider.created_at,
@@ -140,8 +136,6 @@ class MemoryProviderService:
                 return MemoryProviderDetail(
                     memory_provider_id=provider.memory_provider_id,
                     memory_provider_name=provider.memory_provider_name,
-                    provider_type=provider.provider_type,
-                    provider=provider.provider,
                     config=provider.config,
                     enabled=provider.enabled,
                     created_at=provider.created_at,
@@ -186,8 +180,6 @@ class MemoryProviderService:
                     MemoryProviderDetail(
                         memory_provider_id=provider.memory_provider_id,
                         memory_provider_name=provider.memory_provider_name,
-                        provider_type=provider.provider_type,
-                        provider=provider.provider,
                         config=provider.config,
                         enabled=provider.enabled,
                         created_at=provider.created_at,
@@ -249,10 +241,6 @@ class MemoryProviderService:
                 # Update fields if provided
                 if update_data.memory_provider_name is not None:
                     provider.memory_provider_name = update_data.memory_provider_name
-                if update_data.provider_type is not None:
-                    provider.provider_type = update_data.provider_type
-                if update_data.provider is not None:
-                    provider.provider = update_data.provider
                 if update_data.config is not None:
                     provider.config = update_data.config
                 if update_data.enabled is not None:
@@ -272,8 +260,6 @@ class MemoryProviderService:
                 return MemoryProviderDetail(
                     memory_provider_id=provider.memory_provider_id,
                     memory_provider_name=provider.memory_provider_name,
-                    provider_type=provider.provider_type,
-                    provider=provider.provider,
                     config=provider.config,
                     enabled=provider.enabled,
                     created_at=provider.created_at,

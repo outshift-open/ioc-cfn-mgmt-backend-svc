@@ -515,7 +515,7 @@
           "cognitive-fabric-nodes"
         ],
         "summary": "Get Cfn Workspaces Config",
-        "description": "Get aggregated workspace configuration for a CFN node\n\nThis endpoint returns the consolidated configuration document that aggregates\nworkspace-scoped and global resources for the CFN service to apply.\n\n- **cfn_id**: CFN identifier\n\nReturns configuration with:\n- **version**: Configuration schema version (0.1.0)\n- **cognitive_fabric_node**: List of CFN-specific operational settings (non-workspace scoped)\n- **memory_providers**: List of global memory providers (non-workspace scoped)\n- **workspaces**: List of workspaces with their resources:\n  - workspace_id: Workspace identifier\n  - workspace_name: Workspace name\n  - multi_agent_systems: MAS available in this workspace\n  - cognitive_agents: Cognitive agents in this workspace\n  - cognitive_engines: Cognitive engines in this workspace (not included for March 2026)\n  - policies: Policies in this workspace (not included for March 2026)",
+        "description": "Get aggregated workspace configuration for a CFN node\n\nThis endpoint returns the consolidated configuration document that aggregates\nworkspace-scoped and global resources for the CFN service to apply.\n\n- **cfn_id**: CFN identifier\n\nReturns configuration with:\n- **version**: Configuration schema version (0.1.0)\n- **cognitive_fabric_node**: List of CFN-specific operational settings (non-workspace scoped)\n- **memory_providers**: List of global memory providers (non-workspace scoped)\n- **workspaces**: List of workspaces with their resources:\n  - workspace_id: Workspace identifier\n  - workspace_name: Workspace name\n  - multi_agentic_systems: MAS available in this workspace\n  - cognitive_agents: Cognitive agents in this workspace\n  - cognitive_engines: Cognitive engines in this workspace (not included for March 2026)\n  - policies: Policies in this workspace (not included for March 2026)",
         "operationId": "get_cfn_workspaces_config_api_cognitive_fabric_node__cfn_id__workspaces_get",
         "security": [
           {
@@ -2997,14 +2997,7 @@
           "cfn_id": "cfn-persistent-id-123",
           "cfn_name": "cfn-node-prod-1",
           "config": {
-            "cfn_config": {
-              "log_level": "info"
-            },
-            "cognitive_agents": [],
-            "cognitive_engines": [],
-            "config_timestamp": "2026-01-31T01:29:22Z",
             "memory_providers": [],
-            "policies": [],
             "workspaces": []
           },
           "created_at": "2026-02-19T19:46:49.102012",
@@ -3114,16 +3107,6 @@
             "title": "Memory Provider Name",
             "description": "Memory provider name"
           },
-          "provider_type": {
-            "type": "string",
-            "title": "Provider Type",
-            "description": "Provider type (e.g., vector_store, graph_db)"
-          },
-          "provider": {
-            "type": "string",
-            "title": "Provider",
-            "description": "Provider name (ioc-memory-provider)"
-          },
           "config": {
             "anyOf": [
               {
@@ -3140,9 +3123,7 @@
         },
         "type": "object",
         "required": [
-          "memory_provider_name",
-          "provider_type",
-          "provider"
+          "memory_provider_name"
         ],
         "title": "MemoryProviderCreate",
         "description": "Schema for creating a memory provider"
@@ -3156,14 +3137,6 @@
           "memory_provider_name": {
             "type": "string",
             "title": "Memory Provider Name"
-          },
-          "provider_type": {
-            "type": "string",
-            "title": "Provider Type"
-          },
-          "provider": {
-            "type": "string",
-            "title": "Provider"
           },
           "config": {
             "anyOf": [
@@ -3218,8 +3191,6 @@
         "required": [
           "memory_provider_id",
           "memory_provider_name",
-          "provider_type",
-          "provider",
           "config",
           "enabled",
           "created_at",
@@ -3267,30 +3238,6 @@
             ],
             "title": "Memory Provider Name",
             "description": "Memory provider name"
-          },
-          "provider_type": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Provider Type",
-            "description": "Provider type (e.g., vector_store, graph_db)"
-          },
-          "provider": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Provider",
-            "description": "Provider name (ioc-memory-provider)"
           },
           "config": {
             "anyOf": [

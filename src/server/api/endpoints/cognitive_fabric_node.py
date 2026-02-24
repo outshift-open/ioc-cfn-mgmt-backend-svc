@@ -274,7 +274,7 @@ def get_cfn_workspaces_config(
     - **workspaces**: List of workspaces with their resources:
       - workspace_id: Workspace identifier
       - workspace_name: Workspace name
-      - multi_agent_systems: MAS available in this workspace
+      - multi_agentic_systems: MAS available in this workspace
       - cognitive_agents: Cognitive agents in this workspace
       - cognitive_engines: Cognitive engines in this workspace (not included for March 2026)
       - policies: Policies in this workspace (not included for March 2026)

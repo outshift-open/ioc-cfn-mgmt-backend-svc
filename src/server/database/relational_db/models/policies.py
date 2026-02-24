@@ -3,7 +3,7 @@
 from datetime import datetime, timezone
 
 from sqlalchemy import TIMESTAMP, Boolean, Column, String, func
-from sqlalchemy.dialects.postgresql import JSONB
+from sqlalchemy.dialects.postgresql import JSONB, UUID
 
 from server.database.relational_db.models import Base
 
@@ -13,7 +13,8 @@ class Policy(Base):
 
     __tablename__ = "policy"
 
-    policy_id = Column(String(255), primary_key=True, nullable=False)
+    id = Column(UUID(as_uuid=True), primary_key=True, server_default=func.gen_random_uuid(), nullable=False)
+    policy_id = Column(String(255), nullable=False)
     workspace_id = Column(String(36), nullable=False, index=True)
     policy_name = Column(String(255), nullable=False)
     config = Column(JSONB, nullable=True)  # Policy-specific configuration

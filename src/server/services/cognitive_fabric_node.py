@@ -13,6 +13,7 @@ from server.database.relational_db.models.cognitive_fabric_node import (
     CognitiveFabricNode as CognitiveFabricNodeModel,
 )
 from server.database.relational_db.models.workspace import Workspace as WorkspaceModel
+from server.database.relational_db.models.cognitive_agent import CognitiveAgent
 from server.schemas.cognitive_fabric_node import (
     CognitiveFabricNodeHeartbeatResponse,
     CognitiveFabricNodeList,
@@ -1067,11 +1068,14 @@ class CognitiveFabricNodeService:
                 # Get associated workspace IDs
                 workspace_ids = self._get_workspace_ids(session, cfn.cfn_id)
 
+                # Get config to ensure it's fetched from the latest data
+                cfn.cfn_config = self.generate_config(cfn.cfn_id, workspace_ids, cfn.cfn_config)
+
                 return CognitiveFabricNodeResponse(
                     cfn_id=cfn.cfn_id,
                     workspace_ids=workspace_ids,
                     cfn_name=cfn.cfn_name,
-                    config=cfn.config,
+                    config=cfn.cfn_config,
                     status=CognitiveFabricNodeStatus(cfn.status),
                     last_seen=cfn.last_seen,
                     enabled=cfn.enabled,
@@ -1111,114 +1115,107 @@ class CognitiveFabricNodeService:
         Returns:
             Dictionary with configuration including cfn_config and config_timestamp
         """
-        if workspace_ids is None:
-            db = RelationalDB()
-            session = db.get_session()
-            try:
-                workspace_ids = self._get_workspace_ids(session, cfn_id)
-            finally:
-                session.close()
+        db = RelationalDB()
+        session = db.get_session()
 
-        # Get workspace details
-        workspaces_info = []
-        for ws_id in workspace_ids:
-            ws = workspace_service.get(ws_id)
-            if ws:
-                workspaces_info.append(
-                    {
-                        "workspace_id": ws_id,
-                        "workspace_name": ws.name if ws else "Unknown Workspace",
-                    }
+        try:
+            if workspace_ids is None:
+                workspace_ids = self._get_workspace_ids(session, cfn_id)
+
+            workspaces_payload = []
+            for ws_id in workspace_ids:
+                # Fetch workspace directly from DB to avoid permission checks
+                workspace = (
+                    session.query(WorkspaceModel)
+                    .filter(
+                        WorkspaceModel.id == ws_id,
+                        WorkspaceModel.deleted_at.is_(None),
+                    )
+                    .first()
                 )
 
-        workspaces_payload = []
-        for ws_id in workspace_ids:
-            ws = workspace_service.get(ws_id)
-            workspace_obj = {
-                "workspace_id": ws_id,
-                "workspace_name": ws.name if ws else "Unknown Workspace",
-                "multi_agent_systems": [],
-                "cognitive_agents": [],
-                # "cognitive_engines": [],  # Not included for March 2026
-                # "policies": [],  # Not included for March 2026
-            }
+                if not workspace:
+                    continue
 
-            # Get Multi-Agentic Systems for this workspace
-            try:
-                mas_systems = multi_agentic_system_service.list(ws_id).systems
-                workspace_obj["multi_agent_systems"] = [system.model_dump(mode="json") for system in mas_systems]
-            except Exception:
-                pass
+                workspace_name = workspace.name
 
-            # Get Cognitive Agents for this workspace (global/built-in defaults)
-            try:
-                from server.database.relational_db.models.cognitive_agent import CognitiveAgent as CognitiveAgentModel
-
-                db_agents = RelationalDB()
-                session_agents = db_agents.get_session()
-                try:
-                    agents = (
-                        session_agents.query(CognitiveAgentModel)
-                        .filter(CognitiveAgentModel.enabled == True)  # noqa: E712
-                        .all()
-                    )
-                    workspace_obj["cognitive_agents"] = [
-                        {
-                            "cognitive_agent_id": agent.cognitive_agent_id,
-                            "name": agent.cognitive_agent_name,
-                            "description": agent.description,
-                            "enabled": agent.enabled,
-                            "config": agent.config or {},
-                        }
-                        for agent in agents
-                    ]
-                finally:
-                    session_agents.close()
-            except Exception:
-                pass
-
-            # # Get Cognitive Engines for this workspace - Not included for March 2026
-            # try:
-            #     engines = cognitive_engine_service.list(ws_id).engines
-            #     workspace_obj["cognitive_engines"] = [
-            #         {
-            #             "cognitive_engine_id": engine.cognitive_engine_id,
-            #             "name": engine.cognitive_engine_name,
-            #             "enabled": engine.enabled,
-            #             "config": engine.config or {},
-            #         }
-            #         for engine in engines
-            #     ]
-            # except Exception:
-            #     pass
-
-            workspaces_payload.append(workspace_obj)
-
-        # Fetch Memory Providers (global, not workspace-scoped)
-        try:
-            providers = memory_provider_service.list().providers
-            providers_payload = [
-                {
-                    "memory_provider_id": provider.memory_provider_id,
-                    "name": provider.memory_provider_name,
-                    "type": provider.provider_type,
-                    "provider": provider.provider,
-                    "enabled": provider.enabled,
-                    "config": provider.config or {},
+                workspace_obj = {
+                    "workspace_id": ws_id,
+                    "workspace_name": workspace_name,
+                    "multi_agentic_systems": [],
+                    "cognitive_agents": [],
+                    "cognitive_engines": [],
+                    "policies": [],
                 }
-                for provider in providers
-            ]
-        except Exception:
-            providers_payload = []
 
-        return {
-            "config_timestamp": (
-                config_timestamp.isoformat() if config_timestamp else datetime.now(timezone.utc).isoformat()
-            ),
-            "cfn_config": cfn_config or {},
-            "workspaces": workspaces_payload,
-            "memory_providers": providers_payload,
-        }
+                # Get Multi-Agentic Systems for this workspace
+                try:
+                    mas_systems = multi_agentic_system_service.list(ws_id).systems
+                    workspace_obj["multi_agentic_systems"] = [system.model_dump(mode="json") for system in mas_systems]
+                except Exception:
+                    pass
+
+                # Get Cognitive Agents for this workspace (global/built-in defaults)
+                try:
+                    db_agents = RelationalDB()
+                    session_agents = db_agents.get_session()
+                    try:
+                        agents = (
+                            session_agents.query(CognitiveAgent)
+                            .filter(CognitiveAgent.enabled == True)  # noqa: E712
+                            .all()
+                        )
+                        workspace_obj["cognitive_agents"] = [
+                            {
+                                "cognitive_agent_id": agent.cognitive_agent_id,
+                                "name": agent.cognitive_agent_name,
+                                "description": agent.description,
+                                "enabled": agent.enabled,
+                                "config": agent.config or {},
+                            }
+                            for agent in agents
+                        ]
+                    finally:
+                        session_agents.close()
+                except Exception:
+                    pass
+
+                # Get Cognitive Engines for this workspace - Not included for March 2026
+                try:
+                    engines = cognitive_engine_service.list(ws_id).engines
+                    workspace_obj["cognitive_engines"] = [
+                        {
+                            "cognitive_engine_id": engine.cognitive_engine_id,
+                            "name": engine.cognitive_engine_name,
+                            "enabled": engine.enabled,
+                            "config": engine.config or {},
+                        }
+                        for engine in engines
+                    ]
+                except Exception:
+                    pass
+
+                workspaces_payload.append(workspace_obj)
+
+            # Fetch Memory Providers (global, not workspace-scoped)
+            try:
+                providers = memory_provider_service.list().providers
+                providers_payload = [
+                    {
+                        "memory_provider_id": provider.memory_provider_id,
+                        "name": provider.memory_provider_name,
+                        "enabled": provider.enabled,
+                        "config": provider.config or {},
+                    }
+                    for provider in providers
+                ]
+            except Exception:
+                providers_payload = []
+
+            return {"workspaces": workspaces_payload, "memory_providers": providers_payload}
+
+        finally:
+            session.close()
 
     def mark_stale_nodes_offline(self, threshold_minutes: int = 2) -> int:
         """

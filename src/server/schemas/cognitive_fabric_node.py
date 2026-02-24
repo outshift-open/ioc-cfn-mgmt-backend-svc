@@ -96,13 +96,8 @@ class CognitiveFabricNodeResponse(BaseModel):
                 "workspace_ids": [],
                 "cfn_name": "cfn-node-prod-1",
                 "config": {
-                    "config_timestamp": "2026-01-31T01:29:22Z",
-                    "cfn_config": {"log_level": "info"},
-                    "policies": [],
                     "workspaces": [],
-                    "cognitive_agents": [],
                     "memory_providers": [],
-                    "cognitive_engines": [],
                 },
                 "status": "offline",
                 "last_seen": "2026-02-19T19:46:49.185773",
