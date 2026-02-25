@@ -1080,14 +1080,11 @@ class CognitiveFabricNodeService:
                 # Get associated workspace IDs
                 workspace_ids = self._get_workspace_ids(session, cfn.cfn_id)
 
-                # Get config to ensure it's fetched from the latest data
-                cfn.cfn_config = self.generate_config(cfn.cfn_id, workspace_ids, cfn.cfn_config)
-
                 return CognitiveFabricNodeResponse(
                     cfn_id=cfn.cfn_id,
                     workspace_ids=workspace_ids,
                     cfn_name=cfn.cfn_name,
-                    config=cfn.cfn_config,
+                    config=cfn.config,
                     status=CognitiveFabricNodeStatus(cfn.status),
                     last_seen=cfn.last_seen,
                     enabled=cfn.enabled,
