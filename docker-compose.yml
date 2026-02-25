@@ -178,7 +178,7 @@ services:
   # IoC Knowledge Memory Service - Memory and knowledge graph management
   # Port Mapping: 9003:9003 (same port inside and outside container)
   ioc-knowledge-memory-svc:
-    image: ghcr.io/cisco-eti/ioc-knowledge-memory-svc:2026-02-24-8a2b038
+    image: ghcr.io/cisco-eti/ioc-knowledge-memory-svc:2026-02-25-ee3a49b
     platform: linux/amd64
     profiles:
       - full-stack
