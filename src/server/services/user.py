@@ -163,12 +163,17 @@ class UserService:
                     logger.info("Creating default workspace for admin user")
                     workspace_data = WorkspaceCreate(
                         name=workspace_service.DEFAULT_WORKSPACE_NAME,
+                        cfn_id=None,  # TODO: associate with default CFN
                         config={},
                     )
+                    # Use hardcoded ID in dev mode, otherwise let database auto-generate UUID
+                    cfn_dev_mode = os.getenv("CFN_DEV_MODE", "false").lower() == "true"
+                    workspace_id = ADMIN_WORKSPACE_ID_DEFAULT if cfn_dev_mode else None
+
                     workspace_response = workspace_service.create(
                         workspace_data=workspace_data,
                         creator_user_id=user_id,
-                        workspace_id=ADMIN_WORKSPACE_ID_DEFAULT,
+                        workspace_id=workspace_id,
                     )
                     logger.info(
                         f"Successfully created default workspace for admin user with ID: {workspace_response.id}"

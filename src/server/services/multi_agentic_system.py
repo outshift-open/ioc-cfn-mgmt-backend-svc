@@ -11,15 +11,95 @@ from server.schemas.multi_agentic_system import (
     MultiAgenticSystemResponse,
     MultiAgenticSystem as MultiAgenticSystemSchema,
     MultiAgenticSystems,
+    AgentWithMemory,
 )
 from server.database.relational_db.models.multi_agentic_system import MultiAgenticSystem as MultiAgenticSystemModel
+from server.database.relational_db.models.memory_provider import MemoryProvider as MemoryProviderModel
 from server.database.relational_db.db import RelationalDB
 from server.services.workspace import workspace_service
 from server.services.audit import AuditEventType, ResourceType, audit_service, AuditRequest
+from server.schemas.memory_provider import MemoryProviderDetail
 
 
 class MultiAgenticSystemService:
     """Service layer for MAS business logic"""
+
+    def _enrich_with_memory_providers(self, session, mas: MultiAgenticSystemModel) -> MultiAgenticSystemSchema:
+        """Enrich MAS data with full memory provider details"""
+
+        # Fetch shared memory provider details if exists
+        shared_memory = None
+        if mas.shared_memory_provider_id:
+            shared_provider = (
+                session.query(MemoryProviderModel)
+                .filter(
+                    MemoryProviderModel.memory_provider_id == mas.shared_memory_provider_id,
+                    MemoryProviderModel.deleted_at.is_(None),
+                )
+                .first()
+            )
+            if shared_provider:
+                shared_memory = MemoryProviderDetail(
+                    memory_provider_id=shared_provider.memory_provider_id,
+                    memory_provider_name=shared_provider.memory_provider_name,
+                    config=shared_provider.config,
+                    enabled=shared_provider.enabled,
+                    created_at=shared_provider.created_at,
+                    updated_at=shared_provider.updated_at,
+                    created_by=shared_provider.created_by,
+                    updated_by=shared_provider.updated_by,
+                )
+
+        # Enrich agents with memory provider details
+        enriched_agents = None
+        if mas.agents:
+            enriched_agents = []
+            for agent in mas.agents:
+                agentic_memory = None
+                agent_memory_id = agent.get("agentic_memory_provider_id")
+
+                if agent_memory_id:
+                    agent_provider = (
+                        session.query(MemoryProviderModel)
+                        .filter(
+                            MemoryProviderModel.memory_provider_id == agent_memory_id,
+                            MemoryProviderModel.deleted_at.is_(None),
+                        )
+                        .first()
+                    )
+                    if agent_provider:
+                        agentic_memory = MemoryProviderDetail(
+                            memory_provider_id=agent_provider.memory_provider_id,
+                            memory_provider_name=agent_provider.memory_provider_name,
+                            config=agent_provider.config,
+                            enabled=agent_provider.enabled,
+                            created_at=agent_provider.created_at,
+                            updated_at=agent_provider.updated_at,
+                            created_by=agent_provider.created_by,
+                            updated_by=agent_provider.updated_by,
+                        )
+
+                enriched_agents.append(
+                    AgentWithMemory(
+                        agent_id=agent.get("agent_id"),
+                        agentic_memory=agentic_memory,
+                        config=agent.get("config"),
+                    )
+                )
+
+        return MultiAgenticSystemSchema(
+            id=mas.id,
+            workspace_id=mas.workspace_id,
+            name=mas.name,
+            description=mas.description,
+            shared_memory=shared_memory,
+            agents=enriched_agents,
+            config=mas.config,
+            created_at=mas.created_at,
+            updated_at=mas.updated_at,
+            created_by=mas.created_by,
+            updated_by=mas.updated_by,
+        )
 
     def create(self, workspace_id: str, mas_data: MultiAgenticSystemRequest) -> MultiAgenticSystemResponse:
         # Validate workspace exists
@@ -50,11 +130,17 @@ class MultiAgenticSystemService:
                         detail=f"Multi-agentic system with name '{mas_data.name}' already exists in this workspace",
                     )
 
+                # Convert agents from Pydantic models to dict for JSONB storage
+                agents_json = None
+                if mas_data.agents:
+                    agents_json = [agent.model_dump() for agent in mas_data.agents]
+
                 new_mas = MultiAgenticSystemModel(
                     workspace_id=workspace_id,
                     name=mas_data.name,
                     description=mas_data.description,
-                    agents=mas_data.agents,
+                    shared_memory_provider_id=mas_data.shared_memory_provider_id,
+                    agents=agents_json,
                     config=mas_data.config,
                 )
 
@@ -141,19 +227,7 @@ class MultiAgenticSystemService:
                     .all()
                 )
 
-                system_responses = [
-                    MultiAgenticSystemSchema(
-                        id=system.id,
-                        workspace_id=system.workspace_id,
-                        name=system.name,
-                        description=system.description,
-                        agents=system.agents,
-                        config=system.config,
-                        created_at=system.created_at,
-                        updated_at=system.updated_at,
-                    )
-                    for system in systems
-                ]
+                system_responses = [self._enrich_with_memory_providers(session, system) for system in systems]
 
                 return MultiAgenticSystems(systems=system_responses)
 
@@ -190,18 +264,7 @@ class MultiAgenticSystemService:
                         detail="Multi-agentic system not found",
                     )
 
-                return MultiAgenticSystemSchema(
-                    id=mas.id,
-                    workspace_id=mas.workspace_id,
-                    name=mas.name,
-                    description=mas.description,
-                    agents=mas.agents,
-                    config=mas.config,
-                    created_at=mas.created_at,
-                    updated_at=mas.updated_at,
-                    created_by=mas.created_by,
-                    updated_by=mas.updated_by,
-                )
+                return self._enrich_with_memory_providers(session, mas)
 
             finally:
                 session.close()
@@ -261,8 +324,12 @@ class MultiAgenticSystemService:
                 if mas_data.description is not None:
                     mas.description = mas_data.description
 
+                if mas_data.shared_memory_provider_id is not None:
+                    mas.shared_memory_provider_id = mas_data.shared_memory_provider_id
+
                 if mas_data.agents is not None:
-                    mas.agents = mas_data.agents
+                    # Convert agents from Pydantic models to dict for JSONB storage
+                    mas.agents = [agent.model_dump() for agent in mas_data.agents]
 
                 if mas_data.config is not None:
                     mas.config = mas_data.config
@@ -277,18 +344,7 @@ class MultiAgenticSystemService:
 
                 cognitive_fabric_node_service.update_config_for_workspace(workspace_id)
 
-                response = MultiAgenticSystemSchema(
-                    id=mas.id,
-                    workspace_id=mas.workspace_id,
-                    name=mas.name,
-                    description=mas.description,
-                    agents=mas.agents,
-                    config=mas.config,
-                    created_at=mas.created_at,
-                    updated_at=mas.updated_at,
-                    created_by=mas.created_by,
-                    updated_by=mas.updated_by,
-                )
+                response = self._enrich_with_memory_providers(session, mas)
 
                 # add to audits table
                 audit_service.create_audit(

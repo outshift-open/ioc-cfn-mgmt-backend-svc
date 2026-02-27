@@ -125,7 +125,7 @@ class TestWorkspaceEndpoints:
         mas_data = {
             "name": "WS-Del Test MAS",
             "description": "",
-            "agents": {"a1": {"type": "t"}},
+            "agents": [{"agent_id": "a1", "config": {"type": "t"}}],
             "config": {},
         }
         mas_resp = client.post(f"/api/workspaces/{workspace_id}/multi-agentic-systems", json=mas_data)

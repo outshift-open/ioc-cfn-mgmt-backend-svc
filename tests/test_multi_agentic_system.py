@@ -12,7 +12,10 @@ class TestMASEndpoints:
         mas_data = {
             "name": "Test MAS",
             "description": "A test multi-agent system",
-            "agents": {"agent1": {"type": "reasoning"}, "agent2": {"type": "planning"}},
+            "agents": [
+                {"agent_id": "agent1", "config": {"type": "reasoning"}},
+                {"agent_id": "agent2", "config": {"type": "planning"}},
+            ],
             "config": {"param1": "value1"},
         }
 
@@ -34,7 +37,7 @@ class TestMASEndpoints:
         mas_data = {
             "name": "Test MAS - Workspace Not Found",
             "description": "A test multi-agent system",
-            "agents": {"agent1": {"type": "reasoning"}},
+            "agents": [{"agent_id": "agent1", "config": {"type": "reasoning"}}],
             "config": {},
         }
 
@@ -47,7 +50,7 @@ class TestMASEndpoints:
         mas_data = {
             "name": "Test MAS - Invalid Workspace ID",
             "description": "A test multi-agent system",
-            "agents": {"agent1": {"type": "reasoning"}},
+            "agents": [{"agent_id": "agent1", "config": {"type": "reasoning"}}],
             "config": {},
         }
 
@@ -79,7 +82,7 @@ class TestMASEndpoints:
         mas_data = {
             "name": "Test MAS 1",
             "description": "First test MAS",
-            "agents": {"agent1": {"type": "reasoning"}},
+            "agents": [{"agent_id": "agent1", "config": {"type": "reasoning"}}],
             "config": {"param1": "value1"},
         }
 
@@ -100,7 +103,8 @@ class TestMASEndpoints:
         assert "id" in mas
         assert "workspace_id" in mas
         assert mas["description"] == "First test MAS"
-        assert mas["agents"] == {"agent1": {"type": "reasoning"}}
+        assert mas["agents"][0]["agent_id"] == "agent1"
+        assert mas["agents"][0]["config"] == {"type": "reasoning"}
         assert mas["config"] == {"param1": "value1"}
         assert "created_at" in mas
         assert "updated_at" in mas
@@ -115,7 +119,7 @@ class TestMASEndpoints:
 
     def test_create_mas_with_empty_agents(self, client, created_workspace):
         """Test creating MAS with empty agents list."""
-        mas_data = {"name": "Test MAS", "description": "A test multi-agent system", "agents": {}, "config": {}}
+        mas_data = {"name": "Test MAS", "description": "A test multi-agent system", "agents": [], "config": {}}
 
         response = client.post(f"/api/workspaces/{created_workspace}/multi-agentic-systems", json=mas_data)
 

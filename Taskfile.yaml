@@ -98,12 +98,12 @@ tasks:
   docker-build:
     desc: Build Docker image with docker-compose
     cmds:
-      - docker compose --env-file env.conf build --no-cache ioc-cfn-mgmt-plane-svc
+      - docker build -t ${IMAGE_NAME} -f Dockerfile .
 
   docker-run:
     desc: Run Docker container with docker-compose
     cmds:
-      - docker compose --env-file env.conf up --build --pull always ioc-cfn-mgmt-plane-svc
+      - docker compose --env-file env.conf up ioc-cfn-mgmt-plane-svc
 
   docker-compose-full-stack-up:
     desc: Start all services with docker-compose
@@ -112,7 +112,8 @@ tasks:
       GIT_COMMIT_TIME: "{{.GIT_COMMIT_TIME}}"
       GIT_BRANCH: "{{.GIT_BRANCH}}"
     cmds:
-      - docker compose --env-file env.conf --profile full-stack up --pull always
+      - docker compose --env-file env.conf --profile full-stack up --pull always -d
+      - docker compose --env-file env.conf --profile full-stack logs -f
 
   docker-compose-full-stack-down:
     desc: Stop all services with docker-compose

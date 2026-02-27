@@ -18,6 +18,11 @@ class MultiAgenticSystem(Base):
     agents = Column(JSONB, nullable=True)
     config = Column(JSONB, nullable=True)
 
+    # Memory provider for shared memory across all agents in MAS
+    shared_memory_provider_id = Column(
+        String(255), ForeignKey("memory_provider.memory_provider_id", ondelete="SET NULL"), nullable=True
+    )
+
     # Timestamp fields - auto-generated in database
     created_at = Column(DateTime, nullable=False, server_default=text("CURRENT_TIMESTAMP"))
     updated_at = Column(
@@ -34,6 +39,7 @@ class MultiAgenticSystem(Base):
     __table_args__ = (
         Index("idx_mas_workspace_id", "workspace_id"),
         Index("idx_mas_deleted_at", "deleted_at"),
+        Index("idx_mas_shared_memory_provider_id", "shared_memory_provider_id"),
         # Enforce unique active MAS names within a workspace
         Index(
             "idx_mas_workspace_name_unique",

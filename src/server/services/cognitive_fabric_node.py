@@ -1160,7 +1160,9 @@ class CognitiveFabricNodeService:
                 # Get Multi-Agentic Systems for this workspace
                 try:
                     mas_systems = multi_agentic_system_service.list(ws_id).systems
-                    workspace_obj["multi_agentic_systems"] = [system.model_dump(mode="json") for system in mas_systems]
+                    workspace_obj["multi_agentic_systems"] = [
+                        system.model_dump(mode="json", exclude_none=False) for system in mas_systems
+                    ]
                 except Exception:
                     pass
 
