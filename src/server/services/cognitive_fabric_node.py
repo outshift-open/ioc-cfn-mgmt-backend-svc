@@ -1,5 +1,7 @@
 """Cognitive Fabric Node service - Business logic for Cognitive Fabric Node operations"""
 
+import logging
+import os
 import uuid
 from datetime import datetime, timedelta, timezone
 from typing import List, Optional
@@ -33,6 +35,9 @@ from server.services.cognitive_engine import cognitive_engine_service
 from server.services.memory_provider import memory_provider_service
 from server.services.multi_agentic_system import multi_agentic_system_service
 from server.services.workspace import workspace_service
+
+# Set up module-level logger
+logger = logging.getLogger(__name__)
 
 
 class CognitiveFabricNodeService:
@@ -206,10 +211,46 @@ class CognitiveFabricNodeService:
                 session.commit()
                 session.refresh(new_cfn)
 
-                # New CFN has no workspace associations yet
+                # If this is the default-cfn and Default Workspace exists without a CFN, associate them
+                workspace_ids_list = []
+                if cfn_data.cfn_name == os.getenv("CFN_NAME", "default-cfn"):
+                    default_workspace = (
+                        session.query(WorkspaceModel)
+                        .filter(
+                            WorkspaceModel.name == workspace_service.DEFAULT_WORKSPACE_NAME,
+                            WorkspaceModel.cfn_id.is_(None),
+                            WorkspaceModel.deleted_at.is_(None),
+                        )
+                        .first()
+                    )
+
+                    if not default_workspace:
+                        raise HTTPException(
+                            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                            detail=(
+                                "Default workspace not found or already has a CFN assigned. "
+                                "Please create a workspace with name 'default' without a CFN to enable automatic"
+                                " association."
+                            ),
+                        )
+
+                    # Associate workspace with default CFN
+                    default_workspace.cfn_id = cfn_id
+                    default_workspace.updated_at = datetime.now(timezone.utc)
+
+                    # Regenerate CFN config with the workspace
+                    workspace_ids_list = [default_workspace.id]
+                    new_cfn.config = self.generate_config(cfn_id, workspace_ids_list, cfn_data.cfn_config, now)
+                    new_cfn.config_timestamp = now
+
+                    session.commit()
+                    session.refresh(new_cfn)
+                    logger.info(f"Automatically associated new CFN '{cfn_data.cfn_name}' with default workspace")
+
+                # Build response with workspace associations (if any)
                 response = CognitiveFabricNodeResponse(
                     cfn_id=new_cfn.cfn_id,
-                    workspace_ids=[],
+                    workspace_ids=workspace_ids_list,
                     cfn_name=new_cfn.cfn_name,
                     config=new_cfn.config,
                     status=CognitiveFabricNodeStatus(new_cfn.status),

@@ -84,6 +84,9 @@ services:
   # Mgmt. Plane Backend Service - FastAPI backend for workspaces, users, CFN nodes
   # Port Mapping: 9000:9000 (same port inside and outside container)
   ioc-cfn-mgmt-plane-svc:
+    build:
+      context: .
+      dockerfile: Dockerfile
     image: ghcr.io/cisco-eti/ioc-cfn-mgmt-plane-svc:latest
     platform: ${DOCKER_DEFAULT_PLATFORM}
     profiles:

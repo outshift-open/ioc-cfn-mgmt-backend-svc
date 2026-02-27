@@ -58,6 +58,7 @@ def get_version_from_pyproject() -> str:
         logging.warning(f"Could not read version from pyproject.toml: {e}")
         return "unknown"
 
+
 class JsonFormatter(logging.Formatter):
     def __init__(self, service_name: str, version: str):
         super().__init__()
@@ -76,7 +77,6 @@ class JsonFormatter(logging.Formatter):
             logger_name = "server"
         else:
             logger_name = record.name
-
 
         log_record = {
             "level": record.levelname,

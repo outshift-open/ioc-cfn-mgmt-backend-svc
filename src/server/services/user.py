@@ -163,7 +163,7 @@ class UserService:
                     logger.info("Creating default workspace for admin user")
                     workspace_data = WorkspaceCreate(
                         name=workspace_service.DEFAULT_WORKSPACE_NAME,
-                        cfn_id=None,  # TODO: associate with default CFN
+                        cfn_id=None,  # Will be auto-associated when default-cfn registers
                         config={},
                     )
                     # Use hardcoded ID in dev mode, otherwise let database auto-generate UUID
