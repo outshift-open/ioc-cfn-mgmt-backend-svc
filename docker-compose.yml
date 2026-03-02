@@ -162,10 +162,13 @@ services:
       DB_USER: ${POSTGRES_USER}
       DB_PASSWORD: ${POSTGRES_PASSWORD}
       DB_SSL_MODE: ${DB_SSL_MODE:-disable}
+      KNOWLEDGE_MEMORY_SVC_URL: http://ioc-knowledge-memory-svc:9003
     depends_on:
       ioc-mgmt-relational-db:
         condition: service_healthy
       ioc-cfn-mgmt-plane-svc:
+        condition: service_healthy
+      ioc-knowledge-memory-svc:
         condition: service_healthy
 
   # IoC Knowledge Memory Service - Memory and knowledge graph management
