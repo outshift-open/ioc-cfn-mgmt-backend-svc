@@ -107,7 +107,7 @@ jobs:
           echo "POSTGRES_DB=$POSTGRES_DB" >> $GITHUB_ENV
           echo "POSTGRES_USER=$POSTGRES_USER" >> $GITHUB_ENV
           echo "POSTGRES_PASSWORD=$POSTGRES_PASSWORD" >> $GITHUB_ENV
-          echo "POSTGRES_PORT=$POSTGRES_PORT" >> $GITHUB_ENV
+          echo "POSTGRES_PORT=$POSTGRES_CONTAINER_PORT" >> $GITHUB_ENV
 
       - name: Wait for PostgreSQL
         env:

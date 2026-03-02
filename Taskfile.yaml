@@ -187,7 +187,7 @@ tasks:
   db-seed:
     desc: Seed the database with initial data
     cmds:
-      - poetry run psql postgresql://$POSTGRES_USER:$POSTGRES_PASSWORD@localhost:$POSTGRES_PORT/cfn_mgmt -f scripts/populate_software.sql
+      - poetry run psql postgresql://$POSTGRES_USER:$POSTGRES_PASSWORD@localhost:$POSTGRES_HOST_PORT/cfn_mgmt -f scripts/populate_software.sql
     dir: "{{.SRC_DIR}}/server/database/relational_db"
 
   help:
