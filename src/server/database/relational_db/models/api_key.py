@@ -1,4 +1,4 @@
-from sqlalchemy import Column, String, DateTime, text, Index, UniqueConstraint
+from sqlalchemy import Column, String, DateTime, text, Index
 
 from server.database.relational_db.models import Base
 

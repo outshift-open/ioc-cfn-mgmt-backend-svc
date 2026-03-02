@@ -3,7 +3,6 @@
 import hashlib
 import logging
 import os
-import uuid
 from datetime import datetime
 
 from fastapi import HTTPException, status

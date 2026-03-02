@@ -4,6 +4,7 @@ Logger configuration and management utilities.
 Provides functions for initializing logging, querying logger states,
 and updating log levels dynamically at runtime.
 """
+
 import json
 import logging
 import os
@@ -67,10 +68,7 @@ class JsonFormatter(logging.Formatter):
 
     def format(self, record: logging.LogRecord) -> str:
         dt = datetime.fromtimestamp(record.created)
-        timestamp = (
-            dt.strftime("%Y-%m-%dT%H:%M:%S.%f")[:-3]
-            + time.strftime("%z")
-        )
+        timestamp = dt.strftime("%Y-%m-%dT%H:%M:%S.%f")[:-3] + time.strftime("%z")
 
         # this is to normalize uvicorn's logger names, e.g. its default name of "uvicorn.error"
         if record.name.startswith("uvicorn"):

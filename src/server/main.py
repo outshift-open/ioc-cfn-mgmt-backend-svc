@@ -160,9 +160,4 @@ if __name__ == "__main__":
     logger.info(f"Starting up the '{service_name}' FastAPI app! Version: '{version}'")
 
     port = int(os.environ.get("PORT", 9000))
-    uvicorn.run(
-        app,
-        host="0.0.0.0",
-        port=port,
-        log_config=None # tell uvicorn to use our logging config
-    )
+    uvicorn.run(app, host="0.0.0.0", port=port, log_config=None)  # tell uvicorn to use our logging config

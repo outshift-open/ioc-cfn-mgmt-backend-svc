@@ -107,39 +107,23 @@ tasks:
 
   docker-compose-full-stack-up:
     desc: Start all services with docker-compose
-    env:
-      GIT_COMMIT_SHA: "{{.GIT_COMMIT_SHA}}"
-      GIT_COMMIT_TIME: "{{.GIT_COMMIT_TIME}}"
-      GIT_BRANCH: "{{.GIT_BRANCH}}"
     cmds:
       - docker compose --env-file env.conf --profile full-stack up --pull always -d
       - docker compose --env-file env.conf --profile full-stack logs -f
 
   docker-compose-full-stack-up-build:
     desc: Start all services with docker-compose, rebuilding images
-    env:
-      GIT_COMMIT_SHA: "{{.GIT_COMMIT_SHA}}"
-      GIT_COMMIT_TIME: "{{.GIT_COMMIT_TIME}}"
-      GIT_BRANCH: "{{.GIT_BRANCH}}"
     cmds:
       - docker compose --env-file env.conf --profile full-stack up --build --pull always -d
       - docker compose --env-file env.conf --profile full-stack logs -f
 
   docker-compose-full-stack-down:
     desc: Stop all services with docker-compose
-    env:
-      GIT_COMMIT_SHA: "{{.GIT_COMMIT_SHA}}"
-      GIT_COMMIT_TIME: "{{.GIT_COMMIT_TIME}}"
-      GIT_BRANCH: "{{.GIT_BRANCH}}"
     cmds:
       - docker compose --env-file env.conf --profile full-stack down
 
   docker-compose-full-stack-down-with-volumes:
     desc: Stop all services and remove volumes with docker-compose
-    env:
-      GIT_COMMIT_SHA: "{{.GIT_COMMIT_SHA}}"
-      GIT_COMMIT_TIME: "{{.GIT_COMMIT_TIME}}"
-      GIT_BRANCH: "{{.GIT_BRANCH}}"
     cmds:
       - docker compose --env-file env.conf --profile full-stack down -v
 
