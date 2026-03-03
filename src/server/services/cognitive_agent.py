@@ -1,6 +1,5 @@
 """Cognitive Agent service - Business logic for Cognitive Agent operations"""
 
-import uuid
 from datetime import datetime, timezone
 
 from fastapi import HTTPException, status
@@ -14,6 +13,7 @@ from server.schemas.cognitive_agent import (
     CognitiveAgentListItem,
     CognitiveAgentUpdate,
 )
+from server.utils import generate_uuid
 
 
 class CognitiveAgentService:
@@ -60,7 +60,7 @@ class CognitiveAgentService:
                     )
 
                 # Generate unique ID for the agent
-                cognitive_agent_id = str(uuid.uuid4())
+                cognitive_agent_id = generate_uuid()
 
                 # Create new agent
                 new_agent = CognitiveAgentModel(

@@ -1,6 +1,5 @@
 """Cognitive Engine service - Business logic for Cognitive Engine operations"""
 
-import uuid
 from datetime import datetime, timezone
 
 from fastapi import HTTPException, status
@@ -14,6 +13,7 @@ from server.schemas.cognitive_engine import (
     CognitiveEngineListItem,
     CognitiveEngineUpdate,
 )
+from server.utils import generate_uuid
 
 
 class CognitiveEngineService:
@@ -60,7 +60,7 @@ class CognitiveEngineService:
                     )
 
                 # Generate unique ID for the engine
-                cognitive_engine_id = str(uuid.uuid4())
+                cognitive_engine_id = generate_uuid()
 
                 # Create new engine
                 new_engine = CognitiveEngineModel(

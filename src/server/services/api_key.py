@@ -18,6 +18,7 @@ from server.schemas.api_key import (
     ApiKeyListItem,
     ApiKeyResponse,
 )
+from server.utils import generate_uuid
 
 
 class ApiKeyService:
@@ -56,6 +57,7 @@ class ApiKeyService:
 
             # Create new API key record
             new_api_key = ApiKeyModel(
+                id=generate_uuid(),
                 user_id=user_id,
                 key_hash=key_hash,
                 key_preview=key_preview,
@@ -224,6 +226,7 @@ class ApiKeyService:
 
             # Create new dev API key record
             new_api_key = ApiKeyModel(
+                id=generate_uuid(),
                 user_id=user_id,
                 key_hash=key_hash,
                 key_preview=key_preview,

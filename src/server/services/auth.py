@@ -1,7 +1,6 @@
 """Authentication service - Business logic for user authentication"""
 
 import logging
-import uuid
 from typing import Any, Dict, Optional
 
 from fastapi import HTTPException, status
@@ -11,6 +10,7 @@ from server.authn.jwt import create_access_token, create_refresh_token
 from server.common import hash_password, verify_password
 from server.database.relational_db.db import RelationalDB
 from server.database.relational_db.models.user import User as UserModel
+from server.utils import generate_uuid
 
 logger = logging.getLogger(__name__)
 
@@ -156,7 +156,7 @@ class AuthService:
                     )
 
                 # Create new user
-                user_id = str(uuid.uuid4())
+                user_id = generate_uuid()
                 hashed_password = hash_password(password)
 
                 new_user = UserModel(

@@ -4,7 +4,6 @@ Memory Providers are shared across workspaces (cross-workspace resource).
 They are associated with workspaces via the workspace_memory_provider join table.
 """
 
-import uuid
 from datetime import datetime, timezone
 
 from fastapi import HTTPException, status
@@ -17,6 +16,7 @@ from server.schemas.memory_provider import (
     MemoryProviderList,
     MemoryProviderUpdate,
 )
+from server.utils import generate_uuid
 
 
 class MemoryProviderService:
@@ -58,7 +58,7 @@ class MemoryProviderService:
                     )
 
                 # Generate unique ID for the provider
-                memory_provider_id = str(uuid.uuid4())
+                memory_provider_id = generate_uuid()
 
                 # Create new provider
                 new_provider = MemoryProviderModel(

@@ -13,6 +13,7 @@ from server.schemas.policies import (
     PolicyListItem,
     PolicyUpdate,
 )
+from server.utils import generate_uuid
 
 
 class PolicyService:
@@ -65,6 +66,7 @@ class PolicyService:
 
                 # Create new policy
                 new_policy = PolicyModel(
+                    id=generate_uuid(),
                     policy_id=policy_data.policy_id,
                     workspace_id=workspace_id,
                     policy_name=policy_data.policy_name,

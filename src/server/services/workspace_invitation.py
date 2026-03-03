@@ -26,6 +26,7 @@ from server.services.audit import (
     audit_service,
 )
 from server.services.workspace_member import workspace_member_service
+from server.utils import generate_uuid
 
 logger = logging.getLogger(__name__)
 
@@ -103,6 +104,7 @@ class WorkspaceInvitationService:
                 expires_at = now + timedelta(days=INVITATION_EXPIRY_DAYS)
 
                 new_invitation = WorkspaceInvitationModel(
+                    id=generate_uuid(),
                     workspace_id=workspace_id,
                     inviter_id=inviter_id,
                     invitee_username=invitee_username,

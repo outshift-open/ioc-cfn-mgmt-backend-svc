@@ -6,6 +6,7 @@ from server.database.relational_db.models.audit import Audit
 from server.database.relational_db.db import RelationalDB
 from enum import Enum
 from pydantic import BaseModel
+from server.utils import generate_uuid
 
 
 class ResourceType(str, Enum):
@@ -95,6 +96,7 @@ class AuditService:
         self.logger.debug(f"Creating audit entry: {audit}")
         try:
             audit_entry = Audit(
+                id=generate_uuid(),
                 request_id=audit.request_id or audit.operation_id,
                 resource_type=audit.resource_type,
                 audit_type=audit.audit_type,

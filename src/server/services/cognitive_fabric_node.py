@@ -2,7 +2,6 @@
 
 import logging
 import os
-import uuid
 from datetime import datetime, timedelta, timezone
 from typing import List, Optional
 
@@ -35,6 +34,7 @@ from server.services.cognitive_engine import cognitive_engine_service
 from server.services.memory_provider import memory_provider_service
 from server.services.multi_agentic_system import multi_agentic_system_service
 from server.services.workspace import workspace_service
+from server.utils import generate_uuid
 
 # Set up module-level logger
 logger = logging.getLogger(__name__)
@@ -183,7 +183,7 @@ class CognitiveFabricNodeService:
                     return self._refresh_cfn(session, existing_cfn, cfn_data, user_id)
 
                 # Scenario 3: New CFN - Create new entry with generated UUID
-                cfn_id = str(uuid.uuid4())
+                cfn_id = generate_uuid()
 
                 # Create new CFN record with offline status
                 now = datetime.now(timezone.utc)

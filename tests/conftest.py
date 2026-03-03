@@ -32,7 +32,7 @@ def _ensure_test_database_exists(max_wait_seconds: int = 20) -> None:
     """Ensure the test database exists on the configured host.
 
     - Respects POSTGRES_HOST (e.g., 'ioc-mgmt-relational-db' in CI)
-    - Tries candidate ports: POSTGRES_PORT, 5432
+    - Tries candidate ports: POSTGRES_PORT, 5433, 5432
     - Tries bootstrap DBs: 'postgres', 'cfn_mgmt', 'template1'
     - Retries until max_wait_seconds for containers to become ready
     """
@@ -44,7 +44,7 @@ def _ensure_test_database_exists(max_wait_seconds: int = 20) -> None:
     candidate_ports = []
     if os.environ.get("POSTGRES_PORT"):
         candidate_ports.append(str(os.environ["POSTGRES_PORT"]))
-    for p in ("5432",):
+    for p in ("5433", "5432"):
         if p not in candidate_ports:
             candidate_ports.append(p)
 

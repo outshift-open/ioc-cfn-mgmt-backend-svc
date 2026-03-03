@@ -21,6 +21,7 @@ from server.services.audit import (
     ResourceType,
     audit_service,
 )
+from server.utils import generate_uuid
 
 logger = logging.getLogger(__name__)
 
@@ -71,6 +72,7 @@ class WorkspaceMemberService:
 
                 # Create new member
                 new_member = WorkspaceMemberModel(
+                    id=generate_uuid(),
                     workspace_id=workspace_id,
                     user_id=user_id,
                     role=role,

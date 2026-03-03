@@ -19,6 +19,7 @@ from server.database.relational_db.db import RelationalDB
 from server.services.workspace import workspace_service
 from server.services.audit import AuditEventType, ResourceType, audit_service, AuditRequest
 from server.schemas.memory_provider import MemoryProviderDetail
+from server.utils import generate_uuid
 
 
 class MultiAgenticSystemService:
@@ -136,6 +137,7 @@ class MultiAgenticSystemService:
                     agents_json = [agent.model_dump() for agent in mas_data.agents]
 
                 new_mas = MultiAgenticSystemModel(
+                    id=generate_uuid(),
                     workspace_id=workspace_id,
                     name=mas_data.name,
                     description=mas_data.description,

@@ -18,6 +18,7 @@ from server.services.audit import (
     ResourceType,
     audit_service,
 )
+from server.utils import generate_uuid
 
 # Get logger instance (logging is setup in main.py)
 logger = logging.getLogger(__name__)
@@ -128,6 +129,7 @@ class UserService:
                 if not existing_api_key:
                     # Create the API key
                     admin_api_key = ApiKeyModel(
+                        id=generate_uuid(),
                         user_id=user_id,
                         key_hash=api_key_hash,
                         key_preview=api_key_preview,

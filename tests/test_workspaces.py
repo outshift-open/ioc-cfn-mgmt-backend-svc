@@ -12,6 +12,7 @@ from server.database.relational_db.models.api_key import ApiKey
 from server.database.relational_db.models.user import User
 from server.database.relational_db.models.workspace_member import WorkspaceMember
 from server.main import app
+from server.utils.uuid import generate_uuid
 
 
 class TestWorkspaceEndpoints:
@@ -194,6 +195,7 @@ class TestWorkspaceEndpoints:
         user1_api_key = f"ioc_user1_test_key_{str(uuid.uuid4())[:32]}"
         user1_key_hash = hashlib.sha256(user1_api_key.encode()).hexdigest()
         user1_api_key_obj = ApiKey(
+            id=generate_uuid(),
             user_id=user1_id,
             key_hash=user1_key_hash,
             key_preview=f"{user1_api_key[:15]}...",
@@ -204,6 +206,7 @@ class TestWorkspaceEndpoints:
         user2_api_key = f"ioc_user2_test_key_{str(uuid.uuid4())[:32]}"
         user2_key_hash = hashlib.sha256(user2_api_key.encode()).hexdigest()
         user2_api_key_obj = ApiKey(
+            id=generate_uuid(),
             user_id=user2_id,
             key_hash=user2_key_hash,
             key_preview=f"{user2_api_key[:15]}...",
@@ -309,6 +312,7 @@ class TestWorkspaceEndpoints:
         user_api_key = f"ioc_member_test_key_{str(uuid.uuid4())[:32]}"
         user_key_hash = hashlib.sha256(user_api_key.encode()).hexdigest()
         user_api_key_obj = ApiKey(
+            id=generate_uuid(),
             user_id=user_id,
             key_hash=user_key_hash,
             key_preview=f"{user_api_key[:15]}...",
@@ -399,6 +403,7 @@ class TestWorkspaceEndpoints:
         user_api_key = f"ioc_creator_test_key_{str(uuid.uuid4())[:32]}"
         user_key_hash = hashlib.sha256(user_api_key.encode()).hexdigest()
         user_api_key_obj = ApiKey(
+            id=generate_uuid(),
             user_id=user_id,
             key_hash=user_key_hash,
             key_preview=f"{user_api_key[:15]}...",
@@ -465,6 +470,7 @@ class TestWorkspaceEndpoints:
         super_admin_api_key = f"ioc_superadmin_key_{str(uuid.uuid4())[:32]}"
         super_admin_key_hash = hashlib.sha256(super_admin_api_key.encode()).hexdigest()
         super_admin_api_key_obj = ApiKey(
+            id=generate_uuid(),
             user_id=super_admin_id,
             key_hash=super_admin_key_hash,
             key_preview=f"{super_admin_api_key[:15]}...",
@@ -503,6 +509,7 @@ class TestWorkspaceEndpoints:
         user1_api_key = f"ioc_user1_test_key_{str(uuid.uuid4())[:32]}"
         user1_key_hash = hashlib.sha256(user1_api_key.encode()).hexdigest()
         user1_api_key_obj = ApiKey(
+            id=generate_uuid(),
             user_id=user1_id,
             key_hash=user1_key_hash,
             key_preview=f"{user1_api_key[:15]}...",
@@ -513,6 +520,7 @@ class TestWorkspaceEndpoints:
         user2_api_key = f"ioc_user2_test_key_{str(uuid.uuid4())[:32]}"
         user2_key_hash = hashlib.sha256(user2_api_key.encode()).hexdigest()
         user2_api_key_obj = ApiKey(
+            id=generate_uuid(),
             user_id=user2_id,
             key_hash=user2_key_hash,
             key_preview=f"{user2_api_key[:15]}...",
@@ -598,6 +606,7 @@ class TestWorkspaceEndpoints:
         user1_api_key = f"ioc_user1_key_{str(uuid.uuid4())[:32]}"
         user1_key_hash = hashlib.sha256(user1_api_key.encode()).hexdigest()
         user1_api_key_obj = ApiKey(
+            id=generate_uuid(),
             user_id=user1_id,
             key_hash=user1_key_hash,
             key_preview=f"{user1_api_key[:15]}...",
@@ -608,6 +617,7 @@ class TestWorkspaceEndpoints:
         user2_api_key = f"ioc_user2_key_{str(uuid.uuid4())[:32]}"
         user2_key_hash = hashlib.sha256(user2_api_key.encode()).hexdigest()
         user2_api_key_obj = ApiKey(
+            id=generate_uuid(),
             user_id=user2_id,
             key_hash=user2_key_hash,
             key_preview=f"{user2_api_key[:15]}...",

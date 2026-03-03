@@ -29,6 +29,7 @@ from server.services.audit import (
     ResourceType,
     audit_service,
 )
+from server.utils import generate_uuid
 
 logger = logging.getLogger(__name__)
 
@@ -177,9 +178,8 @@ class WorkspaceService:
                     "cfn_id": workspace_data.cfn_id,
                 }
 
-                # Add workspace_id if provided (for admin default workspace)
-                if workspace_id:
-                    workspace_kwargs["id"] = workspace_id
+                # Add workspace_id - either provided (for admin default workspace) or generate new one
+                workspace_kwargs["id"] = workspace_id if workspace_id else generate_uuid()
 
                 # Check if workspace name already exists for the user to prevent duplicates
                 existing_workspace = (
