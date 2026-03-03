@@ -60,11 +60,16 @@ class MemoryProviderService:
                 # Generate unique ID for the provider
                 memory_provider_id = generate_uuid()
 
+                # Prepare config with default shared=False if not specified
+                config = provider_data.config or {}
+                if "shared" not in config:
+                    config["shared"] = False
+
                 # Create new provider
                 new_provider = MemoryProviderModel(
                     memory_provider_id=memory_provider_id,
                     memory_provider_name=provider_data.memory_provider_name,
-                    config=provider_data.config,
+                    config=config,
                     enabled=True,
                     created_by=user_id,
                 )
@@ -242,7 +247,13 @@ class MemoryProviderService:
                 if update_data.memory_provider_name is not None:
                     provider.memory_provider_name = update_data.memory_provider_name
                 if update_data.config is not None:
-                    provider.config = update_data.config
+                    # Ensure shared field is present in config
+                    updated_config = update_data.config.copy() if update_data.config else {}
+                    if "shared" not in updated_config:
+                        # Preserve existing shared value if present, otherwise default to False
+                        existing_shared = (provider.config or {}).get("shared", False)
+                        updated_config["shared"] = existing_shared
+                    provider.config = updated_config
                 if update_data.enabled is not None:
                     provider.enabled = update_data.enabled
 

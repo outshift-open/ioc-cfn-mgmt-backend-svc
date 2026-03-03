@@ -17,7 +17,13 @@ class MemoryProviderCreate(BaseModel):
     """Schema for creating a memory provider"""
 
     memory_provider_name: str = Field(..., description="Memory provider name")
-    config: Optional[dict] = Field(None, description="Provider-specific configuration")
+    config: Optional[dict] = Field(
+        None,
+        description=(
+            "Provider-specific configuration. Should include 'host', 'port', "
+            "and optionally 'shared' (defaults to False)"
+        ),
+    )
 
 
 class MemoryProviderListItem(BaseModel):
@@ -41,7 +47,10 @@ class MemoryProviderUpdate(BaseModel):
     """Schema for updating a memory provider"""
 
     memory_provider_name: Optional[str] = Field(None, description="Memory provider name")
-    config: Optional[dict] = Field(None, description="Provider-specific configuration")
+    config: Optional[dict] = Field(
+        None,
+        description="Provider-specific configuration. Should include 'host', 'port', and optionally 'shared'",
+    )
     enabled: Optional[bool] = Field(None, description="Whether provider is enabled")
 
 
