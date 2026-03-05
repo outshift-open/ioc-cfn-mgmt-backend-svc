@@ -22,31 +22,31 @@ services:
       timeout: 5s
       retries: 5
 
-  # AgensGraph - Backing Graph Database for IoC Knowledge Memory Service
-  # Graph per Workspace and MAS. Name of the graph is <graph_workspace_id_mas_id>
+  # Backing Database for IoC Knowledge Memory Service
+  # Graph(Agensgraph) + PgVector + Postgres Database 
   # Port Mapping: 5456:5432
   #   - Host Port: 5456 (to avoid conflicts with local PostgreSQL on 5432)
   #   - Container Port: 5432 (PostgreSQL default, cannot be changed without config)
-  ioc-graph-db:
-    image: skaiworldwide/agensgraph:v2.16.0-alpine3.22
+  ioc-knowledge-db:
+    image: ghcr.io/cisco-eti/ioc-knowledge-memory-svc-db:1.0
     platform: linux/amd64
     profiles:
       - db-only
       - full-stack
     environment:
-      POSTGRES_DB: ${AGENSGRAPH_DB:-ioc-graph-db}
-      POSTGRES_USER: ${AGENSGRAPH_USER}
-      POSTGRES_PASSWORD: ${AGENSGRAPH_PASSWORD}
+      POSTGRES_DB: ${IOC_KNOWLEDGE_DB:-ioc-knowledge-db}
+      POSTGRES_USER: ${IOC_KNOWLEDGE_DB_USER}
+      POSTGRES_PASSWORD: ${IOC_KNOWLEDGE_DB_PASSWORD}
     ports:
-      - "${AGENSGRAPH_PORT:-5456}:5432"
+      - "${IOC_KNOWLEDGE_DB_PORT:-5456}:5432"
     volumes:
-      - agensgraph_data:/var/lib/postgresql/data
+      - ioc_knowledge_db_data:/var/lib/postgresql/data
     restart: unless-stopped
     healthcheck:
       test:
         [
           "CMD-SHELL",
-          "pg_isready -h localhost -p 5432 -U ${AGENSGRAPH_USER} -d ${AGENSGRAPH_DB:-ioc-graph-db}",
+          "pg_isready -h localhost -p 5432 -U ${IOC_KNOWLEDGE_DB_USER} -d ${IOC_KNOWLEDGE_DB:-ioc-knowledge-db}",
         ]
       interval: 10s
       timeout: 5s
@@ -63,16 +63,16 @@ services:
       - db-only
       - full-stack
     environment:
-      DB_HOST: ioc-graph-db
+      DB_HOST: ioc-knowledge-db
       DB_PORT: 5432
-      DB_USER: ${AGENSGRAPH_USER}
-      DB_PASSWORD: ${AGENSGRAPH_PASSWORD}
-      DB_NAME: ${AGENSGRAPH_DB:-ioc-graph-db}
+      DB_USER: ${IOC_KNOWLEDGE_DB_USER}
+      DB_PASSWORD: ${IOC_KNOWLEDGE_DB_PASSWORD}
+      DB_NAME: ${IOC_KNOWLEDGE_DB:-ioc-knowledge-db}
     ports:
-      - "${AGENSGRAPH_PORT_UI:-5457}:3000"
+      - "${IOC_KNOWLEDGE_DB_GRAPH_UI_PORT:-5457}:3000"
     restart: unless-stopped
     depends_on:
-      - ioc-graph-db
+      - ioc-knowledge-db
 
   ### End Database Services ###
 
@@ -171,10 +171,10 @@ services:
       ioc-knowledge-memory-svc:
         condition: service_healthy
 
-  # IoC Knowledge Memory Service - Memory and knowledge graph management
+  # IoC Knowledge Memory Service - Memory and knowledge management
   # Port Mapping: 9003:9003 (same port inside and outside container)
   ioc-knowledge-memory-svc:
-    image: ghcr.io/cisco-eti/ioc-knowledge-memory-svc:2026-02-25-ee3a49b
+    image: ghcr.io/cisco-eti/ioc-knowledge-memory-svc:2026-03-05-3dfdcb8
     platform: linux/amd64
     profiles:
       - full-stack
@@ -185,15 +185,16 @@ services:
       - APPLICATION_VERSION=dev
       - LOG_LEVEL=${LOG_LEVEL:-INFO}
       - PORT=9003
-      - AGENSGRAPH_HOST=ioc-graph-db
-      - AGENSGRAPH_DB=${AGENSGRAPH_DB:-ioc-graph-db}
-      - AGENSGRAPH_USER=${AGENSGRAPH_USER}
-      - AGENSGRAPH_PASSWORD=${AGENSGRAPH_PASSWORD}
-      - AGENSGRAPH_PORT=5432
+      - IOC_KNOWLEDGE_DB_HOST=ioc-knowledge-db
+      - IOC_KNOWLEDGE_DB=${IOC_KNOWLEDGE_DB:-ioc-knowledge-db}
+      - IOC_KNOWLEDGE_DB_USER=${IOC_KNOWLEDGE_DB_USER}
+      - IOC_KNOWLEDGE_DB_PASSWORD=${IOC_KNOWLEDGE_DB_PASSWORD}
+      - IOC_KNOWLEDGE_DB_PORT=5432
       - MEMORY_PROVIDER_REGISTRATION_URL=http://ioc-cfn-mgmt-plane-svc:9000
+      - EMBEDDING_VECTOR_SIZE=${EMBEDDING_VECTOR_SIZE:-384}
     restart: unless-stopped
     depends_on:
-      ioc-graph-db:
+      ioc-knowledge-db:
         condition: service_healthy
       ioc-graph-db-viewer:
         condition: service_started
@@ -267,4 +268,4 @@ services:
 
 volumes:
   postgres_data:
-  agensgraph_data:
+  ioc_knowledge_db_data:
