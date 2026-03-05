@@ -4,7 +4,9 @@ Memory Providers are shared across workspaces (cross-workspace resource).
 They are associated with workspaces via the workspace_memory_provider join table.
 """
 
+import logging
 from datetime import datetime, timezone
+from typing import List
 
 from fastapi import HTTPException, status
 
@@ -17,6 +19,7 @@ from server.schemas.memory_provider import (
     MemoryProviderUpdate,
 )
 from server.utils import generate_uuid
+from server.utils.encryption import process_config_for_display, process_config_for_storage
 
 
 class MemoryProviderService:
@@ -60,16 +63,16 @@ class MemoryProviderService:
                 # Generate unique ID for the provider
                 memory_provider_id = generate_uuid()
 
-                # Prepare config with default shared=False if not specified
-                config = provider_data.config or {}
-                if "shared" not in config:
-                    config["shared"] = False
+                # Convert Pydantic model to dict and encrypt credentials
+                config_dict = provider_data.config.model_dump()
+                config_dict = process_config_for_storage(config_dict)
 
                 # Create new provider
                 new_provider = MemoryProviderModel(
                     memory_provider_id=memory_provider_id,
                     memory_provider_name=provider_data.memory_provider_name,
-                    config=config,
+                    description=provider_data.description,
+                    config=config_dict,
                     enabled=True,
                     created_by=user_id,
                 )
@@ -86,7 +89,8 @@ class MemoryProviderService:
                 return MemoryProviderDetail(
                     memory_provider_id=new_provider.memory_provider_id,
                     memory_provider_name=new_provider.memory_provider_name,
-                    config=new_provider.config,
+                    description=new_provider.description,
+                    config=process_config_for_display(new_provider.config),
                     enabled=new_provider.enabled,
                     created_at=new_provider.created_at,
                     updated_at=new_provider.updated_at,
@@ -141,7 +145,8 @@ class MemoryProviderService:
                 return MemoryProviderDetail(
                     memory_provider_id=provider.memory_provider_id,
                     memory_provider_name=provider.memory_provider_name,
-                    config=provider.config,
+                    description=provider.description,
+                    config=process_config_for_display(provider.config),
                     enabled=provider.enabled,
                     created_at=provider.created_at,
                     updated_at=provider.updated_at,
@@ -185,7 +190,8 @@ class MemoryProviderService:
                     MemoryProviderDetail(
                         memory_provider_id=provider.memory_provider_id,
                         memory_provider_name=provider.memory_provider_name,
-                        config=provider.config,
+                        description=provider.description,
+                        config=process_config_for_display(provider.config),
                         enabled=provider.enabled,
                         created_at=provider.created_at,
                         updated_at=provider.updated_at,
@@ -246,13 +252,12 @@ class MemoryProviderService:
                 # Update fields if provided
                 if update_data.memory_provider_name is not None:
                     provider.memory_provider_name = update_data.memory_provider_name
+                if update_data.description is not None:
+                    provider.description = update_data.description
                 if update_data.config is not None:
-                    # Ensure shared field is present in config
-                    updated_config = update_data.config.copy() if update_data.config else {}
-                    if "shared" not in updated_config:
-                        # Preserve existing shared value if present, otherwise default to False
-                        existing_shared = (provider.config or {}).get("shared", False)
-                        updated_config["shared"] = existing_shared
+                    # Convert Pydantic model to dict and encrypt credentials
+                    updated_config = update_data.config.model_dump()
+                    updated_config = process_config_for_storage(updated_config)
                     provider.config = updated_config
                 if update_data.enabled is not None:
                     provider.enabled = update_data.enabled
@@ -271,7 +276,8 @@ class MemoryProviderService:
                 return MemoryProviderDetail(
                     memory_provider_id=provider.memory_provider_id,
                     memory_provider_name=provider.memory_provider_name,
-                    config=provider.config,
+                    description=provider.description,
+                    config=process_config_for_display(provider.config),
                     enabled=provider.enabled,
                     created_at=provider.created_at,
                     updated_at=provider.updated_at,
@@ -351,6 +357,51 @@ class MemoryProviderService:
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
                 detail=f"Failed to delete memory provider: {str(e)}",
             )
+
+    def list_for_cfn(self) -> List[dict]:
+        """
+        List Memory Providers with raw configs for CFN consumption
+
+        This method bypasses the display masking and returns raw configs from the database
+        so that process_config_for_cfn() can properly decrypt credentials for CFN nodes.
+
+        Returns:
+            List of dicts with raw provider data including encrypted credentials
+        """
+        try:
+            db = RelationalDB()
+            session = db.get_session()
+
+            try:
+                providers = (
+                    session.query(MemoryProviderModel)
+                    .filter(
+                        MemoryProviderModel.deleted_at.is_(None),
+                        MemoryProviderModel.enabled.is_(True),
+                    )
+                    .all()
+                )
+
+                # Return raw provider data without masking
+                return [
+                    {
+                        "memory_provider_id": provider.memory_provider_id,
+                        "memory_provider_name": provider.memory_provider_name,
+                        "description": provider.description,
+                        "config": provider.config,  # Raw config with credentials_encrypted
+                        "enabled": provider.enabled,
+                    }
+                    for provider in providers
+                ]
+
+            finally:
+                session.close()
+
+        except Exception as e:
+            # Don't fail CFN config generation if memory providers can't be fetched
+            logger = logging.getLogger(__name__)
+            logger.error(f"Failed to list memory providers for CFN: {str(e)}")
+            return []
 
 
 # Singleton instance

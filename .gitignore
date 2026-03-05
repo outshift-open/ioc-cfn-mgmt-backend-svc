@@ -113,6 +113,9 @@ ENV/
 env.bak/
 venv.bak/
 
+# Local secrets (auto-generated encryption keys)
+.secrets/
+
 # Spyder project settings
 .spyderproject
 .spyproject

@@ -43,6 +43,7 @@ class MultiAgenticSystemService:
                 shared_memory = MemoryProviderDetail(
                     memory_provider_id=shared_provider.memory_provider_id,
                     memory_provider_name=shared_provider.memory_provider_name,
+                    description=shared_provider.description,
                     config=shared_provider.config,
                     enabled=shared_provider.enabled,
                     created_at=shared_provider.created_at,
@@ -72,6 +73,7 @@ class MultiAgenticSystemService:
                         agentic_memory = MemoryProviderDetail(
                             memory_provider_id=agent_provider.memory_provider_id,
                             memory_provider_name=agent_provider.memory_provider_name,
+                            description=agent_provider.description,
                             config=agent_provider.config,
                             enabled=agent_provider.enabled,
                             created_at=agent_provider.created_at,

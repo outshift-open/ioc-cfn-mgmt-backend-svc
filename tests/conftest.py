@@ -26,6 +26,8 @@ os.environ.setdefault("POSTGRES_DB", "ioc_test")
 os.environ.setdefault("POSTGRES_USER", "postgresUser")
 os.environ.setdefault("POSTGRES_PASSWORD", "postgresPW")
 os.environ.setdefault("POSTGRES_HOST", "localhost")
+# Required: Encryption key for memory provider credentials
+os.environ.setdefault("MEMORY_PROVIDER_ENCRYPTION_KEY", "iY1jTBw2ZcKbtZTowQqcAaFCMWCYJ7MXKBphCxxsJ1s=")
 
 
 def _ensure_test_database_exists(max_wait_seconds: int = 20) -> None:

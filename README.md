@@ -19,6 +19,7 @@ IoC CFN Management Backend Service - FastAPI backend for workspaces, users, API 
 ### Dependencies for the Relational DB
 
 For details please refer to the [README](src/server/database/relational_db/README.md)
+
 - [PostgreSQL 17 Alpine](https://hub.docker.com/_/postgres)
 - [Atlas](https://atlasgo.io/guides/orms/sqlalchemy/getting-started)
 
@@ -61,6 +62,10 @@ task dev
 
 **API Documentation:** http://localhost:9000/docs
 
+### Encryption Keys
+
+Memory provider credentials are encrypted using a Fernet key. The key is automatically generated on first run and stored in `.secrets/encryption.key` (gitignored). Each developer gets a unique key.
+
 ## Development
 
 **Using Task**
@@ -91,16 +96,19 @@ task docker-compose-db-up            # Databases only
 **API Documentation:** http://localhost:9000/docs
 
 **IAM (Identity and Access Management):**
+
 - API Keys: `GET|POST|DELETE /api/iam/api-keys`
 - Users: `GET /api/iam/users`
 - Roles: `GET /api/iam/roles`
 
 **Workspaces:**
+
 - Workspaces: `GET|POST|PUT|DELETE /api/workspaces`
 - Workspace Members: `GET|POST|DELETE /api/workspaces/{workspace_id}/members`
 - Workspace Invitations: `GET|POST|DELETE /api/workspaces/{workspace_id}/invitations`
 
 **Workspace Resources:**
+
 - Multi-Agentic Systems: `GET|POST|DELETE /api/workspaces/{workspace_id}/multi-agentic-systems`
 - Cognitive Fabric Nodes: `GET|POST|PUT|DELETE /api/workspaces/{workspace_id}/cognitive-fabric-node`
 
@@ -121,4 +129,5 @@ curl http://localhost:9000/api/audit-events/5bda66e6-1608-4f83-b7e4-aadbddce312c
 ```
 
 **Other:**
+
 - Audit Logs: `GET /api/audits`

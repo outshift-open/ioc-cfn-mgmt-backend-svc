@@ -3179,6 +3179,148 @@
         "type": "object",
         "title": "HTTPValidationError"
       },
+      "MemoryProviderAuthConfig": {
+        "properties": {
+          "type": {
+            "type": "string",
+            "enum": [
+              "none",
+              "token",
+              "bearer",
+              "basic",
+              "custom"
+            ],
+            "title": "Type",
+            "description": "Auth type: none, token, bearer, basic, custom",
+            "default": "none"
+          },
+          "credentials": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/MemoryProviderAuthCredentials"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Auth credentials (will be encrypted in database)"
+          }
+        },
+        "type": "object",
+        "title": "MemoryProviderAuthConfig",
+        "description": "Authentication configuration for memory provider"
+      },
+      "MemoryProviderAuthCredentials": {
+        "properties": {
+          "api_key": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Api Key",
+            "description": "API key for token-based auth"
+          },
+          "access_token": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Access Token",
+            "description": "Access token for bearer auth"
+          },
+          "username": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Username",
+            "description": "Username for basic auth"
+          },
+          "password": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Password",
+            "description": "Password for basic auth"
+          },
+          "header_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Header Name",
+            "description": "Custom header name"
+          },
+          "header_value": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Header Value",
+            "description": "Custom header value"
+          }
+        },
+        "type": "object",
+        "title": "MemoryProviderAuthCredentials",
+        "description": "Auth credentials - structure varies by auth type"
+      },
+      "MemoryProviderConfig": {
+        "properties": {
+          "url": {
+            "type": "string",
+            "title": "Url",
+            "description": "Provider URL (e.g., http://localhost:8765)"
+          },
+          "auth": {
+            "$ref": "#/components/schemas/MemoryProviderAuthConfig",
+            "description": "Authentication configuration"
+          },
+          "shared": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Shared",
+            "description": "Whether provider is shared",
+            "default": false
+          }
+        },
+        "type": "object",
+        "required": [
+          "url"
+        ],
+        "title": "MemoryProviderConfig",
+        "description": "Memory Provider configuration"
+      },
       "MemoryProviderCreate": {
         "properties": {
           "memory_provider_name": {
@@ -3186,23 +3328,27 @@
             "title": "Memory Provider Name",
             "description": "Memory provider name"
           },
-          "config": {
+          "description": {
             "anyOf": [
               {
-                "additionalProperties": true,
-                "type": "object"
+                "type": "string"
               },
               {
                 "type": "null"
               }
             ],
-            "title": "Config",
-            "description": "Provider-specific configuration"
+            "title": "Description",
+            "description": "Description of the memory provider"
+          },
+          "config": {
+            "$ref": "#/components/schemas/MemoryProviderConfig",
+            "description": "Provider configuration"
           }
         },
         "type": "object",
         "required": [
-          "memory_provider_name"
+          "memory_provider_name",
+          "config"
         ],
         "title": "MemoryProviderCreate",
         "description": "Schema for creating a memory provider"
@@ -3216,6 +3362,17 @@
           "memory_provider_name": {
             "type": "string",
             "title": "Memory Provider Name"
+          },
+          "description": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Description"
           },
           "config": {
             "anyOf": [
@@ -3270,6 +3427,7 @@
         "required": [
           "memory_provider_id",
           "memory_provider_name",
+          "description",
           "config",
           "enabled",
           "created_at",
@@ -3318,18 +3476,28 @@
             "title": "Memory Provider Name",
             "description": "Memory provider name"
           },
-          "config": {
+          "description": {
             "anyOf": [
               {
-                "additionalProperties": true,
-                "type": "object"
+                "type": "string"
               },
               {
                 "type": "null"
               }
             ],
-            "title": "Config",
-            "description": "Provider-specific configuration"
+            "title": "Description",
+            "description": "Description of the memory provider"
+          },
+          "config": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/MemoryProviderConfig"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Provider configuration"
           },
           "enabled": {
             "anyOf": [

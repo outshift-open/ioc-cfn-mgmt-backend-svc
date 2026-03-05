@@ -35,6 +35,7 @@ from server.services.memory_provider import memory_provider_service
 from server.services.multi_agentic_system import multi_agentic_system_service
 from server.services.workspace import workspace_service
 from server.utils import generate_uuid
+from server.utils.encryption import process_config_for_cfn
 
 # Set up module-level logger
 logger = logging.getLogger(__name__)
@@ -1201,11 +1202,29 @@ class CognitiveFabricNodeService:
                 # Get Multi-Agentic Systems for this workspace
                 try:
                     mas_systems = multi_agentic_system_service.list(ws_id).systems
-                    workspace_obj["multi_agentic_systems"] = [
-                        system.model_dump(mode="json", exclude_none=False) for system in mas_systems
-                    ]
-                except Exception:
-                    pass
+                    mas_systems_data = []
+                    for system in mas_systems:
+                        system_data = system.model_dump(mode="json", exclude_none=False)
+
+                        # Process memory provider configs for CFN (decrypt credentials)
+                        if system_data.get("shared_memory") and system_data["shared_memory"].get("config"):
+                            system_data["shared_memory"]["config"] = process_config_for_cfn(
+                                system_data["shared_memory"]["config"]
+                            )
+
+                        # Process agent memory provider configs
+                        if system_data.get("agents"):
+                            for agent in system_data["agents"]:
+                                if agent.get("agentic_memory") and agent["agentic_memory"].get("config"):
+                                    agent["agentic_memory"]["config"] = process_config_for_cfn(
+                                        agent["agentic_memory"]["config"]
+                                    )
+
+                        mas_systems_data.append(system_data)
+
+                    workspace_obj["multi_agentic_systems"] = mas_systems_data
+                except Exception as e:
+                    logger.error(f"Error processing MAS for CFN: {e}", exc_info=True)
 
                 # Get Cognitive Agents for this workspace (global/built-in defaults)
                 try:
@@ -1251,13 +1270,14 @@ class CognitiveFabricNodeService:
 
             # Fetch Memory Providers (global, not workspace-scoped)
             try:
-                providers = memory_provider_service.list().providers
+                providers = memory_provider_service.list_for_cfn()
                 providers_payload = [
                     {
-                        "memory_provider_id": provider.memory_provider_id,
-                        "name": provider.memory_provider_name,
-                        "enabled": provider.enabled,
-                        "config": provider.config or {},
+                        "memory_provider_id": provider["memory_provider_id"],
+                        "name": provider["memory_provider_name"],
+                        "description": provider["description"],
+                        "enabled": provider["enabled"],
+                        "config": process_config_for_cfn(provider["config"] or {}),
                     }
                     for provider in providers
                 ]

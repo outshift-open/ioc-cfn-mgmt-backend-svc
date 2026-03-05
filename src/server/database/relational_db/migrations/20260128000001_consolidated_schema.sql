@@ -193,6 +193,7 @@ ALTER TABLE "workspace" ADD CONSTRAINT "fk_workspace_cfn"
 CREATE TABLE "memory_provider" (
   "memory_provider_id" character varying(255) NOT NULL,
   "memory_provider_name" character varying(255) NOT NULL,
+  "description" character varying(1000) NULL,
   "config" jsonb NULL,
   "enabled" boolean NOT NULL DEFAULT true,
   "created_at" timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
