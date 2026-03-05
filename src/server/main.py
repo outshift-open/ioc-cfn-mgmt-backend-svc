@@ -21,6 +21,7 @@ setup_logging(service_name)
 
 from server.api.api import api_router  # noqa: E402
 from server.database.relational_db.db import RelationalDB  # noqa: E402
+from server.database.relational_db.cfn_cp_db import CfnCpDB  # noqa: E402
 from server.services.cognitive_fabric_node_monitor import cognitive_fabric_node_monitor  # noqa: E402
 from server.services.user import UserService  # noqa: E402
 from server.utils.version import get_app_version  # noqa: E402
@@ -39,6 +40,14 @@ async def lifespan(app: FastAPI):
         db.init()
     except Exception as e:
         logger.error(f"Relational Database initialization failed: {str(e)}")
+        raise
+
+    # CfnCp Database Setup (cfn_cp database for audit events)
+    try:
+        cfn_cp_db = CfnCpDB()
+        cfn_cp_db.init()
+    except Exception as e:
+        logger.error(f"CfnCp Database initialization failed: {str(e)}")
         raise
 
     logger.info("Database connections initialized")
@@ -95,10 +104,11 @@ async def lifespan(app: FastAPI):
         cognitive_fabric_node_monitor_task.cancel()
     logger.info("Cognitive Fabric Node monitor stopped")
 
-    logger.info("Closing database connection...")
+    logger.info("Closing database connections...")
     db.close()
+    cfn_cp_db.close()
     # await graph_db.close()
-    logger.info("Database connection closed")
+    logger.info("Database connections closed")
 
 
 # Create FastAPI app

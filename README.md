@@ -104,5 +104,21 @@ task docker-compose-db-up            # Databases only
 - Multi-Agentic Systems: `GET|POST|DELETE /api/workspaces/{workspace_id}/multi-agentic-systems`
 - Cognitive Fabric Nodes: `GET|POST|PUT|DELETE /api/workspaces/{workspace_id}/cognitive-fabric-node`
 
+**CFN Audit Events** (from `cfn_cp` database):
+- List all events: `GET /api/audit-events`
+- Filter events: `GET /api/audit-events?resource_type=MAS&audit_type=RESOURCE_CREATED`
+- Get event by ID: `GET /api/audit-events/{id}`
+
+```bash
+# List all CFN audit events
+curl http://localhost:9000/api/audit-events/
+
+# Filter by resource_type and audit_type
+curl "http://localhost:9000/api/audit-events/?resource_type=MAS&audit_type=RESOURCE_CREATED"
+
+# Get a specific audit event by UUID
+curl http://localhost:9000/api/audit-events/5bda66e6-1608-4f83-b7e4-aadbddce312c
+```
+
 **Other:**
 - Audit Logs: `GET /api/audits`
