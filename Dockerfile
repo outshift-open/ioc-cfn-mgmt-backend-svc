@@ -36,6 +36,7 @@ LABEL org.opencontainers.image.source=https://github.com/cisco-eti/ioc-cfn-mgmt-
 RUN apt-get update && apt-get install -y \
     postgresql-client \
     libatomic1 \
+    curl \
     && rm -rf /var/lib/apt/lists/*
 
 # Add user app
@@ -56,6 +57,7 @@ COPY --from=builder --chown=app:app /build/bin/atlasgo /home/app/bin/atlasgo
 # Copy application source and scripts
 COPY --chown=app:app src/ ./src/
 COPY --chown=app:app scripts/ ./scripts/
+COPY --chown=app:app pyproject.toml ./
 COPY --chown=app:app docker-entrypoint.sh ./
 
 # Make entrypoint executable
