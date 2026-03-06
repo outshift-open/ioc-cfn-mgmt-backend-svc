@@ -23,7 +23,7 @@ services:
       retries: 5
 
   # Backing Database for IoC Knowledge Memory Service
-  # Graph(Agensgraph) + PgVector + Postgres Database 
+  # Graph(Agensgraph) + PgVector + Postgres Database
   # Port Mapping: 5456:5432
   #   - Host Port: 5456 (to avoid conflicts with local PostgreSQL on 5432)
   #   - Container Port: 5432 (PostgreSQL default, cannot be changed without config)
@@ -103,9 +103,10 @@ services:
       - POSTGRES_DB=${POSTGRES_DB:-ioc}
       - POSTGRES_USER=${POSTGRES_USER}
       - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
-      - MEMORY_PROVIDER_ENCRYPTION_KEY=${MEMORY_PROVIDER_ENCRYPTION_KEY}
       - PORT=9000
       - CFN_DEV_MODE=${CFN_DEV_MODE}
+    volumes:
+      - ./.secrets:/home/app/.secrets:ro
     restart: unless-stopped
     depends_on:
       ioc-mgmt-relational-db:

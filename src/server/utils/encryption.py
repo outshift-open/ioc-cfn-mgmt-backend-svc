@@ -9,57 +9,73 @@ from typing import Any, Dict, Optional
 
 from cryptography.fernet import Fernet
 
+from server.utils.repo_root import REPO_ROOT
+
 logger = logging.getLogger(__name__)
 
+# Path to encryption key file
+ENCRYPTION_KEY_FILE = Path(REPO_ROOT) / ".secrets" / "encryption.key"
 
-KEY_FILE = Path(__file__).parent.parent.parent.parent / ".secrets" / "encryption.key"
 
-
-def get_or_create_encryption_key() -> str:
+def _load_or_generate_encryption_key() -> Optional[str]:
     """
-    Get encryption key from environment variable or local file.
-    Auto-generates and stores key if neither exists.
-
+    Load encryption key from file or environment, or generate a new one.
+    
     Priority:
-    1. MEMORY_PROVIDER_ENCRYPTION_KEY environment variable (for CI/production)
-    2. .secrets/encryption.key file (for local development)
-    3. Auto-generate new key and save to file
-
+    1. Environment variable MEMORY_PROVIDER_ENCRYPTION_KEY (for Docker/production)
+    2. File at .secrets/encryption.key (auto-generated for local dev)
+    3. Generate new key and save to file
+    
     Returns:
-        Encryption key as string
+        Encryption key as string, or None if generation fails
     """
-    if env_key := os.getenv("MEMORY_PROVIDER_ENCRYPTION_KEY"):
+    # Check environment variable first (for Docker)
+    env_key = os.getenv("MEMORY_PROVIDER_ENCRYPTION_KEY")
+    if env_key:
         logger.info("Using encryption key from environment variable")
         return env_key
-
-    if KEY_FILE.exists():
-        logger.info(f"Using encryption key from {KEY_FILE}")
-        return KEY_FILE.read_text().strip()
-
-    logger.warning("No encryption key found - generating new one")
-
-    KEY_FILE.parent.mkdir(exist_ok=True)
-
-    new_key = Fernet.generate_key().decode()
-
-    KEY_FILE.write_text(new_key)
+    
+    # Check if key file exists
+    if ENCRYPTION_KEY_FILE.exists():
+        try:
+            key = ENCRYPTION_KEY_FILE.read_text().strip()
+            logger.info(f"Loaded encryption key from {ENCRYPTION_KEY_FILE}")
+            return key
+        except Exception as e:
+            logger.error(f"Failed to read encryption key from {ENCRYPTION_KEY_FILE}: {e}")
+            return None
+    
+    # Generate new key
     try:
-        KEY_FILE.chmod(0o600)
-    except Exception:
-        pass
+        logger.info("No encryption key found - generating new key")
+        new_key = Fernet.generate_key().decode()
+        
+        # Create .secrets directory if it doesn't exist
+        ENCRYPTION_KEY_FILE.parent.mkdir(parents=True, exist_ok=True)
+        
+        # Save key to file
+        ENCRYPTION_KEY_FILE.write_text(new_key)
+        
+        # Set restrictive permissions (owner read/write only)
+        ENCRYPTION_KEY_FILE.chmod(0o600)
+        
+        logger.info(f"Generated and saved new encryption key to {ENCRYPTION_KEY_FILE}")
+        return new_key
+    except Exception as e:
+        logger.error(f"Failed to generate encryption key: {e}")
+        return None
 
-    logger.warning(f"Generated new encryption key and saved to {KEY_FILE}")
-    logger.warning(" Keep this file safe - deleting it will make existing encrypted data unreadable!")
-    logger.warning(" This key is unique to your local environment")
 
-    return new_key
+# Load or generate encryption key
+ENCRYPTION_KEY = _load_or_generate_encryption_key()
+if not ENCRYPTION_KEY:
+    logger.warning("Encryption key not available - credentials will not be encrypted")
+    cipher = None
+else:
+    cipher = Fernet(ENCRYPTION_KEY.encode())
 
 
-ENCRYPTION_KEY = get_or_create_encryption_key()
-cipher = Fernet(ENCRYPTION_KEY.encode())
-
-
-def encrypt_credentials(credentials: dict) -> str:
+def encrypt_credentials(credentials: dict) -> Optional[str]:
     """
     Encrypt credentials dictionary to encrypted string
 
@@ -67,14 +83,14 @@ def encrypt_credentials(credentials: dict) -> str:
         credentials: Dict with sensitive fields like api_key, password, etc.
 
     Returns:
-        Base64-encoded encrypted string
-
-    Raises:
-        ValueError: If credentials is empty or invalid format
-        RuntimeError: If encryption operation fails
+        Base64-encoded encrypted string or None if no cipher
     """
+    if not cipher:
+        logger.warning("Encryption key not configured - storing credentials in plaintext")
+        return None
+
     if not credentials:
-        raise ValueError("Cannot encrypt empty credentials")
+        return None
 
     try:
         # Serialize to JSON
@@ -85,12 +101,9 @@ def encrypt_credentials(credentials: dict) -> str:
 
         # Return as string for JSONB storage
         return encrypted_bytes.decode("utf-8")
-    except (TypeError, ValueError) as e:
-        logger.error("Failed to encrypt credentials: invalid format")
-        raise ValueError("Invalid credentials format") from e
     except Exception as e:
-        logger.error("Encryption operation failed")
-        raise RuntimeError("Encryption failed") from e
+        logger.error(f"Failed to encrypt credentials: {e}")
+        raise
 
 
 def decrypt_credentials(encrypted: str) -> dict:
@@ -102,13 +115,13 @@ def decrypt_credentials(encrypted: str) -> dict:
 
     Returns:
         Decrypted credentials dictionary
-
-    Raises:
-        ValueError: If encrypted string is empty or invalid format
-        RuntimeError: If decryption operation fails
     """
+    if not cipher:
+        logger.warning("Encryption key not configured - cannot decrypt")
+        return {}
+
     if not encrypted:
-        raise ValueError("Cannot decrypt empty string")
+        return {}
 
     try:
         # Decrypt
@@ -119,15 +132,12 @@ def decrypt_credentials(encrypted: str) -> dict:
         credentials = json.loads(decrypted_bytes.decode("utf-8"))
 
         return credentials
-    except (TypeError, ValueError, json.JSONDecodeError) as e:
-        logger.error("Failed to decrypt credentials: invalid format or corrupted data")
-        raise ValueError("Invalid encrypted credentials format") from e
     except Exception as e:
-        logger.error("Decryption operation failed")
-        raise RuntimeError("Decryption failed") from e
+        logger.error(f"Failed to decrypt credentials: {e}")
+        raise
 
 
-def process_config_for_storage(config: Dict[str, Any]) -> Dict[str, Any]:
+def process_config_for_storage(config: dict) -> dict:
     """
     Process config before storing in database - encrypt credentials
 
@@ -137,22 +147,24 @@ def process_config_for_storage(config: Dict[str, Any]) -> Dict[str, Any]:
     Returns:
         Config with credentials encrypted
     """
-    config_copy = copy.deepcopy(config)
+    config_copy = config.copy()
 
     # Check if auth has credentials
     if config_copy.get("auth", {}).get("type") != "none":
         credentials = config_copy.get("auth", {}).get("credentials")
 
         if credentials:
-            # Encrypt credentials (always, since cipher is required)
+            # Encrypt credentials
             encrypted = encrypt_credentials(credentials)
-            config_copy["auth"]["credentials_encrypted"] = encrypted
-            del config_copy["auth"]["credentials"]
+
+            if encrypted:
+                config_copy["auth"]["credentials_encrypted"] = encrypted
+                del config_copy["auth"]["credentials"]
 
     return config_copy
 
 
-def process_config_for_cfn(config: Dict[str, Any]) -> Dict[str, Any]:
+def process_config_for_cfn(config: dict) -> dict:
     """
     Process config before sending to CFN - decrypt credentials
 
@@ -162,7 +174,7 @@ def process_config_for_cfn(config: Dict[str, Any]) -> Dict[str, Any]:
     Returns:
         Config with credentials decrypted
     """
-    config_copy = copy.deepcopy(config)
+    config_copy = config.copy()
 
     # Check if auth has encrypted credentials
     if config_copy.get("auth", {}).get("credentials_encrypted"):
@@ -180,7 +192,7 @@ def process_config_for_cfn(config: Dict[str, Any]) -> Dict[str, Any]:
 
 def process_config_for_display(config: Optional[Dict[str, Any]]) -> Optional[Dict[str, Any]]:
     """
-    Process config before returning in API response - mask sensitive credentials
+    Process config before returning in API response - mask sensitive credentials.
     Only returns fields relevant to the specific auth type.
 
     Args:
@@ -202,7 +214,6 @@ def process_config_for_display(config: Optional[Dict[str, Any]]) -> Optional[Dic
         decrypted = decrypt_credentials(encrypted)
 
         # Get auth type to filter relevant fields and define which fields are relevant for each auth type
-
         auth_type = config_copy.get("auth", {}).get("type", "none")
 
         relevant_fields_by_type = {

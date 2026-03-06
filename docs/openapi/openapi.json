@@ -2167,6 +2167,155 @@
           }
         }
       }
+    },
+    "/api/audit-events/": {
+      "get": {
+        "tags": [
+          "audit-events"
+        ],
+        "summary": "List CFN Audit Events",
+        "description": "Retrieve a paginated list of audit events from the CFN control-plane database (cfn_cp). Supports optional filtering by `resource_type` and `audit_type`.",
+        "operationId": "list_audit_events_api_audit_events__get",
+        "parameters": [
+          {
+            "name": "skip",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 0,
+              "description": "Number of records to skip for pagination",
+              "default": 0,
+              "title": "Skip"
+            },
+            "description": "Number of records to skip for pagination"
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 1000,
+              "minimum": 1,
+              "description": "Maximum number of records to return",
+              "default": 100,
+              "title": "Limit"
+            },
+            "description": "Maximum number of records to return"
+          },
+          {
+            "name": "resource_type",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Filter by resource type (e.g. MAS, WORKSPACE, COGNITIVE_FABRIC_NODE)",
+              "title": "Resource Type"
+            },
+            "description": "Filter by resource type (e.g. MAS, WORKSPACE, COGNITIVE_FABRIC_NODE)"
+          },
+          {
+            "name": "audit_type",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Filter by audit type (e.g. RESOURCE_CREATED, RESOURCE_UPDATED, RESOURCE_DELETED)",
+              "title": "Audit Type"
+            },
+            "description": "Filter by audit type (e.g. RESOURCE_CREATED, RESOURCE_UPDATED, RESOURCE_DELETED)"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "List of audit events returned successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AuditCfnEventListResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal server error while querying cfn_cp database"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/audit-events/{audit_event_id}": {
+      "get": {
+        "tags": [
+          "audit-events"
+        ],
+        "summary": "Get CFN Audit Event by ID",
+        "description": "Retrieve a single audit event from the CFN control-plane database by its UUID.",
+        "operationId": "get_audit_event_api_audit_events__audit_event_id__get",
+        "parameters": [
+          {
+            "name": "audit_event_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Audit Event Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Audit event returned successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AuditCfnEventResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Audit event not found"
+          },
+          "500": {
+            "description": "Internal server error while querying cfn_cp database"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   "components": {
@@ -2249,6 +2398,135 @@
         ],
         "title": "AgentWithMemory",
         "description": "Schema for agent with full memory provider details (output)"
+      },
+      "AuditCfnEventListResponse": {
+        "properties": {
+          "total": {
+            "type": "integer",
+            "title": "Total",
+            "description": "Total number of audit events matching the query"
+          },
+          "audit_events": {
+            "items": {
+              "$ref": "#/components/schemas/AuditCfnEventResponse"
+            },
+            "type": "array",
+            "title": "Audit Events",
+            "description": "List of audit events"
+          }
+        },
+        "type": "object",
+        "required": [
+          "total",
+          "audit_events"
+        ],
+        "title": "AuditCfnEventListResponse",
+        "description": "Response model for listing CFN audit events."
+      },
+      "AuditCfnEventResponse": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id",
+            "description": "Unique audit event ID (UUID)"
+          },
+          "operation_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Operation Id",
+            "description": "Operation identifier"
+          },
+          "resource_type": {
+            "type": "string",
+            "title": "Resource Type",
+            "description": "Type of the resource (e.g. MAS, WORKSPACE)"
+          },
+          "resource_identifier": {
+            "type": "string",
+            "title": "Resource Identifier",
+            "description": "Identifier of the resource"
+          },
+          "audit_type": {
+            "type": "string",
+            "title": "Audit Type",
+            "description": "Type of audit event (e.g. RESOURCE_CREATED)"
+          },
+          "audit_resource_identifier": {
+            "type": "string",
+            "title": "Audit Resource Identifier",
+            "description": "Identifier of the audited resource"
+          },
+          "audit_information": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Audit Information",
+            "description": "JSONB audit event details"
+          },
+          "audit_extra_information": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Audit Extra Information",
+            "description": "Additional information as text"
+          },
+          "created_by": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Created By",
+            "description": "UUID of the user who created the event"
+          },
+          "created_on": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created On",
+            "description": "Timestamp when the event was created"
+          },
+          "last_modified_by": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Last Modified By",
+            "description": "UUID of the user who last modified the event"
+          },
+          "last_modified_on": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Last Modified On",
+            "description": "Timestamp when the event was last modified"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "resource_type",
+          "resource_identifier",
+          "audit_type",
+          "audit_resource_identifier",
+          "created_by",
+          "created_on",
+          "last_modified_by",
+          "last_modified_on"
+        ],
+        "title": "AuditCfnEventResponse",
+        "description": "Response model for CFN audit events from cfn_cp database."
       },
       "CognitiveAgentCreate": {
         "properties": {

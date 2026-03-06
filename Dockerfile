@@ -1,17 +1,40 @@
+# Builder Stage
+FROM ghcr.io/cisco-eti/sre-python-docker:v3.11.9-hardened-debian-12 AS builder
+
+WORKDIR /build
+
+# Install build dependencies (curl for atlas, build-essential and python3-dev for compiling Python packages)
+RUN apt-get update && apt-get install -y \
+    curl \
+    build-essential \
+    python3-dev \
+    && rm -rf /var/lib/apt/lists/*
+
+# Copy dependency files
+COPY pyproject.toml poetry.lock ./
+
+# Install poetry and dependencies to a specific location
+# This compiles packages like greenlet that need python3-dev
+RUN pip3 install --no-cache-dir poetry && \
+    poetry config virtualenvs.create false && \
+    poetry install --only=main --no-root --compile
+
+# Install Atlas binary
+RUN mkdir -p /build/bin && \
+    curl -sSf https://atlasgo.sh | sh -s -- --no-install -o /build/bin/atlasgo -y && \
+    chmod +x /build/bin/atlasgo
+
+# Runtime Stage
 FROM ghcr.io/cisco-eti/sre-python-docker:v3.11.9-hardened-debian-12
 
 # Link this container image to the GitHub repository
 LABEL org.opencontainers.image.source=https://github.com/cisco-eti/ioc-cfn-mgmt-plane-svc
 
-# Install curl for health checks, wget for atlas installation, postgresql-client for database seeding, and build essentials for regopy
+# Install only runtime dependencies
+# postgresql-client for database seeding
 # libatomic1 is required for regopy on some architectures
-# python3-dev is required to build greenlet from source when wheels aren't available
 RUN apt-get update && apt-get install -y \
-    curl \
-    wget \
     postgresql-client \
-    build-essential \
-    python3-dev \
     libatomic1 \
     && rm -rf /var/lib/apt/lists/*
 
@@ -23,18 +46,12 @@ RUN mkdir /home/app/ && chown -R app:app /home/app
 
 WORKDIR /home/app
 
-COPY --chown=app:app pyproject.toml poetry.lock ./
+# Copy installed Python packages from builder 
+COPY --from=builder /usr/local/lib/python3.11/site-packages /usr/local/lib/python3.11/site-packages
+COPY --from=builder /usr/local/bin /usr/local/bin
 
-# Install poetry and dependencies as root to avoid permission issues
-RUN pip3 install poetry
-RUN poetry config virtualenvs.create false
-RUN poetry install --only=main --no-root
-
-# Install Atlas binary for migrations
-RUN mkdir -p /home/app/bin && \
-    curl -sSf https://atlasgo.sh | sh -s -- --no-install -o /home/app/bin/atlasgo -y && \
-    chmod +x /home/app/bin/atlasgo && \
-    chown -R app:app /home/app/bin
+# Copy Atlas binary from builder
+COPY --from=builder --chown=app:app /build/bin/atlasgo /home/app/bin/atlasgo
 
 # Copy application source and scripts
 COPY --chown=app:app src/ ./src/
