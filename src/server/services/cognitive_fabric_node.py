@@ -1251,15 +1251,15 @@ class CognitiveFabricNodeService:
                 except Exception:
                     pass
 
-                # Get Cognitive Engines for this workspace - Not included for March 2026
+                # Get Cognition Engines for this workspace
                 try:
                     engines = cognitive_engine_service.list(ws_id).engines
                     workspace_obj["cognitive_engines"] = [
                         {
                             "cognitive_engine_id": engine.cognitive_engine_id,
-                            "name": engine.cognitive_engine_name,
-                            "enabled": engine.enabled,
+                            "cognitive_engine_name": engine.cognitive_engine_name,
                             "config": engine.config or {},
+                            "enabled": engine.enabled,
                         }
                         for engine in engines
                     ]

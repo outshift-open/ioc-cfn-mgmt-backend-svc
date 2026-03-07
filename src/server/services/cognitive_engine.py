@@ -13,6 +13,7 @@ from server.schemas.cognitive_engine import (
     CognitiveEngineListItem,
     CognitiveEngineUpdate,
 )
+from server.services.workspace import workspace_service
 from server.utils import generate_uuid
 
 
@@ -34,6 +35,13 @@ class CognitiveEngineService:
         Raises:
             HTTPException: If engine with same name already exists in workspace or creation fails
         """
+        # Validate workspace exists
+        if not workspace_service.exists(workspace_id):
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Workspace not found",
+            )
+
         try:
             db = RelationalDB()
             session = db.get_session()
@@ -76,6 +84,11 @@ class CognitiveEngineService:
                 session.commit()
                 session.refresh(new_engine)
 
+                # Update all CFN configs since engines are workspace-scoped
+                from server.services.cognitive_fabric_node import cognitive_fabric_node_service
+
+                cognitive_fabric_node_service.update_config_for_all_cfns()
+
                 return CognitiveEngineDetail(
                     cognitive_engine_id=new_engine.cognitive_engine_id,
                     workspace_id=new_engine.workspace_id,
@@ -113,6 +126,13 @@ class CognitiveEngineService:
         Raises:
             HTTPException: If engine not found
         """
+        # Validate workspace exists
+        if not workspace_service.exists(workspace_id):
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Workspace not found",
+            )
+
         try:
             db = RelationalDB()
             session = db.get_session()
@@ -167,6 +187,13 @@ class CognitiveEngineService:
         Returns:
             CognitiveEngineList with engines and total count
         """
+        # Validate workspace exists
+        if not workspace_service.exists(workspace_id):
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Workspace not found",
+            )
+
         try:
             db = RelationalDB()
             session = db.get_session()
@@ -226,6 +253,13 @@ class CognitiveEngineService:
         Raises:
             HTTPException: If engine not found or update fails
         """
+        # Validate workspace exists
+        if not workspace_service.exists(workspace_id):
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Workspace not found",
+            )
+
         try:
             db = RelationalDB()
             session = db.get_session()
@@ -260,6 +294,11 @@ class CognitiveEngineService:
 
                 session.commit()
                 session.refresh(engine)
+
+                # Update all CFN configs since engines are workspace-scoped
+                from server.services.cognitive_fabric_node import cognitive_fabric_node_service
+
+                cognitive_fabric_node_service.update_config_for_all_cfns()
 
                 return CognitiveEngineDetail(
                     cognitive_engine_id=engine.cognitive_engine_id,
@@ -299,6 +338,13 @@ class CognitiveEngineService:
         Raises:
             HTTPException: If engine not found or deletion fails
         """
+        # Validate workspace exists
+        if not workspace_service.exists(workspace_id):
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Workspace not found",
+            )
+
         try:
             db = RelationalDB()
             session = db.get_session()
@@ -326,6 +372,11 @@ class CognitiveEngineService:
                 engine.updated_at = datetime.now(timezone.utc)
 
                 session.commit()
+
+                # Update all CFN configs since engines are workspace-scoped
+                from server.services.cognitive_fabric_node import cognitive_fabric_node_service
+
+                cognitive_fabric_node_service.update_config_for_all_cfns()
 
                 return {
                     "message": f"Cognitive engine '{cognitive_engine_id}' deleted successfully",

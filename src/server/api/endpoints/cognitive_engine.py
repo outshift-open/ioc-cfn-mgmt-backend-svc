@@ -18,10 +18,10 @@ router = APIRouter()
 
 
 @router.post(
-    "/{workspace_id}/cognitive-engines",
+    "/{workspace_id}/cognition-engines",
     response_model=CognitiveEngineDetail,
-    summary="Create Cognitive Engine",
-    description="Create a new cognitive engine in workspace",
+    summary="Create Cognition Engine",
+    description="Create a new cognition engine in workspace",
     status_code=201,
 )
 def create_cognitive_engine(
@@ -46,10 +46,10 @@ def create_cognitive_engine(
 
 
 @router.get(
-    "/{workspace_id}/cognitive-engines",
+    "/{workspace_id}/cognition-engines",
     response_model=CognitiveEngineList,
-    summary="List Cognitive Engines",
-    description="Get list of all cognitive engines in workspace",
+    summary="List Cognition Engines",
+    description="Get list of all cognition engines in workspace",
 )
 def list_cognitive_engines(
     workspace_id: str,
@@ -70,10 +70,10 @@ def list_cognitive_engines(
 
 
 @router.get(
-    "/{workspace_id}/cognitive-engines/{cognitive_engine_id}",
+    "/{workspace_id}/cognition-engines/{cognitive_engine_id}",
     response_model=CognitiveEngineDetail,
-    summary="Get Cognitive Engine",
-    description="Get details of a specific cognitive engine",
+    summary="Get Cognition Engine",
+    description="Get details of a specific cognition engine",
 )
 def get_cognitive_engine(
     workspace_id: str,
@@ -96,10 +96,10 @@ def get_cognitive_engine(
 
 
 @router.patch(
-    "/{workspace_id}/cognitive-engines/{cognitive_engine_id}",
+    "/{workspace_id}/cognition-engines/{cognitive_engine_id}",
     response_model=CognitiveEngineDetail,
-    summary="Update Cognitive Engine",
-    description="Update an existing cognitive engine",
+    summary="Update Cognition Engine",
+    description="Update an existing cognition engine",
 )
 def update_cognitive_engine(
     workspace_id: str,
@@ -125,10 +125,10 @@ def update_cognitive_engine(
 
 
 @router.delete(
-    "/{workspace_id}/cognitive-engines/{cognitive_engine_id}",
+    "/{workspace_id}/cognition-engines/{cognitive_engine_id}",
     response_model=Dict[str, str],
-    summary="Delete Cognitive Engine",
-    description="Delete a cognitive engine (soft delete)",
+    summary="Delete Cognition Engine",
+    description="Delete a cognition engine (soft delete)",
 )
 def delete_cognitive_engine(
     workspace_id: str,

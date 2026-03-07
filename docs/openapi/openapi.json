@@ -1598,14 +1598,14 @@
         }
       }
     },
-    "/api/workspaces/{workspace_id}/cognitive-engines": {
+    "/api/workspaces/{workspace_id}/cognition-engines": {
       "post": {
         "tags": [
-          "cognitive-engines"
+          "cognition-engines"
         ],
-        "summary": "Create Cognitive Engine",
-        "description": "Create a new cognitive engine in workspace",
-        "operationId": "create_cognitive_engine_api_workspaces__workspace_id__cognitive_engines_post",
+        "summary": "Create Cognition Engine",
+        "description": "Create a new cognition engine in workspace",
+        "operationId": "create_cognitive_engine_api_workspaces__workspace_id__cognition_engines_post",
         "security": [
           {
             "HTTPBearer": []
@@ -1657,11 +1657,11 @@
       },
       "get": {
         "tags": [
-          "cognitive-engines"
+          "cognition-engines"
         ],
-        "summary": "List Cognitive Engines",
-        "description": "Get list of all cognitive engines in workspace",
-        "operationId": "list_cognitive_engines_api_workspaces__workspace_id__cognitive_engines_get",
+        "summary": "List Cognition Engines",
+        "description": "Get list of all cognition engines in workspace",
+        "operationId": "list_cognitive_engines_api_workspaces__workspace_id__cognition_engines_get",
         "security": [
           {
             "HTTPBearer": []
@@ -1702,14 +1702,14 @@
         }
       }
     },
-    "/api/workspaces/{workspace_id}/cognitive-engines/{cognitive_engine_id}": {
+    "/api/workspaces/{workspace_id}/cognition-engines/{cognitive_engine_id}": {
       "get": {
         "tags": [
-          "cognitive-engines"
+          "cognition-engines"
         ],
-        "summary": "Get Cognitive Engine",
-        "description": "Get details of a specific cognitive engine",
-        "operationId": "get_cognitive_engine_api_workspaces__workspace_id__cognitive_engines__cognitive_engine_id__get",
+        "summary": "Get Cognition Engine",
+        "description": "Get details of a specific cognition engine",
+        "operationId": "get_cognitive_engine_api_workspaces__workspace_id__cognition_engines__cognitive_engine_id__get",
         "security": [
           {
             "HTTPBearer": []
@@ -1760,11 +1760,11 @@
       },
       "patch": {
         "tags": [
-          "cognitive-engines"
+          "cognition-engines"
         ],
-        "summary": "Update Cognitive Engine",
-        "description": "Update an existing cognitive engine",
-        "operationId": "update_cognitive_engine_api_workspaces__workspace_id__cognitive_engines__cognitive_engine_id__patch",
+        "summary": "Update Cognition Engine",
+        "description": "Update an existing cognition engine",
+        "operationId": "update_cognitive_engine_api_workspaces__workspace_id__cognition_engines__cognitive_engine_id__patch",
         "security": [
           {
             "HTTPBearer": []
@@ -1825,11 +1825,11 @@
       },
       "delete": {
         "tags": [
-          "cognitive-engines"
+          "cognition-engines"
         ],
-        "summary": "Delete Cognitive Engine",
-        "description": "Delete a cognitive engine (soft delete)",
-        "operationId": "delete_cognitive_engine_api_workspaces__workspace_id__cognitive_engines__cognitive_engine_id__delete",
+        "summary": "Delete Cognition Engine",
+        "description": "Delete a cognition engine (soft delete)",
+        "operationId": "delete_cognitive_engine_api_workspaces__workspace_id__cognition_engines__cognitive_engine_id__delete",
         "security": [
           {
             "HTTPBearer": []
@@ -1865,7 +1865,7 @@
                   "additionalProperties": {
                     "type": "string"
                   },
-                  "title": "Response Delete Cognitive Engine Api Workspaces  Workspace Id  Cognitive Engines  Cognitive Engine Id  Delete"
+                  "title": "Response Delete Cognitive Engine Api Workspaces  Workspace Id  Cognition Engines  Cognitive Engine Id  Delete"
                 }
               }
             }
