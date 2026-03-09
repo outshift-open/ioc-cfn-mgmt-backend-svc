@@ -78,7 +78,7 @@ class CognitiveAgentService:
                 session.refresh(new_agent)
 
                 # Update all CFN configs since agents are global
-                from server.services.cognitive_fabric_node import cognitive_fabric_node_service
+                from server.services.cognition_fabric_node import cognitive_fabric_node_service
 
                 cognitive_fabric_node_service.update_config_for_all_cfns()
 
@@ -273,7 +273,7 @@ class CognitiveAgentService:
                 session.refresh(agent)
 
                 # Update all CFN configs since agents are global
-                from server.services.cognitive_fabric_node import cognitive_fabric_node_service
+                from server.services.cognition_fabric_node import cognitive_fabric_node_service
 
                 cognitive_fabric_node_service.update_config_for_all_cfns()
 
@@ -345,7 +345,7 @@ class CognitiveAgentService:
                 session.commit()
 
                 # Update all CFN configs since agents are global
-                from server.services.cognitive_fabric_node import cognitive_fabric_node_service
+                from server.services.cognition_fabric_node import cognitive_fabric_node_service
 
                 cognitive_fabric_node_service.update_config_for_all_cfns()
 

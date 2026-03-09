@@ -158,7 +158,7 @@ class MultiAgenticSystemService:
                 )
 
                 # Update CFN config for this workspace
-                from server.services.cognitive_fabric_node import cognitive_fabric_node_service
+                from server.services.cognition_fabric_node import cognitive_fabric_node_service
 
                 cognitive_fabric_node_service.update_config_for_workspace(workspace_id)
 
@@ -344,7 +344,7 @@ class MultiAgenticSystemService:
                 session.refresh(mas)
 
                 # Update CFN config for this workspace
-                from server.services.cognitive_fabric_node import cognitive_fabric_node_service
+                from server.services.cognition_fabric_node import cognitive_fabric_node_service
 
                 cognitive_fabric_node_service.update_config_for_workspace(workspace_id)
 
@@ -420,7 +420,7 @@ class MultiAgenticSystemService:
                 session.commit()
 
                 # Update CFN config for this workspace
-                from server.services.cognitive_fabric_node import cognitive_fabric_node_service
+                from server.services.cognition_fabric_node import cognitive_fabric_node_service
 
                 cognitive_fabric_node_service.update_config_for_workspace(workspace_id)
 

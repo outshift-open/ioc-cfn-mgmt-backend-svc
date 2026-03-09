@@ -10,7 +10,7 @@ from fastapi.testclient import TestClient
 from server.database.relational_db.db import RelationalDB
 from server.database.relational_db.models import Base
 from server.database.relational_db.models.api_key import ApiKey
-from server.database.relational_db.models.cognitive_fabric_node import (
+from server.database.relational_db.models.cognition_fabric_node import (
     CognitiveFabricNode,
 )
 from server.database.relational_db.models.multi_agentic_system import MultiAgenticSystem
@@ -180,7 +180,7 @@ def registered_cfn(client):
         "ip_address": "192.168.1.100",
         "port": 8080,
     }
-    cfn_response = client.post("/api/cognitive-fabric-nodes/register", json=cfn_data)
+    cfn_response = client.post("/api/cognition-fabric-nodes/register", json=cfn_data)
     assert cfn_response.status_code == 201
     return cfn_response.json()["cfn_id"]
 
@@ -194,7 +194,7 @@ def created_cfn(client, sample_cfn):
         "ip_address": "192.168.1.100",
         "port": 8080,
     }
-    cfn_response = client.post("/api/cognitive-fabric-nodes/register", json=cfn_data)
+    cfn_response = client.post("/api/cognition-fabric-nodes/register", json=cfn_data)
     assert cfn_response.status_code == 201
     cfn_id = cfn_response.json()["cfn_id"]
 

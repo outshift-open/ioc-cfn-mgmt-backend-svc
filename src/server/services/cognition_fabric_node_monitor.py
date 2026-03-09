@@ -3,7 +3,7 @@
 import asyncio
 import logging
 
-from server.services.cognitive_fabric_node import cognitive_fabric_node_service
+from server.services.cognition_fabric_node import cognitive_fabric_node_service
 
 logger = logging.getLogger(__name__)
 

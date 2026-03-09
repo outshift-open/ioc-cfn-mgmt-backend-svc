@@ -10,12 +10,12 @@ from sqlalchemy import and_
 from sqlalchemy.exc import IntegrityError
 
 from server.database.relational_db.db import RelationalDB
-from server.database.relational_db.models.cognitive_fabric_node import (
+from server.database.relational_db.models.cognition_fabric_node import (
     CognitiveFabricNode as CognitiveFabricNodeModel,
 )
 from server.database.relational_db.models.workspace import Workspace as WorkspaceModel
 from server.database.relational_db.models.cognitive_agent import CognitiveAgent
-from server.schemas.cognitive_fabric_node import (
+from server.schemas.cognition_fabric_node import (
     CognitiveFabricNodeHeartbeatResponse,
     CognitiveFabricNodeList,
     CognitiveFabricNodeListItem,

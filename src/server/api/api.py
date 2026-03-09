@@ -5,7 +5,7 @@ from server.api.endpoints.audit_cfn_event import router as audit_cfn_events_rout
 from server.api.endpoints.auth import router as auth_router
 from server.api.endpoints.cognitive_agent import router as cognitive_agent_router
 from server.api.endpoints.cognitive_engine import router as cognitive_engine_router
-from server.api.endpoints.cognitive_fabric_node import router as cognitive_fabric_node_router
+from server.api.endpoints.cognition_fabric_node import router as cognitive_fabric_node_router
 from server.api.endpoints.iam import router as iam_router
 from server.api.endpoints.memory_provider import router as memory_provider_router
 from server.api.endpoints.multi_agentic_system import router as multi_agentic_system_router
@@ -18,7 +18,7 @@ from server.api.endpoints.workspaces import router as workspaces_router
 
 api_router = APIRouter()
 
-api_router.include_router(cognitive_fabric_node_router, prefix="", tags=["cognitive-fabric-nodes"])
+api_router.include_router(cognitive_fabric_node_router, prefix="", tags=["cognition-fabric-nodes"])
 api_router.include_router(memory_provider_router, prefix="", tags=["memory-providers"])
 api_router.include_router(workspaces_router, prefix="/workspaces", tags=["workspaces"])
 api_router.include_router(multi_agentic_system_router, prefix="/workspaces", tags=["multi-agentic-systems"])

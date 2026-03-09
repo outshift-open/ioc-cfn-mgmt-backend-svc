@@ -5,7 +5,7 @@ import data.authz.operations.workspaces
 import data.authz.operations.users
 import data.authz.operations.api_keys
 import data.authz.operations.softwares
-import data.authz.operations.cognitive_fabric_node
+import data.authz.operations.cognition_fabric_node
 import data.authz.operations.cognitive_engine
 import data.authz.operations.cognitive_agent
 import data.authz.operations.memory_provider
@@ -39,8 +39,8 @@ allow if {
 
 allow if {
 	input.user.role == "viewer"
-	input.resource == "cognitive_fabric_node"
-	input.operation in cognitive_fabric_node.viewer
+	input.resource == "cognition_fabric_node"
+	input.operation in cognition_fabric_node.viewer
 }
 
 allow if {

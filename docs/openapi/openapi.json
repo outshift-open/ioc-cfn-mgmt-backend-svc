@@ -55,14 +55,14 @@
         }
       }
     },
-    "/api/cognitive-fabric-nodes/register": {
+    "/api/cognition-fabric-nodes/register": {
       "post": {
         "tags": [
-          "cognitive-fabric-nodes"
+          "cognition-fabric-nodes"
         ],
         "summary": "Create Cfn Node",
         "description": "Register a new CFN node\n\n- **cfn_id**: Persistent CFN identifier (provided by CFN, immutable)\n- **cfn_name**: Human-readable CFN name (globally unique, can be updated later)\n- **cfn_config**: Optional current CFN configuration\n\nCFN is identifies to the management plane.\nRegistration creates the CFN record without workspace association.\nWorkspace association happens during workspace creation.\n\n**Response includes:**\n- **cfn_id**: The CFN identifier\n- **cfn_name**: The CFN name\n- **status**: Current status (offline)\n- **config**: Configuration for the CFN to apply locally\n  - cognitive_fabric_node: CFN-specific operational settings (non-workspace scoped)\n  - memory_providers: Global memory providers (non-workspace scoped)\n  - workspaces: Associated workspaces with MAS, cognitive agents, engines\n\nCFN must send heartbeat to change status from offline to online.",
-        "operationId": "create_cfn_node_api_cognitive_fabric_nodes_register_post",
+        "operationId": "create_cfn_node_api_cognition_fabric_nodes_register_post",
         "requestBody": {
           "content": {
             "application/json": {
@@ -102,14 +102,14 @@
         ]
       }
     },
-    "/api/cognitive-fabric-nodes": {
+    "/api/cognition-fabric-nodes": {
       "post": {
         "tags": [
-          "cognitive-fabric-nodes"
+          "cognition-fabric-nodes"
         ],
         "summary": "Create Cfn Node",
         "description": "Register a new CFN node\n\n- **cfn_id**: Persistent CFN identifier (provided by CFN, immutable)\n- **cfn_name**: Human-readable CFN name (globally unique, can be updated later)\n- **cfn_config**: Optional current CFN configuration\n\nCFN is identifies to the management plane.\nRegistration creates the CFN record without workspace association.\nWorkspace association happens during workspace creation.\n\n**Response includes:**\n- **cfn_id**: The CFN identifier\n- **cfn_name**: The CFN name\n- **status**: Current status (offline)\n- **config**: Configuration for the CFN to apply locally\n  - cognitive_fabric_node: CFN-specific operational settings (non-workspace scoped)\n  - memory_providers: Global memory providers (non-workspace scoped)\n  - workspaces: Associated workspaces with MAS, cognitive agents, engines\n\nCFN must send heartbeat to change status from offline to online.",
-        "operationId": "create_cfn_node_api_cognitive_fabric_nodes_post",
+        "operationId": "create_cfn_node_api_cognition_fabric_nodes_post",
         "security": [
           {
             "HTTPBearer": []
@@ -150,11 +150,11 @@
       },
       "get": {
         "tags": [
-          "cognitive-fabric-nodes"
+          "cognition-fabric-nodes"
         ],
         "summary": "List Cfn Nodes",
         "description": "List all CFN nodes, optionally filtered by workspace\n\n- **workspace_id**: Optional workspace filter\n- **status**: Optional status filter (online, offline, blocked)\n\nReturns all CFN nodes (enabled and disabled). Deleted CFNs are never included.",
-        "operationId": "list_cfn_nodes_api_cognitive_fabric_nodes_get",
+        "operationId": "list_cfn_nodes_api_cognition_fabric_nodes_get",
         "security": [
           {
             "HTTPBearer": []
@@ -222,14 +222,14 @@
         }
       }
     },
-    "/api/cognitive-fabric-nodes/{cfn_id}": {
+    "/api/cognition-fabric-nodes/{cfn_id}": {
       "put": {
         "tags": [
-          "cognitive-fabric-nodes"
+          "cognition-fabric-nodes"
         ],
         "summary": "Update Cfn Node",
         "description": "Update CFN node information\n\n- **cfn_id**: CFN identifier (immutable)\n- **cfn_name**: Optional updated CFN name (globally unique)\n- **cfn_config**: Optional updated CFN configuration\n\n**Response includes:**\n- Full CFN details (cfn_id, workspace_ids, cfn_name, cfn_config, status, last_seen, enabled, timestamps)\n- **config**: Regenerated configuration for the CFN to apply\n  - cognitive_fabric_node: CFN-specific operational settings\n  - memory_providers: Global memory providers\n  - workspaces: List of workspace details with MAS, cognitive agents, engines\n\nThe config is automatically regenerated with each update to ensure CFN has the latest configuration.",
-        "operationId": "update_cfn_node_api_cognitive_fabric_nodes__cfn_id__put",
+        "operationId": "update_cfn_node_api_cognition_fabric_nodes__cfn_id__put",
         "security": [
           {
             "HTTPBearer": []
@@ -281,11 +281,11 @@
       },
       "delete": {
         "tags": [
-          "cognitive-fabric-nodes"
+          "cognition-fabric-nodes"
         ],
         "summary": "Delete Cfn Node",
         "description": "Delete CFN node (hard delete)\n\n- **cfn_id**: CFN identifier\n\n**IMPORTANT:** A CFN must be disabled first before it can be deleted.\n\nDeleting a CFN marks it as deleted in the database and removes all\nworkspace associations. After deletion, the CFN ID can be reused to\ncreate a new CFN node.\n\n**Flow:**\n1. User clicks \"Disable\" in UI \u2192 CFN is disabled (PATCH /disable)\n2. \"Delete\" button appears in UI\n3. User clicks \"Delete\" \u2192 CFN is deleted (DELETE)\n4. CFN ID is now available for reuse\n\nNo response body (204 No Content).",
-        "operationId": "delete_cfn_node_api_cognitive_fabric_nodes__cfn_id__delete",
+        "operationId": "delete_cfn_node_api_cognition_fabric_nodes__cfn_id__delete",
         "security": [
           {
             "HTTPBearer": []
@@ -320,11 +320,11 @@
       },
       "get": {
         "tags": [
-          "cognitive-fabric-nodes"
+          "cognition-fabric-nodes"
         ],
         "summary": "Get Cfn Node",
         "description": "Get detailed CFN node information\n\n- **cfn_id**: CFN identifier\n\nReturns full CFN details including:\n- cfn_id, cfn_name\n- workspace_ids (all associated workspaces)\n- cfn_config (node-reported configuration)\n- config (aggregated configuration to be applied)\n- status (online, offline)\n- enabled flag (true if CFN can operate, false if disabled)\n- created_at, updated_at, last_seen timestamps\n\nThis endpoint retrieves information for both enabled and disabled CFNs.\nDeleted CFNs will return 404 Not Found.",
-        "operationId": "get_cfn_node_api_cognitive_fabric_nodes__cfn_id__get",
+        "operationId": "get_cfn_node_api_cognition_fabric_nodes__cfn_id__get",
         "security": [
           {
             "HTTPBearer": []
@@ -365,14 +365,14 @@
         }
       }
     },
-    "/api/cognitive-fabric-nodes/{cfn_id}/enable": {
+    "/api/cognition-fabric-nodes/{cfn_id}/enable": {
       "patch": {
         "tags": [
-          "cognitive-fabric-nodes"
+          "cognition-fabric-nodes"
         ],
         "summary": "Enable Cfn Node",
         "description": "Enable a disabled CFN node\n\n- **cfn_id**: CFN identifier\n\nThis is an admin operation to re-enable a disabled CFN.\nAfter enabling, the CFN can call /register to reconnect and resume operations.\n\n**Response includes:**\n- Full CFN details with enabled=True and status=offline (until heartbeat is sent)\n- **config**: Configuration for the CFN to apply when it reconnects\n  - cognitive_fabric_node: CFN-specific operational settings\n  - memory_providers: Global memory providers\n  - workspaces: List of workspace details with MAS, cognitive agents, engines",
-        "operationId": "enable_cfn_node_api_cognitive_fabric_nodes__cfn_id__enable_patch",
+        "operationId": "enable_cfn_node_api_cognition_fabric_nodes__cfn_id__enable_patch",
         "security": [
           {
             "HTTPBearer": []
@@ -413,14 +413,14 @@
         }
       }
     },
-    "/api/cognitive-fabric-nodes/{cfn_id}/disable": {
+    "/api/cognition-fabric-nodes/{cfn_id}/disable": {
       "patch": {
         "tags": [
-          "cognitive-fabric-nodes"
+          "cognition-fabric-nodes"
         ],
         "summary": "Disable Cfn Node",
         "description": "Disable CFN node (soft disable, prepares for deletion)\n\n- **cfn_id**: CFN identifier\n\nDisabling a CFN stops heartbeats and prepares it for deletion.\nThe CFN will no longer be able to send heartbeats.\nThe CFN ID is LOCKED and cannot be reused while in disabled state.\n\nAfter disabling, the \"Delete\" button will appear in the UI.\nThe CFN can be re-enabled using the /enable endpoint, or permanently\ndeleted using the DELETE endpoint.\n\n**Response includes:**\n- Full CFN details with enabled=False\n- **config**: Configuration (preserved from last state)",
-        "operationId": "disable_cfn_node_api_cognitive_fabric_nodes__cfn_id__disable_patch",
+        "operationId": "disable_cfn_node_api_cognition_fabric_nodes__cfn_id__disable_patch",
         "security": [
           {
             "HTTPBearer": []
@@ -461,14 +461,14 @@
         }
       }
     },
-    "/api/cognitive-fabric-nodes/{cfn_id}/heartbeat": {
+    "/api/cognition-fabric-nodes/{cfn_id}/heartbeat": {
       "put": {
         "tags": [
-          "cognitive-fabric-nodes"
+          "cognition-fabric-nodes"
         ],
         "summary": "Cfn Heartbeat",
-        "description": "CFN heartbeat endpoint - updates last_seen timestamp and returns config_timestamp\n\n- **cfn_id**: CFN identifier\n\nCFN nodes call this periodically (e.g., every 30 seconds) to indicate they are online.\nReturns the current status, last_seen timestamp, and config_timestamp.\n\nCFN compares the returned config_timestamp with its stored value.\nIf timestamps differ, CFN should call GET /cognitive-fabric-nodes/{cfn_id} to fetch updated config.\n\nNote: This endpoint requires authentication but not write access.\nDisabled or deleted nodes will receive 403 Forbidden.",
-        "operationId": "cfn_heartbeat_api_cognitive_fabric_nodes__cfn_id__heartbeat_put",
+        "description": "CFN heartbeat endpoint - updates last_seen timestamp and returns config_timestamp\n\n- **cfn_id**: CFN identifier\n\nCFN nodes call this periodically (e.g., every 30 seconds) to indicate they are online.\nReturns the current status, last_seen timestamp, and config_timestamp.\n\nCFN compares the returned config_timestamp with its stored value.\nIf timestamps differ, CFN should call GET /cognition-fabric-nodes/{cfn_id} to fetch updated config.\n\nNote: This endpoint requires authentication but not write access.\nDisabled or deleted nodes will receive 403 Forbidden.",
+        "operationId": "cfn_heartbeat_api_cognition_fabric_nodes__cfn_id__heartbeat_put",
         "security": [
           {
             "HTTPBearer": []
@@ -512,7 +512,7 @@
     "/api/cognitive-fabric-node/{cfn_id}/workspaces": {
       "get": {
         "tags": [
-          "cognitive-fabric-nodes"
+          "cognition-fabric-nodes"
         ],
         "summary": "Get Cfn Workspaces Config",
         "description": "Get aggregated workspace configuration for a CFN node\n\nThis endpoint returns the consolidated configuration document that aggregates\nworkspace-scoped and global resources for the CFN service to apply.\n\n- **cfn_id**: CFN identifier\n\nReturns configuration with:\n- **version**: Configuration schema version (0.1.0)\n- **cognitive_fabric_node**: List of CFN-specific operational settings (non-workspace scoped)\n- **memory_providers**: List of global memory providers (non-workspace scoped)\n- **workspaces**: List of workspaces with their resources:\n  - workspace_id: Workspace identifier\n  - workspace_name: Workspace name\n  - multi_agentic_systems: MAS available in this workspace\n  - cognitive_agents: Cognitive agents in this workspace\n  - cognitive_engines: Cognitive engines in this workspace (not included for March 2026)\n  - policies: Policies in this workspace (not included for March 2026)",

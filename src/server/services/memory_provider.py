@@ -82,7 +82,7 @@ class MemoryProviderService:
                 session.refresh(new_provider)
 
                 # Update all CFN configs since memory providers are global
-                from server.services.cognitive_fabric_node import cognitive_fabric_node_service
+                from server.services.cognition_fabric_node import cognitive_fabric_node_service
 
                 cognitive_fabric_node_service.update_config_for_all_cfns()
 
@@ -269,7 +269,7 @@ class MemoryProviderService:
                 session.refresh(provider)
 
                 # Update all CFN configs since memory providers are global
-                from server.services.cognitive_fabric_node import cognitive_fabric_node_service
+                from server.services.cognition_fabric_node import cognitive_fabric_node_service
 
                 cognitive_fabric_node_service.update_config_for_all_cfns()
 
@@ -338,7 +338,7 @@ class MemoryProviderService:
                 session.commit()
 
                 # Update all CFN configs since memory providers are global
-                from server.services.cognitive_fabric_node import cognitive_fabric_node_service
+                from server.services.cognition_fabric_node import cognitive_fabric_node_service
 
                 cognitive_fabric_node_service.update_config_for_all_cfns()
 

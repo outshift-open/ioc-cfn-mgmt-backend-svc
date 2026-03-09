@@ -138,7 +138,7 @@ class WorkspaceService:
         Raises:
             HTTPException: 404 if CFN not found, 400 if CFN required but not provided, 409 on conflict
         """
-        from server.database.relational_db.models.cognitive_fabric_node import (
+        from server.database.relational_db.models.cognition_fabric_node import (
             CognitiveFabricNode as CognitiveFabricNodeModel,
         )
 
@@ -209,7 +209,7 @@ class WorkspaceService:
                 session.refresh(new_workspace)
 
                 if workspace_data.cfn_id:
-                    from server.services.cognitive_fabric_node import cognitive_fabric_node_service
+                    from server.services.cognition_fabric_node import cognitive_fabric_node_service
 
                     cfn = (
                         session.query(CognitiveFabricNodeModel)
@@ -516,7 +516,7 @@ class WorkspaceService:
                 old_cfn_id = workspace.cfn_id
                 if workspace_data.cfn_id is not None:
                     # Validate new CFN exists and is enabled
-                    from server.database.relational_db.models.cognitive_fabric_node import (
+                    from server.database.relational_db.models.cognition_fabric_node import (
                         CognitiveFabricNode as CognitiveFabricNodeModel,
                     )
 
@@ -550,10 +550,10 @@ class WorkspaceService:
 
                 # Update CFN config_timestamp if workspace's CFN association changed
                 if workspace_data.cfn_id is not None and old_cfn_id != workspace_data.cfn_id:
-                    from server.database.relational_db.models.cognitive_fabric_node import (
+                    from server.database.relational_db.models.cognition_fabric_node import (
                         CognitiveFabricNode as CognitiveFabricNodeModel,
                     )
-                    from server.services.cognitive_fabric_node import cognitive_fabric_node_service
+                    from server.services.cognition_fabric_node import cognitive_fabric_node_service
 
                     now = datetime.now(timezone.utc)
 
@@ -744,10 +744,10 @@ class WorkspaceService:
 
                 # Update CFN config_timestamp if workspace was associated with a CFN
                 if deleted_workspace_cfn_id:
-                    from server.database.relational_db.models.cognitive_fabric_node import (
+                    from server.database.relational_db.models.cognition_fabric_node import (
                         CognitiveFabricNode as CognitiveFabricNodeModel,
                     )
-                    from server.services.cognitive_fabric_node import cognitive_fabric_node_service
+                    from server.services.cognition_fabric_node import cognitive_fabric_node_service
 
                     cfn = (
                         session.query(CognitiveFabricNodeModel)

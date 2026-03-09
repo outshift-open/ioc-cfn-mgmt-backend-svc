@@ -22,7 +22,7 @@ setup_logging(service_name)
 from server.api.api import api_router  # noqa: E402
 from server.database.relational_db.db import RelationalDB  # noqa: E402
 from server.database.relational_db.cfn_cp_db import CfnCpDB  # noqa: E402
-from server.services.cognitive_fabric_node_monitor import cognitive_fabric_node_monitor  # noqa: E402
+from server.services.cognition_fabric_node_monitor import cognitive_fabric_node_monitor  # noqa: E402
 from server.services.user import UserService  # noqa: E402
 from server.utils.version import get_app_version  # noqa: E402
 
@@ -77,7 +77,7 @@ async def lifespan(app: FastAPI):
             + f"Admin API Key:  {admin_api_key}\n"
             + "\n"
             + "Example CFN Registration:\n"
-            + "curl -X POST http://localhost:8000/api/cognitive-fabric-nodes/register \\\n"
+            + "curl -X POST http://localhost:8000/api/cognition-fabric-nodes/register \\\n"
             + f'  -H "X-API-Key: {admin_api_key}" \\\n'
             + '  -H "Content-Type: application/json" \\\n'
             + '  -d \'{"cfn_id": "cfn-001", "cfn_name": "test-node", '

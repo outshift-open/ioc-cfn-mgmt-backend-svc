@@ -85,7 +85,7 @@ class CognitiveEngineService:
                 session.refresh(new_engine)
 
                 # Update all CFN configs since engines are workspace-scoped
-                from server.services.cognitive_fabric_node import cognitive_fabric_node_service
+                from server.services.cognition_fabric_node import cognitive_fabric_node_service
 
                 cognitive_fabric_node_service.update_config_for_all_cfns()
 
@@ -296,7 +296,7 @@ class CognitiveEngineService:
                 session.refresh(engine)
 
                 # Update all CFN configs since engines are workspace-scoped
-                from server.services.cognitive_fabric_node import cognitive_fabric_node_service
+                from server.services.cognition_fabric_node import cognitive_fabric_node_service
 
                 cognitive_fabric_node_service.update_config_for_all_cfns()
 
@@ -374,7 +374,7 @@ class CognitiveEngineService:
                 session.commit()
 
                 # Update all CFN configs since engines are workspace-scoped
-                from server.services.cognitive_fabric_node import cognitive_fabric_node_service
+                from server.services.cognition_fabric_node import cognitive_fabric_node_service
 
                 cognitive_fabric_node_service.update_config_for_all_cfns()
 

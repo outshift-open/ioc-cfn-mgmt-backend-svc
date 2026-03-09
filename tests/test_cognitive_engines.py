@@ -588,7 +588,7 @@ class TestCognitiveEngineCFNIntegration:
         engine2_id = engine2_response.json()["cognitive_engine_id"]
 
         # Get CFN config
-        cfn_config_response = client.get(f"/api/cognitive-fabric-nodes/{cfn_id}")
+        cfn_config_response = client.get(f"/api/cognition-fabric-nodes/{cfn_id}")
         assert cfn_config_response.status_code == status.HTTP_200_OK
 
         cfn_config = cfn_config_response.json()
@@ -641,7 +641,7 @@ class TestCognitiveEngineCFNIntegration:
         )
 
         # Get CFN config
-        cfn_config_response = client.get(f"/api/cognitive-fabric-nodes/{cfn_id}")
+        cfn_config_response = client.get(f"/api/cognition-fabric-nodes/{cfn_id}")
         cfn_config = cfn_config_response.json()
 
         # Find our workspace
@@ -677,7 +677,7 @@ class TestCognitiveEngineCFNIntegration:
         )
 
         # Get updated CFN config
-        cfn_config = client.get(f"/api/cognitive-fabric-nodes/{cfn_id}").json()
+        cfn_config = client.get(f"/api/cognition-fabric-nodes/{cfn_id}").json()
 
         # Verify updated config is in CFN config
         workspaces = cfn_config["config"]["workspaces"]
@@ -705,7 +705,7 @@ class TestCognitiveEngineCFNIntegration:
         engine_id = engine_response.json()["cognitive_engine_id"]
 
         # Verify engine is in CFN config
-        cfn_config_before = client.get(f"/api/cognitive-fabric-nodes/{cfn_id}").json()
+        cfn_config_before = client.get(f"/api/cognition-fabric-nodes/{cfn_id}").json()
         workspaces_before = cfn_config_before["config"]["workspaces"]
         test_workspace_before = next(
             (ws for ws in workspaces_before if ws["workspace_id"] == created_workspace),
@@ -721,7 +721,7 @@ class TestCognitiveEngineCFNIntegration:
         )
 
         # Get updated CFN config
-        cfn_config_after = client.get(f"/api/cognitive-fabric-nodes/{cfn_id}").json()
+        cfn_config_after = client.get(f"/api/cognition-fabric-nodes/{cfn_id}").json()
 
         # Verify engine is removed from CFN config
         workspaces_after = cfn_config_after["config"]["workspaces"]

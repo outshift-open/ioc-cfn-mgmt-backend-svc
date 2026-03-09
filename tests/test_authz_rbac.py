@@ -55,56 +55,56 @@ class TestAuthzRBAC:
         admin_user = {"id": "admin-123", "role": "admin"}
 
         # Admin can register CFN nodes
-        assert authz_service.check_permission(admin_user, "register", "cognitive_fabric_node")
+        assert authz_service.check_permission(admin_user, "register", "cognition_fabric_node")
 
         # Admin can update CFN nodes
-        assert authz_service.check_permission(admin_user, "update", "cognitive_fabric_node")
+        assert authz_service.check_permission(admin_user, "update", "cognition_fabric_node")
 
         # Admin can deregister CFN nodes
-        assert authz_service.check_permission(admin_user, "deregister", "cognitive_fabric_node")
+        assert authz_service.check_permission(admin_user, "deregister", "cognition_fabric_node")
 
         # Admin can send heartbeat
-        assert authz_service.check_permission(admin_user, "heartbeat", "cognitive_fabric_node")
+        assert authz_service.check_permission(admin_user, "heartbeat", "cognition_fabric_node")
 
         # Admin can list CFN nodes
-        assert authz_service.check_permission(admin_user, "list", "cognitive_fabric_node")
+        assert authz_service.check_permission(admin_user, "list", "cognition_fabric_node")
 
         # Admin can get CFN node details
-        assert authz_service.check_permission(admin_user, "get", "cognitive_fabric_node")
+        assert authz_service.check_permission(admin_user, "get", "cognition_fabric_node")
 
     def test_viewer_has_readonly_cognitive_fabric_node_access(self):
         """Viewer role should have read-only CFN access"""
         viewer_user = {"id": "viewer-123", "role": "viewer"}
 
         # Viewer can list CFN nodes
-        assert authz_service.check_permission(viewer_user, "list", "cognitive_fabric_node")
+        assert authz_service.check_permission(viewer_user, "list", "cognition_fabric_node")
 
         # Viewer can get CFN node details
-        assert authz_service.check_permission(viewer_user, "get", "cognitive_fabric_node")
+        assert authz_service.check_permission(viewer_user, "get", "cognition_fabric_node")
 
         # Viewer cannot register CFN nodes
-        assert not authz_service.check_permission(viewer_user, "register", "cognitive_fabric_node")
+        assert not authz_service.check_permission(viewer_user, "register", "cognition_fabric_node")
 
         # Viewer cannot update CFN nodes
-        assert not authz_service.check_permission(viewer_user, "update", "cognitive_fabric_node")
+        assert not authz_service.check_permission(viewer_user, "update", "cognition_fabric_node")
 
         # Viewer cannot deregister CFN nodes
-        assert not authz_service.check_permission(viewer_user, "deregister", "cognitive_fabric_node")
+        assert not authz_service.check_permission(viewer_user, "deregister", "cognition_fabric_node")
 
         # Viewer cannot send heartbeat
-        assert not authz_service.check_permission(viewer_user, "heartbeat", "cognitive_fabric_node")
+        assert not authz_service.check_permission(viewer_user, "heartbeat", "cognition_fabric_node")
 
     def test_guest_has_no_cognitive_fabric_node_access(self):
         """Guest role should have no CFN access"""
         guest_user = {"id": "guest-123", "role": "guest"}
 
         # Guest cannot perform any CFN operations
-        assert not authz_service.check_permission(guest_user, "register", "cognitive_fabric_node")
-        assert not authz_service.check_permission(guest_user, "update", "cognitive_fabric_node")
-        assert not authz_service.check_permission(guest_user, "deregister", "cognitive_fabric_node")
-        assert not authz_service.check_permission(guest_user, "heartbeat", "cognitive_fabric_node")
-        assert not authz_service.check_permission(guest_user, "list", "cognitive_fabric_node")
-        assert not authz_service.check_permission(guest_user, "get", "cognitive_fabric_node")
+        assert not authz_service.check_permission(guest_user, "register", "cognition_fabric_node")
+        assert not authz_service.check_permission(guest_user, "update", "cognition_fabric_node")
+        assert not authz_service.check_permission(guest_user, "deregister", "cognition_fabric_node")
+        assert not authz_service.check_permission(guest_user, "heartbeat", "cognition_fabric_node")
+        assert not authz_service.check_permission(guest_user, "list", "cognition_fabric_node")
+        assert not authz_service.check_permission(guest_user, "get", "cognition_fabric_node")
 
     def test_admin_has_full_api_key_access(self):
         """Admin role should have full API key access"""

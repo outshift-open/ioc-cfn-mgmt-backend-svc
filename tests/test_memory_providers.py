@@ -359,7 +359,7 @@ class TestMemoryProviderEncryptionFlow:
         
         # 4. Register CFN for this workspace  
         cfn_response = client.post(
-            "/api/cognitive-fabric-nodes",
+            "/api/cognition-fabric-nodes",
             json={"cfn_name": "encryption-test-cfn"},
         )
         
@@ -375,7 +375,7 @@ class TestMemoryProviderEncryptionFlow:
         assert workspace_update_response.status_code == status.HTTP_200_OK
         
         # 6. Fetch CFN config (what the actual CFN service receives)
-        cfn_config_response = client.get(f"/api/cognitive-fabric-nodes/{cfn_id}")
+        cfn_config_response = client.get(f"/api/cognition-fabric-nodes/{cfn_id}")
         
         assert cfn_config_response.status_code == status.HTTP_200_OK
         cfn_config = cfn_config_response.json()
@@ -446,7 +446,7 @@ class TestMemoryProviderEncryptionFlow:
         assert mas_response.status_code == status.HTTP_201_CREATED
         
         cfn_response = client.post(
-            "/api/cognitive-fabric-nodes",
+            "/api/cognition-fabric-nodes",
             json={"cfn_name": "bearer-test-cfn"},
         )
         cfn_id = cfn_response.json()["cfn_id"]
@@ -457,7 +457,7 @@ class TestMemoryProviderEncryptionFlow:
         )
         
         # Fetch CFN config
-        cfn_config = client.get(f"/api/cognitive-fabric-nodes/{cfn_id}").json()
+        cfn_config = client.get(f"/api/cognition-fabric-nodes/{cfn_id}").json()
         
         # Verify decrypted for CFN
         memory_providers = cfn_config["config"]["memory_providers"]
@@ -508,7 +508,7 @@ class TestMemoryProviderEncryptionFlow:
         )
         
         cfn_response = client.post(
-            "/api/cognitive-fabric-nodes",
+            "/api/cognition-fabric-nodes",
             json={"cfn_name": "basic-test-cfn"},
         )
         cfn_id = cfn_response.json()["cfn_id"]
@@ -519,7 +519,7 @@ class TestMemoryProviderEncryptionFlow:
         )
         
         # Fetch CFN config and verify decryption
-        cfn_config = client.get(f"/api/cognitive-fabric-nodes/{cfn_id}").json()
+        cfn_config = client.get(f"/api/cognition-fabric-nodes/{cfn_id}").json()
         memory_providers = cfn_config["config"]["memory_providers"]
         test_provider = next((mp for mp in memory_providers if mp["memory_provider_id"] == provider_id), None)
         
@@ -560,7 +560,7 @@ class TestMemoryProviderEncryptionFlow:
         )
         
         cfn_response = client.post(
-            "/api/cognitive-fabric-nodes",
+            "/api/cognition-fabric-nodes",
             json={"cfn_name": "no-auth-cfn"},
         )
         cfn_id = cfn_response.json()["cfn_id"]
@@ -571,7 +571,7 @@ class TestMemoryProviderEncryptionFlow:
         )
         
         # Verify no auth in CFN config either
-        cfn_config = client.get(f"/api/cognitive-fabric-nodes/{cfn_id}").json()
+        cfn_config = client.get(f"/api/cognition-fabric-nodes/{cfn_id}").json()
         memory_providers = cfn_config["config"]["memory_providers"]
         test_provider = next((mp for mp in memory_providers if mp["memory_provider_id"] == provider_id), None)
         

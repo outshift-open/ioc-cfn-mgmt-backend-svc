@@ -223,11 +223,11 @@ class TestWorkspaceEndpoints:
         user2_client.headers = {"X-API-Key": user2_api_key}
 
         # Create CFNs for each workspace
-        dev_cfn_resp = client.post("/api/cognitive-fabric-nodes", json={"cfn_id": "cfn-dev-test", "cfn_name": "dev-cfn-node"})
+        dev_cfn_resp = client.post("/api/cognition-fabric-nodes", json={"cfn_id": "cfn-dev-test", "cfn_name": "dev-cfn-node"})
         assert dev_cfn_resp.status_code == 201
-        user1_cfn_resp = user1_client.post("/api/cognitive-fabric-nodes", json={"cfn_id": "cfn-user1-test", "cfn_name": "user1-cfn-node"})
+        user1_cfn_resp = user1_client.post("/api/cognition-fabric-nodes", json={"cfn_id": "cfn-user1-test", "cfn_name": "user1-cfn-node"})
         assert user1_cfn_resp.status_code == 201
-        user2_cfn_resp = user2_client.post("/api/cognitive-fabric-nodes", json={"cfn_id": "cfn-user2-test", "cfn_name": "user2-cfn-node"})
+        user2_cfn_resp = user2_client.post("/api/cognition-fabric-nodes", json={"cfn_id": "cfn-user2-test", "cfn_name": "user2-cfn-node"})
         assert user2_cfn_resp.status_code == 201
 
         # Dev-user (from fixture) creates a workspace
@@ -322,7 +322,7 @@ class TestWorkspaceEndpoints:
         session.commit()
 
         # Register CFN first
-        cfn_resp = client.post("/api/cognitive-fabric-nodes", json={"cfn_id": "cfn-shared-test", "cfn_name": "shared-cfn-node"})
+        cfn_resp = client.post("/api/cognition-fabric-nodes", json={"cfn_id": "cfn-shared-test", "cfn_name": "shared-cfn-node"})
         assert cfn_resp.status_code == 201
 
         # Dev-user creates a workspace
@@ -416,7 +416,7 @@ class TestWorkspaceEndpoints:
         user_client.headers = {"X-API-Key": user_api_key}
 
         # Register CFN first
-        cfn_resp = user_client.post("/api/cognitive-fabric-nodes", json={"cfn_name": "creator-cfn-node"})
+        cfn_resp = user_client.post("/api/cognition-fabric-nodes", json={"cfn_name": "creator-cfn-node"})
         assert cfn_resp.status_code == 201
         cfn_id = cfn_resp.json()["cfn_id"]
 
@@ -537,11 +537,11 @@ class TestWorkspaceEndpoints:
         user2_client.headers = {"X-API-Key": user2_api_key}
 
         # Create CFNs for each workspace
-        user1_cfn_resp = user1_client.post("/api/cognitive-fabric-nodes", json={"cfn_name": "user1-super-admin-cfn"})
+        user1_cfn_resp = user1_client.post("/api/cognition-fabric-nodes", json={"cfn_name": "user1-super-admin-cfn"})
         assert user1_cfn_resp.status_code == 201
         user1_cfn_id = user1_cfn_resp.json()["cfn_id"]
 
-        user2_cfn_resp = user2_client.post("/api/cognitive-fabric-nodes", json={"cfn_name": "user2-super-admin-cfn"})
+        user2_cfn_resp = user2_client.post("/api/cognition-fabric-nodes", json={"cfn_name": "user2-super-admin-cfn"})
         assert user2_cfn_resp.status_code == 201
         user2_cfn_id = user2_cfn_resp.json()["cfn_id"]
 
@@ -634,9 +634,9 @@ class TestWorkspaceEndpoints:
         user2_client.headers = {"X-API-Key": user2_api_key}
 
         # Register CFNs for each user's workspace
-        user1_cfn_resp = user1_client.post("/api/cognitive-fabric-nodes", json={"cfn_id": "cfn-default-user1", "cfn_name": "default-user1-cfn"})
+        user1_cfn_resp = user1_client.post("/api/cognition-fabric-nodes", json={"cfn_id": "cfn-default-user1", "cfn_name": "default-user1-cfn"})
         assert user1_cfn_resp.status_code == 201
-        user2_cfn_resp = user2_client.post("/api/cognitive-fabric-nodes", json={"cfn_id": "cfn-default-user2", "cfn_name": "default-user2-cfn"})
+        user2_cfn_resp = user2_client.post("/api/cognition-fabric-nodes", json={"cfn_id": "cfn-default-user2", "cfn_name": "default-user2-cfn"})
         assert user2_cfn_resp.status_code == 201
 
         # User A creates a workspace named "Default Workspace"
