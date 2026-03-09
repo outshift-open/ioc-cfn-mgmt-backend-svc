@@ -16,6 +16,13 @@ IoC CFN Management Backend Service - FastAPI backend for workspaces, users, API 
   - **Go users**: `go install github.com/go-task/task/v3/cmd/task@latest`
   - **Manual install**: `sh -c "$(curl --location https://taskfile.dev/install.sh)" -- -d -b ~/.local/bin`
 
+### Provide LLM Credentials
+
+Provide the following env vars in env.conf:
+- `AZURE_OPENAI_ENDPOINT`
+- `AZURE_OPENAI_API_KEY`
+- `AZURE_OPENAI_DEPLOYMENT`
+
 ### Dependencies for the Relational DB
 
 For details please refer to the [README](src/server/database/relational_db/README.md)
@@ -46,10 +53,16 @@ task run                     # installs deps, applies db migrations, then runs
 task docker-compose-full-stack-up    # Start complete stack (application + databases + cfn-svc)
 ```
 
-> **Note:** The full-stack profile includes `ioc-cfn-svc` (port 9002), which depends on both
-> `ioc-cfn-mgmt-plane-svc` and PostgreSQL. It shares database credentials
+> **Note:** The full-stack profile includes `ioc-cfn-svc` (port 9002), which now depends on
+> `ioc-mgmt-relational-db` (PostgreSQL), `ioc-cfn-mgmt-plane-svc`,
+> `ioc-knowledge-memory-svc`, and `ioc-cfn-cognition-engine`. Startup is gated on all four
+> services being healthy. The service shares database credentials
 > (`POSTGRES_USER`, `POSTGRES_PASSWORD`, `POSTGRES_PORT`) from `env.conf` and uses a
 > separate database (`DB_NAME=cfn_cp`).
+>
+> The `ioc-cfn-cognition-engine` service additionally requires the following environment
+> variables to be set: `AZURE_OPENAI_ENDPOINT`, `AZURE_OPENAI_API_KEY`,
+> and `AZURE_OPENAI_DEPLOYMENT` in `.env`.
 
 ### Alternative Quick Start Methods
 

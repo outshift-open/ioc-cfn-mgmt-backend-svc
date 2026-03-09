@@ -165,12 +165,15 @@ services:
       DB_PASSWORD: ${POSTGRES_PASSWORD}
       DB_SSL_MODE: ${DB_SSL_MODE:-disable}
       KNOWLEDGE_MEMORY_SVC_URL: http://ioc-knowledge-memory-svc:9003
+      COGNITION_ENGINE_SVC_URL: http://ioc-cfn-cognition-engine:9004
     depends_on:
       ioc-mgmt-relational-db:
         condition: service_healthy
       ioc-cfn-mgmt-plane-svc:
         condition: service_healthy
       ioc-knowledge-memory-svc:
+        condition: service_healthy
+      ioc-cfn-cognition-engine:
         condition: service_healthy
 
   # IoC Knowledge Memory Service - Memory and knowledge management
@@ -209,64 +212,22 @@ services:
       retries: 3
       start_period: 40s
 
-  # Default (Built-in) Cognitive Agents (Functions) - Knowledge Management
-  # Port Mapping: 9004:9004 (same port inside and outside container)
-  # TODO: Add service configuration when image is available
-  # ioc-cfn-ca-knowledge-mgmt:
-  #   image: ghcr.io/cisco-eti/ioc-cfn-ca-knowledge-mgmt:latest
-  #   platform: ${DOCKER_DEFAULT_PLATFORM}
-  #   profiles:
-  #     - full-stack
-  #   ports:
-  #     - "9004:9004"
-  #   environment:
-  #     - SERVICE_NAME=ioc-cfn-ca-knowledge-mgmt
-  #     - APPLICATION_VERSION=dev
-  #     - LOG_LEVEL=${LOG_LEVEL:-INFO}
-  #     - PORT=9004
-  #     - MGMT_URL=http://ioc-cfn-mgmt-plane-svc:9000
-  #     - MEMORY_SVC_URL=http://ioc-knowledge-memory-svc:9003
-  #   restart: unless-stopped
-  #   depends_on:
-  #     ioc-cfn-mgmt-plane-svc:
-  #       condition: service_healthy
-  #     ioc-knowledge-memory-svc:
-  #       condition: service_healthy
-  #   healthcheck:
-  #     test: ["CMD", "curl", "-f", "http://localhost:9004/health"]
-  #     interval: 30s
-  #     timeout: 10s
-  #     retries: 3
-  #     start_period: 40s
-
-  # Default (Built-in) Cognitive Agents (Functions) - Semantic Negotiation
-  # Port Mapping: 9005:9005 (same port inside and outside container)
-  # TODO: Add service configuration when image is available
-  # ioc-cfn-ca-semantic-negotiation:
-  #   image: ghcr.io/cisco-eti/ioc-cfn-ca-semantic-negotiation:latest
-  #   platform: ${DOCKER_DEFAULT_PLATFORM}
-  #   profiles:
-  #     - full-stack
-  #   ports:
-  #     - "9005:9005"
-  #   environment:
-  #     - SERVICE_NAME=ioc-cfn-ca-semantic-negotiation
-  #     - APPLICATION_VERSION=dev
-  #     - LOG_LEVEL=${LOG_LEVEL:-INFO}
-  #     - PORT=9005
-  #     - MGMT_URL=http://ioc-cfn-mgmt-plane-svc:9000
-  #   restart: unless-stopped
-  #   depends_on:
-  #     ioc-cfn-mgmt-plane-svc:
-  #       condition: service_healthy
-  #   healthcheck:
-  #     test: ["CMD", "curl", "-f", "http://localhost:9005/health"]
-  #     interval: 30s
-  #     timeout: 10s
-  #     retries: 3
-  #     start_period: 40s
-
-  ### End Application Services ###
+  ioc-cfn-cognition-engine:
+    image: ghcr.io/cisco-eti/ioc-cfn-cognition-engine:latest
+    ports:
+      - "9004:9004"
+    platform: ${DOCKER_DEFAULT_PLATFORM}
+    restart: unless-stopped
+    environment:
+      - AZURE_OPENAI_ENDPOINT=${AZURE_OPENAI_ENDPOINT}
+      - AZURE_OPENAI_API_KEY=${AZURE_OPENAI_API_KEY}
+      - AZURE_OPENAI_DEPLOYMENT=${AZURE_OPENAI_DEPLOYMENT}
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9004/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
 
 volumes:
   postgres_data:
