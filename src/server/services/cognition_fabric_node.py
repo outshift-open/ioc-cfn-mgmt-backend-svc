@@ -22,6 +22,7 @@ from server.schemas.cognition_fabric_node import (
     CognitiveFabricNodeRegisterRequest,
     CognitiveFabricNodeResponse,
     CognitiveFabricNodeStatus,
+    CognitiveFabricNodeSummaryResponse,
     CognitiveFabricNodeUpdateRequest,
 )
 from server.services.audit import (
@@ -1147,6 +1148,168 @@ class CognitiveFabricNodeService:
             raise HTTPException(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
                 detail=f"Failed to retrieve CFN node: {str(e)}",
+            )
+
+    def get_summary(self, cfn_id: str) -> CognitiveFabricNodeSummaryResponse:
+        """
+        Get CFN node summary with detailed workspace configuration
+
+        Transforms the internal config format to the summary format:
+        - workspace_id → id, workspace_name → name
+        - cognitive_engines → cognition_engines
+        - cognitive_engine_id → id, cognitive_engine_name → name
+        - agent_id → id
+        - memory_provider_id → id, memory_provider_name → name
+        - Removes cognitive_agents field
+
+        Args:
+            cfn_id: CFN identifier
+
+        Returns:
+            CognitiveFabricNodeSummaryResponse with transformed workspace details
+
+        Raises:
+            HTTPException: 404 if not found
+        """
+        try:
+            db = RelationalDB()
+            session = db.get_session()
+
+            try:
+                cfn = (
+                    session.query(CognitiveFabricNodeModel)
+                    .filter(
+                        CognitiveFabricNodeModel.cfn_id == cfn_id,
+                        CognitiveFabricNodeModel.deleted_at.is_(None),
+                    )
+                    .first()
+                )
+
+                if not cfn:
+                    raise HTTPException(
+                        status_code=status.HTTP_404_NOT_FOUND,
+                        detail="CFN node not found",
+                    )
+
+                # Transform workspaces from old format to new format
+                transformed_workspaces = []
+                if cfn.config and cfn.config.get("workspaces"):
+                    for ws in cfn.config["workspaces"]:
+                        # Transform cognitive engines
+                        cognition_engines = []
+                        for ce in ws.get("cognitive_engines", []):
+                            cognition_engines.append({
+                                "id": ce.get("cognitive_engine_id"),
+                                "name": ce.get("cognitive_engine_name"),
+                                "config": ce.get("config", {}),
+                                "enabled": ce.get("enabled"),
+                            })
+
+                        # Transform multi-agentic systems
+                        mas_list = []
+                        for mas in ws.get("multi_agentic_systems", []):
+                            transformed_mas = {
+                                "id": mas.get("id"),
+                                "name": mas.get("name"),
+                                "description": mas.get("description"),
+                                "config": mas.get("config"),
+                                "created_at": mas.get("created_at"),
+                                "updated_at": mas.get("updated_at"),
+                                "created_by": mas.get("created_by"),
+                                "updated_by": mas.get("updated_by"),
+                            }
+                            # Note: workspace_id is intentionally removed - workspace context is at parent level
+
+                            # Transform shared_memory
+                            if mas.get("shared_memory"):
+                                sm = mas["shared_memory"]
+                                transformed_mas["shared_memory"] = {
+                                    "id": sm.get("memory_provider_id"),
+                                    "name": sm.get("memory_provider_name"),
+                                    "description": sm.get("description"),
+                                    "config": sm.get("config"),
+                                    "enabled": sm.get("enabled"),
+                                    "created_at": sm.get("created_at"),
+                                    "updated_at": sm.get("updated_at"),
+                                    "created_by": sm.get("created_by"),
+                                    "updated_by": sm.get("updated_by"),
+                                }
+                            else:
+                                transformed_mas["shared_memory"] = None
+
+                            # Transform agents
+                            if mas.get("agents"):
+                                transformed_agents = []
+                                for agent in mas["agents"]:
+                                    transformed_agent = {
+                                        "id": agent.get("agent_id"),
+                                        "config": agent.get("config"),
+                                    }
+
+                                    # Transform agentic_memory
+                                    if agent.get("agentic_memory"):
+                                        am = agent["agentic_memory"]
+                                        transformed_agent["agentic_memory"] = {
+                                            "id": am.get("memory_provider_id"),
+                                            "name": am.get("memory_provider_name"),
+                                            "description": am.get("description"),
+                                            "config": am.get("config"),
+                                            "enabled": am.get("enabled"),
+                                            "created_at": am.get("created_at"),
+                                            "updated_at": am.get("updated_at"),
+                                            "created_by": am.get("created_by"),
+                                            "updated_by": am.get("updated_by"),
+                                        }
+                                    else:
+                                        transformed_agent["agentic_memory"] = None
+
+                                    transformed_agents.append(transformed_agent)
+                                transformed_mas["agents"] = transformed_agents
+                            else:
+                                transformed_mas["agents"] = None
+
+                            mas_list.append(transformed_mas)
+
+                        transformed_ws = {
+                            "policies": ws.get("policies", []),
+                            "id": ws.get("workspace_id"),
+                            "name": ws.get("workspace_name"),
+                            "cognition_engines": cognition_engines,
+                            "multi_agentic_systems": mas_list,
+                        }
+                        # Remove cognitive_agents - not included in summary
+                        transformed_workspaces.append(transformed_ws)
+
+                # Build config with transformed workspaces and config_timestamp
+                config = {
+                    "workspaces": transformed_workspaces,
+                    "config_timestamp": cfn.config_timestamp.isoformat() if cfn.config_timestamp else None,
+                }
+
+                return CognitiveFabricNodeSummaryResponse(
+                    id=cfn.cfn_id,
+                    name=cfn.cfn_name,
+                    config=config,
+                    status=CognitiveFabricNodeStatus(cfn.status),
+                    last_seen=cfn.last_seen,
+                    enabled=cfn.enabled,
+                    ip_address=cfn.ip_address,
+                    port=int(cfn.port) if cfn.port else None,
+                    created_at=cfn.created_at,
+                    updated_at=cfn.updated_at,
+                    created_by=cfn.created_by,
+                    updated_by=cfn.updated_by,
+                )
+
+            finally:
+                session.close()
+
+        except HTTPException:
+            raise
+        except Exception as e:
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail=f"Failed to retrieve CFN node summary: {str(e)}",
             )
 
     def generate_config(

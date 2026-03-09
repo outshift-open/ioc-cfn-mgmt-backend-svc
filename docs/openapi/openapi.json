@@ -509,6 +509,54 @@
         }
       }
     },
+    "/api/cognition-fabric-nodes/{cfn_id}/summary": {
+      "get": {
+        "tags": [
+          "cognition-fabric-nodes"
+        ],
+        "summary": "Get Cfn Node Summary",
+        "description": "Get CFN node summary with detailed workspace configuration\n\n- **cfn_id**: CFN identifier\n\nReturns CFN summary including:\n- id, name\n- config (workspaces with cognitive_engines, multi_agentic_systems, and config_timestamp)\n- status (online, offline)\n- enabled flag\n- ip_address, port\n- created_at, updated_at, last_seen timestamps\n\nThe config.workspaces array contains full details of each workspace including:\n- workspace id and name\n- cognitive_engines (list of CEs in the workspace)\n- multi_agentic_systems (list of MAS in the workspace with full details)\n- policies (empty array for now)\n\nThis endpoint retrieves information for both enabled and disabled CFNs.\nDeleted CFNs will return 404 Not Found.",
+        "operationId": "get_cfn_node_summary_api_cognition_fabric_nodes__cfn_id__summary_get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "cfn_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Cfn Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CognitiveFabricNodeSummaryResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/cognitive-fabric-node/{cfn_id}/workspaces": {
       "get": {
         "tags": [
@@ -3374,6 +3422,136 @@
         ],
         "title": "CognitiveFabricNodeStatus",
         "description": "Cognitive Fabric Node status enumeration"
+      },
+      "CognitiveFabricNodeSummaryResponse": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id",
+            "description": "Cognitive Fabric Node identifier"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name",
+            "description": "Cognitive Fabric Node name"
+          },
+          "config": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Config",
+            "description": "Configuration with workspaces and config_timestamp"
+          },
+          "status": {
+            "$ref": "#/components/schemas/CognitiveFabricNodeStatus",
+            "description": "Current node status"
+          },
+          "last_seen": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Last Seen",
+            "description": "Last heartbeat timestamp"
+          },
+          "enabled": {
+            "type": "boolean",
+            "title": "Enabled",
+            "description": "Whether node is enabled"
+          },
+          "ip_address": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ip Address",
+            "description": "IP address of the CFN node"
+          },
+          "port": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Port",
+            "description": "Port number of the CFN node"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At",
+            "description": "Creation timestamp"
+          },
+          "updated_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Updated At",
+            "description": "Last update timestamp"
+          },
+          "created_by": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Created By",
+            "description": "Creator user ID"
+          },
+          "updated_by": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Updated By",
+            "description": "Last updater user ID"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "name",
+          "config",
+          "status",
+          "last_seen",
+          "enabled",
+          "created_at"
+        ],
+        "title": "CognitiveFabricNodeSummaryResponse",
+        "description": "Schema for Cognitive Fabric Node summary response",
+        "example": {
+          "config": {
+            "config_timestamp": "2026-03-09T21:10:03.939351Z",
+            "workspaces": []
+          },
+          "created_at": "2026-03-09T21:10:03.938397",
+          "created_by": "00000000-0000-0000-0000-000000000000",
+          "enabled": true,
+          "id": "db44357c-e7ef-4db4-a32d-dc12731d87d9",
+          "ip_address": "172.18.0.8",
+          "last_seen": "2026-03-09T22:13:23.994122",
+          "name": "My Cognition Fabric Node",
+          "port": 9002,
+          "status": "online",
+          "updated_at": "2026-03-09T22:13:23.993225"
+        }
       },
       "CognitiveFabricNodeUpdateRequest": {
         "properties": {

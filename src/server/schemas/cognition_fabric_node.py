@@ -193,3 +193,42 @@ class CognitiveFabricNodeHeartbeatResponse(BaseModel):
     status: CognitiveFabricNodeStatus = Field(..., description="Current node status")
     last_seen: datetime = Field(..., description="Last heartbeat timestamp")
     config_timestamp: datetime = Field(..., description="Current config timestamp for change detection")
+
+
+class CognitiveFabricNodeSummaryResponse(BaseModel):
+    """Schema for Cognitive Fabric Node summary response"""
+
+    model_config = ConfigDict(
+        json_schema_extra={
+            "example": {
+                "id": "db44357c-e7ef-4db4-a32d-dc12731d87d9",
+                "name": "My Cognition Fabric Node",
+                "config": {
+                    "workspaces": [],
+                    "config_timestamp": "2026-03-09T21:10:03.939351Z",
+                },
+                "status": "online",
+                "last_seen": "2026-03-09T22:13:23.994122",
+                "enabled": True,
+                "ip_address": "172.18.0.8",
+                "port": 9002,
+                "created_at": "2026-03-09T21:10:03.938397",
+                "updated_at": "2026-03-09T22:13:23.993225",
+                "created_by": "00000000-0000-0000-0000-000000000000",
+                "updated_by": None,
+            }
+        }
+    )
+
+    id: str = Field(..., description="Cognitive Fabric Node identifier")
+    name: str = Field(..., description="Cognitive Fabric Node name")
+    config: Dict[str, Any] = Field(..., description="Configuration with workspaces and config_timestamp")
+    status: CognitiveFabricNodeStatus = Field(..., description="Current node status")
+    last_seen: datetime = Field(..., description="Last heartbeat timestamp")
+    enabled: bool = Field(..., description="Whether node is enabled")
+    ip_address: Optional[str] = Field(None, description="IP address of the CFN node")
+    port: Optional[int] = Field(None, description="Port number of the CFN node")
+    created_at: datetime = Field(..., description="Creation timestamp")
+    updated_at: Optional[datetime] = Field(None, description="Last update timestamp")
+    created_by: Optional[str] = Field(None, description="Creator user ID")
+    updated_by: Optional[str] = Field(None, description="Last updater user ID")

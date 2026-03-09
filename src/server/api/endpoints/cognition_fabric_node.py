@@ -11,6 +11,7 @@ from server.schemas.cognition_fabric_node import (
     CognitiveFabricNodeList,
     CognitiveFabricNodeRegisterRequest,
     CognitiveFabricNodeResponse,
+    CognitiveFabricNodeSummaryResponse,
     CognitiveFabricNodeUpdateRequest,
 )
 from server.services import cognitive_fabric_node_service
@@ -249,6 +250,40 @@ def get_cfn_node(
     """
     authz_service.require_permission(auth_user, "get", "cognition_fabric_node")
     return cognitive_fabric_node_service.get(cfn_id)
+
+
+@router.get(
+    "/cognition-fabric-nodes/{cfn_id}/summary",
+    response_model=CognitiveFabricNodeSummaryResponse,
+)
+def get_cfn_node_summary(
+    cfn_id: str,
+    auth_user: dict = Depends(get_auth_user),
+):
+    """
+    Get CFN node summary with detailed workspace configuration
+
+    - **cfn_id**: CFN identifier
+
+    Returns CFN summary including:
+    - id, name
+    - config (workspaces with cognitive_engines, multi_agentic_systems, and config_timestamp)
+    - status (online, offline)
+    - enabled flag
+    - ip_address, port
+    - created_at, updated_at, last_seen timestamps
+
+    The config.workspaces array contains full details of each workspace including:
+    - workspace id and name
+    - cognitive_engines (list of CEs in the workspace)
+    - multi_agentic_systems (list of MAS in the workspace with full details)
+    - policies (empty array for now)
+
+    This endpoint retrieves information for both enabled and disabled CFNs.
+    Deleted CFNs will return 404 Not Found.
+    """
+    authz_service.require_permission(auth_user, "get", "cognition_fabric_node")
+    return cognitive_fabric_node_service.get_summary(cfn_id)
 
 
 @router.get(

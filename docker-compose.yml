@@ -222,6 +222,10 @@ services:
       - AZURE_OPENAI_ENDPOINT=${AZURE_OPENAI_ENDPOINT}
       - AZURE_OPENAI_API_KEY=${AZURE_OPENAI_API_KEY}
       - AZURE_OPENAI_DEPLOYMENT=${AZURE_OPENAI_DEPLOYMENT}
+      # Auto-register with management plane on startup
+      - MGMT_PLANE_URL=http://ioc-cfn-mgmt-plane-svc:9000
+      - COGNITION_ENGINE_HOST=ioc-cfn-cognition-engine
+      - COGNITION_ENGINE_PORT=9004
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:9004/health"]
       interval: 30s
