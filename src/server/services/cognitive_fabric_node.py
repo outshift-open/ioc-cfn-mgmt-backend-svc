@@ -212,14 +212,14 @@ class CognitiveFabricNodeService:
                 session.commit()
                 session.refresh(new_cfn)
 
-                # If this is the default-cfn and Default Workspace exists without a CFN, associate them
+                # If this is the default-cfn and Default Workspace needs association, associate them
                 workspace_ids_list = []
                 if cfn_data.cfn_name == os.getenv("CFN_NAME", "My Cognition Fabric Node"):
+                    # Get Default Workspace (regardless of cfn_id state)
                     default_workspace = (
                         session.query(WorkspaceModel)
                         .filter(
                             WorkspaceModel.name == workspace_service.DEFAULT_WORKSPACE_NAME,
-                            WorkspaceModel.cfn_id.is_(None),
                             WorkspaceModel.deleted_at.is_(None),
                         )
                         .first()
@@ -228,25 +228,40 @@ class CognitiveFabricNodeService:
                     if not default_workspace:
                         raise HTTPException(
                             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                            detail=(
-                                "Default workspace not found or already has a CFN assigned. "
-                                "Please create a workspace with name 'default' without a CFN to enable automatic"
-                                " association."
-                            ),
+                            detail="Default workspace not found. Cannot auto-associate CFN.",
                         )
 
-                    # Associate workspace with default CFN
-                    default_workspace.cfn_id = cfn_id
-                    default_workspace.updated_at = datetime.now(timezone.utc)
+                    # Check if workspace needs association (no CFN or CFN was deleted)
+                    needs_association = False
+                    if default_workspace.cfn_id is None:
+                        needs_association = True
+                        logger.info("Default Workspace has no CFN assigned")
+                    else:
+                        # Check if the linked CFN is deleted
+                        linked_cfn = (
+                            session.query(CognitiveFabricNodeModel)
+                            .filter(CognitiveFabricNodeModel.cfn_id == default_workspace.cfn_id)
+                            .first()
+                        )
+                        if linked_cfn and linked_cfn.deleted_at is not None:
+                            needs_association = True
+                            logger.info(f"Default Workspace's CFN '{linked_cfn.cfn_name}' was deleted")
 
-                    # Regenerate CFN config with the workspace
-                    workspace_ids_list = [default_workspace.id]
-                    new_cfn.config = self.generate_config(cfn_id, workspace_ids_list, cfn_data.cfn_config, now)
-                    new_cfn.config_timestamp = now
+                    if needs_association:
+                        # Associate workspace with default CFN
+                        default_workspace.cfn_id = cfn_id
+                        default_workspace.updated_at = datetime.now(timezone.utc)
 
-                    session.commit()
-                    session.refresh(new_cfn)
-                    logger.info(f"Automatically associated new CFN '{cfn_data.cfn_name}' with default workspace")
+                        # Regenerate CFN config with the workspace
+                        workspace_ids_list = [default_workspace.id]
+                        new_cfn.config = self.generate_config(cfn_id, workspace_ids_list, cfn_data.cfn_config, now)
+                        new_cfn.config_timestamp = now
+
+                        session.commit()
+                        session.refresh(new_cfn)
+                        logger.info(f"Automatically associated new CFN '{cfn_data.cfn_name}' with default workspace")
+                    else:
+                        logger.info(f"Default Workspace already has active CFN '{default_workspace.cfn_id}'")
 
                 # Build response with workspace associations (if any)
                 response = CognitiveFabricNodeResponse(
@@ -433,6 +448,39 @@ class CognitiveFabricNodeService:
         cfn.last_seen = now
         cfn.updated_at = now
         cfn.updated_by = user_id
+
+        # If this is the default CFN, check if Default Workspace needs re-association
+        if cfn_data.cfn_name == os.getenv("CFN_NAME", "My Cognition Fabric Node"):
+            default_workspace = (
+                session.query(WorkspaceModel)
+                .filter(
+                    WorkspaceModel.name == workspace_service.DEFAULT_WORKSPACE_NAME,
+                    WorkspaceModel.deleted_at.is_(None),
+                )
+                .first()
+            )
+
+            if default_workspace:
+                # Check if workspace needs re-association (no CFN or CFN was deleted)
+                needs_association = False
+                if default_workspace.cfn_id is None:
+                    needs_association = True
+                    logger.info("Default Workspace has no CFN assigned during refresh")
+                elif default_workspace.cfn_id != cfn.cfn_id:
+                    # Check if the linked CFN is deleted
+                    linked_cfn = (
+                        session.query(CognitiveFabricNodeModel)
+                        .filter(CognitiveFabricNodeModel.cfn_id == default_workspace.cfn_id)
+                        .first()
+                    )
+                    if linked_cfn and linked_cfn.deleted_at is not None:
+                        needs_association = True
+                        logger.info(f"Default Workspace's CFN '{linked_cfn.cfn_name}' was deleted during refresh")
+
+                if needs_association:
+                    default_workspace.cfn_id = cfn.cfn_id
+                    default_workspace.updated_at = now
+                    logger.info(f"Re-associated CFN '{cfn_data.cfn_name}' with Default Workspace during refresh")
 
         workspace_ids = self._get_workspace_ids(session, cfn.cfn_id)
         cfn.config = self.generate_config(cfn.cfn_id, workspace_ids, cfn.cfn_config)
