@@ -232,6 +232,9 @@ services:
       timeout: 10s
       retries: 3
       start_period: 40s
+    depends_on:
+      ioc-cfn-mgmt-plane-svc:
+        condition: service_healthy
 
 volumes:
   postgres_data:
