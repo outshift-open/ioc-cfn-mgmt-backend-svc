@@ -2,10 +2,10 @@ name: Build and Push Docker Image
 
 on:
   push:
-    branches: [main]
+    branches: [main, clawbee]
     tags: ["*"]
   pull_request:
-    branches: [main]
+    branches: [main, clawbee]
   workflow_dispatch:
 
 permissions:
@@ -57,17 +57,14 @@ jobs:
           password: ${{ secrets.GHCR_TOKEN }}
           logout: false
 
-      - name: Build and push Docker image (PR)
+      - name: Build Docker image (PR - build only, no push, single platform)
         if: github.event_name == 'pull_request'
         uses: docker/build-push-action@10e90e3645eae34f1e60eeb005ba3a3d33f178e8 # v6.19.2
         with:
           context: .
           file: Dockerfile
-          push: true
-          platforms: linux/amd64, linux/arm64
-          tags: |
-            ghcr.io/${{ github.repository_owner }}/ioc-cfn-mgmt-plane-svc:pr-${{ github.event.pull_request.number }}
-            ghcr.io/${{ github.repository_owner }}/ioc-cfn-mgmt-plane-svc:${{ steps.metadata.outputs.date_formatted }}-${{ steps.metadata.outputs.short_sha }}
+          push: false
+          platforms: linux/amd64
           cache-from: type=gha
           cache-to: type=gha,mode=max
           provenance: false
@@ -83,6 +80,21 @@ jobs:
           tags: |
             ghcr.io/${{ github.repository_owner }}/ioc-cfn-mgmt-plane-svc:latest
             ghcr.io/${{ github.repository_owner }}/ioc-cfn-mgmt-plane-svc:${{ steps.metadata.outputs.date_formatted }}-${{ steps.metadata.outputs.short_sha }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+          provenance: false
+
+      - name: Build and push Docker image (clawbee)
+        if: github.event_name == 'push' && github.ref == 'refs/heads/clawbee'
+        uses: docker/build-push-action@10e90e3645eae34f1e60eeb005ba3a3d33f178e8 # v6.19.2
+        with:
+          context: .
+          file: Dockerfile
+          push: true
+          platforms: linux/amd64, linux/arm64
+          tags: |
+            ghcr.io/${{ github.repository_owner }}/ioc-cfn-mgmt-plane-svc:clawbee-latest
+            ghcr.io/${{ github.repository_owner }}/ioc-cfn-mgmt-plane-svc:clawbee-${{ steps.metadata.outputs.date_formatted }}-${{ steps.metadata.outputs.short_sha }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
           provenance: false

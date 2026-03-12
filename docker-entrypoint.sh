@@ -5,9 +5,8 @@ echo "Starting application initialization..."
 
 # Run database migrations
 echo "Running database migrations..."
-cd /home/app/src/server/database/relational_db
-/home/app/bin/atlasgo migrate apply --dir "file://migrations" --env local
-cd /home/app
+export MIGRATIONS_DIR="/home/app/src/server/database/relational_db/migrations"
+/home/app/scripts/migrate.sh apply
 
 # Seed the database with KEP adapters if the script exists
 if [ -f "/home/app/src/server/database/relational_db/scripts/populate_software.sql" ]; then

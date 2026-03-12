@@ -1,32 +1,10 @@
 services:
-  ### Database Services ###
-  ioc-mgmt-relational-db:
-    image: postgres:17-alpine
-    platform: ${DOCKER_DEFAULT_PLATFORM}
-    profiles:
-      - db-only
-      - full-stack
-    environment:
-      POSTGRES_DB: ${POSTGRES_DB:-ioc}
-      POSTGRES_USER: ${POSTGRES_USER}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
-    ports:
-      - "${POSTGRES_HOST_PORT:-5432}:5432"
-    volumes:
-      - postgres_data:/var/lib/postgresql/data
-      - ./scripts/init-multi-db.sh:/docker-entrypoint-initdb.d/init-multi-db.sh:ro
-    healthcheck:
-      test:
-        ["CMD-SHELL", "pg_isready -d ${POSTGRES_DB:-ioc} -U ${POSTGRES_USER}"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-
   # Backing Database for IoC Knowledge Memory Service
   # Graph(Agensgraph) + PgVector + Postgres Database
   # Port Mapping: 5456:5432
   #   - Host Port: 5456 (to avoid conflicts with local PostgreSQL on 5432)
   #   - Container Port: 5432 (PostgreSQL default, cannot be changed without config)
+  #   - it will have cfn_mgmt_db and ioc_knowledge_db both
   ioc-knowledge-db:
     image: ghcr.io/cisco-eti/ioc-knowledge-memory-svc-db:1.0
     platform: linux/amd64
@@ -41,6 +19,7 @@ services:
       - "${IOC_KNOWLEDGE_DB_PORT:-5456}:5432"
     volumes:
       - ioc_knowledge_db_data:/var/lib/postgresql/data
+      - ./scripts/init-multi-db.sh:/docker-entrypoint-initdb.d/init-multi-db.sh:ro
     restart: unless-stopped
     healthcheck:
       test:
@@ -52,28 +31,6 @@ services:
       timeout: 5s
       retries: 5
       start_period: 30s
-
-  # AgensGraph Viewer - Web UI for AgensGraph Database
-  # Port Mapping: 5457:3000
-  #   - Host Port: 5457 (accessible from your machine)
-  #   - Container Port: 3000 (AGViewer's default internal port)
-  ioc-graph-db-viewer:
-    image: skaiworldwide/agviewer:latest
-    profiles:
-      - db-only
-      - full-stack
-    environment:
-      DB_HOST: ioc-knowledge-db
-      DB_PORT: 5432
-      DB_USER: ${IOC_KNOWLEDGE_DB_USER}
-      DB_PASSWORD: ${IOC_KNOWLEDGE_DB_PASSWORD}
-      DB_NAME: ${IOC_KNOWLEDGE_DB:-ioc-knowledge-db}
-    ports:
-      - "${IOC_KNOWLEDGE_DB_GRAPH_UI_PORT:-5457}:3000"
-    restart: unless-stopped
-    depends_on:
-      - ioc-knowledge-db
-
   ### End Database Services ###
 
   ### Application Services ###
@@ -87,7 +44,7 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
-    image: ghcr.io/cisco-eti/ioc-cfn-mgmt-plane-svc:latest
+    image: ghcr.io/cisco-eti/ioc-cfn-mgmt-plane-svc:clawbee-latest
     platform: ${DOCKER_DEFAULT_PLATFORM}
     profiles:
       - full-stack
@@ -98,18 +55,18 @@ services:
       - APPLICATION_VERSION=dev
       - LOG_LEVEL=${LOG_LEVEL:-INFO}
       - ADMIN_USER_PASSWORD=${ADMIN_USER_PASSWORD}
-      - POSTGRES_HOST=ioc-mgmt-relational-db
-      - POSTGRES_PORT=${POSTGRES_CONTAINER_PORT:-5432}
-      - POSTGRES_DB=${POSTGRES_DB:-ioc}
-      - POSTGRES_USER=${POSTGRES_USER}
-      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+      - POSTGRES_HOST=ioc-knowledge-db
+      - POSTGRES_PORT=5432
+      - POSTGRES_DB=cfn_mgmt
+      - POSTGRES_USER=${IOC_KNOWLEDGE_DB_USER}
+      - POSTGRES_PASSWORD=${IOC_KNOWLEDGE_DB_PASSWORD}
       - PORT=9000
       - CFN_DEV_MODE=${CFN_DEV_MODE}
     volumes:
       - ./.secrets:/home/app/.secrets:ro
     restart: unless-stopped
     depends_on:
-      ioc-mgmt-relational-db:
+      ioc-knowledge-db:
         condition: service_healthy
     healthcheck:
       test: ["CMD", "curl", "-f", "http://ioc-cfn-mgmt-plane-svc:9000/health"]
@@ -141,6 +98,7 @@ services:
 
   # CFN Service - Cognitive Fabric Node service
   # Port Mapping: 9002:9002 (same port inside and outside container)
+  # TODO: Remove cfn_cp and DB dependency once the Python CFN service is hooked up here
   ioc-cfn-svc:
     image: ghcr.io/cisco-eti/ioc-cfn-svc:latest
     container_name: ioc-cfn-svc
@@ -158,16 +116,16 @@ services:
       HEARTBEAT_INTERVAL_SECONDS: ${HEARTBEAT_INTERVAL_SECONDS:-10}
       MCP_ENABLED: ${MCP_ENABLED:-false}
       MCP_PORT: ${MCP_PORT:-9002}
-      DB_HOST: ioc-mgmt-relational-db
-      DB_PORT: ${POSTGRES_CONTAINER_PORT:-5432}
-      DB_NAME: ${DB_NAME:-cfn_cp}
-      DB_USER: ${POSTGRES_USER}
-      DB_PASSWORD: ${POSTGRES_PASSWORD}
+      DB_HOST: ioc-knowledge-db
+      DB_PORT: 5432
+      DB_NAME: cfn_cp
+      DB_USER: ${IOC_KNOWLEDGE_DB_USER}
+      DB_PASSWORD: ${IOC_KNOWLEDGE_DB_PASSWORD}
       DB_SSL_MODE: ${DB_SSL_MODE:-disable}
       KNOWLEDGE_MEMORY_SVC_URL: http://ioc-knowledge-memory-svc:9003
       COGNITION_ENGINE_SVC_URL: http://ioc-cfn-cognition-engine:9004
     depends_on:
-      ioc-mgmt-relational-db:
+      ioc-knowledge-db:
         condition: service_healthy
       ioc-cfn-mgmt-plane-svc:
         condition: service_healthy
@@ -201,8 +159,6 @@ services:
     depends_on:
       ioc-knowledge-db:
         condition: service_healthy
-      ioc-graph-db-viewer:
-        condition: service_started
       ioc-cfn-mgmt-plane-svc:
         condition: service_healthy
     healthcheck:
@@ -237,5 +193,4 @@ services:
         condition: service_healthy
 
 volumes:
-  postgres_data:
   ioc_knowledge_db_data:

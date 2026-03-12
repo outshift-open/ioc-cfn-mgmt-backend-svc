@@ -18,21 +18,11 @@ vars:
 
 tasks:
   deps:
-    desc: Install all dependencies (Python and Atlas)
+    desc: Install all dependencies (Python)
     cmds:
-      - task: install-atlas
       - task: install-update-poetry
       - task: poetry-check
     silent: false
-
-  install-atlas:
-    desc: Install Atlas migration tool to bin directory
-    cmds:
-      - mkdir -p {{.BIN_DIR}}
-      - curl -sSf https://atlasgo.sh | sh -s -- --no-install -o {{.BIN_DIR}}/atlasgo -y
-      - chmod +x {{.BIN_DIR}}/atlasgo
-    status:
-      - '[ -f "{{.BIN_DIR}}/atlasgo" ]'
 
   install-update-poetry:
     desc: Install and update Python dependencies using Poetry
@@ -146,32 +136,17 @@ tasks:
   db-migrate-apply:
     desc: Apply pending database migrations
     cmds:
-      - '{{.BIN_DIR}}/atlasgo migrate apply --dir "file://migrations" --env local'
-    dir: "src/server/database/relational_db"
+      - ./scripts/migrate.sh apply
 
   db-migrate-status:
     desc: Show database migration status
     cmds:
-      - /usr/local/bin/atlasgo migrate status --dir "file://migrations" --env local
-    dir: "src/server/database/relational_db"
-
-  db-migrate-new:
-    desc: Create a new migration which will be placed in migrations folder (provide name as argument)
-    # task db-migrate-new -- "msg_for_migration"
-    cmds:
-      - /usr/local/bin/atlasgo migrate diff {{.CLI_ARGS}} --dir "file://migrations" --env local
-    dir: "src/server/database/relational_db"
-
-  db-migrate-hash:
-    desc: Rehash migration files to update checksums
-    cmds:
-      - /usr/local/bin/atlasgo migrate hash --dir "file://migrations"
-    dir: "src/server/database/relational_db"
+      - ./scripts/migrate.sh status
 
   db-seed:
     desc: Seed the database with initial data
     cmds:
-      - poetry run psql postgresql://$POSTGRES_USER:$POSTGRES_PASSWORD@localhost:$POSTGRES_HOST_PORT/cfn_mgmt -f scripts/populate_software.sql
+      - poetry run psql postgresql://$POSTGRES_USER:$POSTGRES_PASSWORD@localhost:$POSTGRES_PORT/cfn_mgmt -f scripts/populate_software.sql
     dir: "{{.SRC_DIR}}/server/database/relational_db"
 
   help:
