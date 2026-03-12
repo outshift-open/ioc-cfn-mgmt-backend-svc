@@ -15,12 +15,8 @@ class AuditCfnEventResponse(BaseModel):
     resource_identifier: str = Field(..., description="Identifier of the resource")
     audit_type: str = Field(..., description="Type of audit event (e.g. RESOURCE_CREATED)")
     audit_resource_identifier: str = Field(..., description="Identifier of the audited resource")
-    audit_information: Optional[Dict[str, Any]] = Field(
-        default=None, description="JSONB audit event details"
-    )
-    audit_extra_information: Optional[str] = Field(
-        default=None, description="Additional information as text"
-    )
+    audit_information: Optional[Dict[str, Any]] = Field(default=None, description="JSONB audit event details")
+    audit_extra_information: Optional[str] = Field(default=None, description="Additional information as text")
     created_by: UUID = Field(..., description="UUID of the user who created the event")
     created_on: datetime = Field(..., description="Timestamp when the event was created")
     last_modified_by: UUID = Field(..., description="UUID of the user who last modified the event")

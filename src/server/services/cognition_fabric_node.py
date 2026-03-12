@@ -1198,12 +1198,14 @@ class CognitiveFabricNodeService:
                         # Transform cognitive engines
                         cognition_engines = []
                         for ce in ws.get("cognitive_engines", []):
-                            cognition_engines.append({
-                                "id": ce.get("cognitive_engine_id"),
-                                "name": ce.get("cognitive_engine_name"),
-                                "config": ce.get("config", {}),
-                                "enabled": ce.get("enabled"),
-                            })
+                            cognition_engines.append(
+                                {
+                                    "id": ce.get("cognitive_engine_id"),
+                                    "name": ce.get("cognitive_engine_name"),
+                                    "config": ce.get("config", {}),
+                                    "enabled": ce.get("enabled"),
+                                }
+                            )
 
                         # Transform multi-agentic systems
                         mas_list = []
