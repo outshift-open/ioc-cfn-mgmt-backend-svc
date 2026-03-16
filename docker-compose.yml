@@ -96,7 +96,7 @@ services:
       ioc-cfn-mgmt-plane-svc:
         condition: service_healthy
 
-  # CFN Service - Cognitive Fabric Node service
+  # CFN Service - Cognition Fabric Node service
   # Port Mapping: 9002:9002 (same port inside and outside container)
   ioc-cfn-svc:
     image: ghcr.io/cisco-eti/ioc-cognition-fabric-node-svc:2026-03-13-3dc8edf
