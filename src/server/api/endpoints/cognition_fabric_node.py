@@ -1,3 +1,7 @@
+# Copyright 2026 Cisco Systems, Inc. and its affiliates
+#
+# SPDX-License-Identifier: Apache-2.0
+
 """Cognitive Fabric Node API endpoints — CFNs are cross-workspace resources"""
 
 from typing import Optional
