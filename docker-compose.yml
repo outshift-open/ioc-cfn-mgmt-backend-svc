@@ -99,7 +99,7 @@ services:
   # CFN Service - Cognition Fabric Node service
   # Port Mapping: 9002:9002 (same port inside and outside container)
   ioc-cfn-svc:
-    image: ghcr.io/cisco-eti/ioc-cognition-fabric-node-svc:2026-03-13-3dc8edf
+    image: ghcr.io/cisco-eti/ioc-cognition-fabric-node-svc:2026-03-23-751ebb2
     container_name: ioc-cfn-svc
     platform: ${DOCKER_DEFAULT_PLATFORM}
     profiles:
@@ -108,11 +108,21 @@ services:
     ports:
       - "9002:9002"
     environment:
-      PORT: "9002"
-      APP_NAME: "ioc-cfn-svc"
-      MGMT_URL: http://ioc-cfn-mgmt-plane-svc:9000
-      CFN_NAME: ${CFN_NAME:-cfn-new}
-      HEARTBEAT_INTERVAL_SECONDS: ${HEARTBEAT_INTERVAL_SECONDS:-10}
+      - PORT=${PORT:-9002}
+      - LOG_LEVEL=${LOG_LEVEL:-INFO}
+      - MGMT_URL=http://ioc-cfn-mgmt-plane-svc:9000
+      - CFN_NAME=${CFN_NAME:-cfn-new}
+      - HEARTBEAT_INTERVAL_SECONDS=${HEARTBEAT_INTERVAL_SECONDS:-10}
+      - SERVICE_NAME=${SERVICE_NAME:-ioc-cfn-svc}
+      - DB_NAME=${IOC_KNOWLEDGE_DB}
+      - DB_USER=${IOC_KNOWLEDGE_DB_USER}
+      - DB_PASSWORD=${IOC_KNOWLEDGE_DB_PASSWORD}
+      - DB_HOST=ioc-knowledge-db
+      - DB_PORT=5432
+      - AZURE_OPENAI_ENDPOINT=${AZURE_OPENAI_ENDPOINT}
+      - AZURE_OPENAI_API_KEY=${AZURE_OPENAI_API_KEY}
+      - AZURE_OPENAI_DEPLOYMENT=${AZURE_OPENAI_DEPLOYMENT}
+      - AZURE_OPENAI_API_VERSION=${AZURE_OPENAI_VERSION:-}
     depends_on:
       ioc-knowledge-db:
         condition: service_healthy
