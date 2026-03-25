@@ -44,7 +44,7 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
-    image: ghcr.io/cisco-eti/ioc-cfn-mgmt-plane-svc:clawbee-latest
+    image: ghcr.io/cisco-eti/ioc-cfn-mgmt-plane-svc:clawbee-2026-03-25-a9f4ae4
     platform: ${DOCKER_DEFAULT_PLATFORM}
     profiles:
       - full-stack
