@@ -99,7 +99,7 @@ services:
   # CFN Service - Cognition Fabric Node service
   # Port Mapping: 9002:9002 (same port inside and outside container)
   ioc-cfn-svc:
-    image: ghcr.io/cisco-eti/ioc-cognition-fabric-node-svc:2026-03-23-751ebb2
+    image: ghcr.io/cisco-eti/ioc-cognition-fabric-node-svc:2026-03-25-4cecbbf
     container_name: ioc-cfn-svc
     platform: ${DOCKER_DEFAULT_PLATFORM}
     profiles:
@@ -119,6 +119,7 @@ services:
       - DB_PASSWORD=${IOC_KNOWLEDGE_DB_PASSWORD}
       - DB_HOST=ioc-knowledge-db
       - DB_PORT=5432
+      - LLM_PROVIDER=${LLM_PROVIDER:-azure-openai}
       - AZURE_OPENAI_ENDPOINT=${AZURE_OPENAI_ENDPOINT}
       - AZURE_OPENAI_API_KEY=${AZURE_OPENAI_API_KEY}
       - AZURE_OPENAI_DEPLOYMENT=${AZURE_OPENAI_DEPLOYMENT}
