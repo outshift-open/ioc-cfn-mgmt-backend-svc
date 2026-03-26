@@ -99,7 +99,7 @@ services:
   # CFN Service - Cognition Fabric Node service
   # Port Mapping: 9002:9002 (same port inside and outside container)
   ioc-cfn-svc:
-    image: ghcr.io/cisco-eti/ioc-cognition-fabric-node-svc:2026-03-25-4cecbbf
+    image: ghcr.io/cisco-eti/ioc-cognition-fabric-node-svc:2026-03-26-f88e19a
     container_name: ioc-cfn-svc
     platform: ${DOCKER_DEFAULT_PLATFORM}
     profiles:
