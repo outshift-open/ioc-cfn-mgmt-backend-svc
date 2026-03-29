@@ -1,3 +1,7 @@
+# Copyright 2026 Cisco Systems, Inc. and its affiliates
+#
+# SPDX-License-Identifier: Apache-2.0
+
 """Cognitive Fabric Node Monitor - Background service for monitoring node heartbeats"""
 
 import asyncio

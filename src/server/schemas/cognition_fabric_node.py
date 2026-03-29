@@ -1,3 +1,7 @@
+# Copyright 2026 Cisco Systems, Inc. and its affiliates
+#
+# SPDX-License-Identifier: Apache-2.0
+
 from datetime import datetime
 from enum import Enum
 from typing import Any, Dict, List, Optional

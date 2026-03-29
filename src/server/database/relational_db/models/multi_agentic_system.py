@@ -1,3 +1,7 @@
+# Copyright 2026 Cisco Systems, Inc. and its affiliates
+#
+# SPDX-License-Identifier: Apache-2.0
+
 from sqlalchemy import Column, String, DateTime, Text, text, Index, ForeignKey
 from sqlalchemy.dialects.postgresql import JSONB
 

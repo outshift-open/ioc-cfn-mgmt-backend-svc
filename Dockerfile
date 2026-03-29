@@ -2,10 +2,9 @@
 FROM python:3.11-slim AS builder
 
 # Install build dependencies
-RUN apt-get update && apt-get install -y \
+RUN apt-get update && apt-get install -y --no-install-recommends \
     build-essential \
     libpq-dev \
-    curl \
     git \
     && rm -rf /var/lib/apt/lists/*
 
@@ -21,11 +20,6 @@ RUN pip3 install --no-cache-dir poetry \
     && poetry config virtualenvs.create false \
     && poetry install --only=main --no-root --compile
 
-# Install Atlas binary
-RUN mkdir -p /home/app/bin && \
-    curl -sSf https://atlasgo.sh | sh -s -- --no-install -o /home/app/bin/atlasgo -y && \
-    chmod +x /home/app/bin/atlasgo
-
 # Runtime stage
 FROM python:3.11-slim AS runtime
 
@@ -33,7 +27,7 @@ FROM python:3.11-slim AS runtime
 LABEL org.opencontainers.image.source=https://github.com/cisco-eti/ioc-cfn-mgmt-plane-svc
 
 # Install only runtime dependencies
-RUN apt-get update && apt-get install -y \
+RUN apt-get update && apt-get install -y --no-install-recommends \
     curl \
     postgresql-client \
     libatomic1 \
@@ -50,24 +44,20 @@ WORKDIR /home/app
 COPY --from=builder /usr/local/lib/python3.11/site-packages /usr/local/lib/python3.11/site-packages
 COPY --from=builder /usr/local/bin /usr/local/bin
 
-# Copy Atlas binary from builder
-COPY --from=builder --chown=app:app /home/app/bin/atlasgo /home/app/bin/atlasgo
-
 # Copy application source and scripts
 COPY --chown=app:app src/ ./src/
 COPY --chown=app:app scripts/ ./scripts/
 COPY --chown=app:app pyproject.toml ./
 COPY --chown=app:app docker-entrypoint.sh ./
 
-# Make entrypoint executable
-RUN chmod +x docker-entrypoint.sh
+# Make scripts executable
+RUN chmod +x docker-entrypoint.sh scripts/migrate.sh
 
 # Switch to app user
 USER app
 
 # Set environment variables
 ENV PYTHONPATH="/home/app/src"
-ENV PATH="/home/app/bin:/home/app/.local/bin:$PATH"
 
 # Use entrypoint script to run initializations if required, then start server
 ENTRYPOINT ["/home/app/docker-entrypoint.sh"]

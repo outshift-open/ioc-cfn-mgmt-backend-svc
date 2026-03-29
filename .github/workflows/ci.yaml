@@ -5,9 +5,11 @@ on:
   push:
     branches:
       - "main"
+      - "clawbee"
   pull_request:
     branches:
       - "main"
+      - "clawbee"
   workflow_dispatch:
 
 # Grant read access for GITHUB_TOKEN on all jobs
@@ -107,7 +109,7 @@ jobs:
           echo "POSTGRES_DB=$POSTGRES_DB" >> $GITHUB_ENV
           echo "POSTGRES_USER=$POSTGRES_USER" >> $GITHUB_ENV
           echo "POSTGRES_PASSWORD=$POSTGRES_PASSWORD" >> $GITHUB_ENV
-          echo "POSTGRES_PORT=$POSTGRES_CONTAINER_PORT" >> $GITHUB_ENV
+          echo "POSTGRES_PORT=5432" >> $GITHUB_ENV
 
       - name: Wait for PostgreSQL
         env:

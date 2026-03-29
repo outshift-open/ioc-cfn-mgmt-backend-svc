@@ -1,3 +1,7 @@
+# Copyright 2026 Cisco Systems, Inc. and its affiliates
+#
+# SPDX-License-Identifier: Apache-2.0
+
 """Encryption utilities for sensitive data"""
 
 import copy
@@ -20,12 +24,12 @@ ENCRYPTION_KEY_FILE = Path(REPO_ROOT) / ".secrets" / "encryption.key"
 def _load_or_generate_encryption_key() -> Optional[str]:
     """
     Load encryption key from file or environment, or generate a new one.
-    
+
     Priority:
     1. Environment variable MEMORY_PROVIDER_ENCRYPTION_KEY (for Docker/production)
     2. File at .secrets/encryption.key (auto-generated for local dev)
     3. Generate new key and save to file
-    
+
     Returns:
         Encryption key as string, or None if generation fails
     """
@@ -34,7 +38,7 @@ def _load_or_generate_encryption_key() -> Optional[str]:
     if env_key:
         logger.info("Using encryption key from environment variable")
         return env_key
-    
+
     # Check if key file exists
     if ENCRYPTION_KEY_FILE.exists():
         try:
@@ -44,21 +48,21 @@ def _load_or_generate_encryption_key() -> Optional[str]:
         except Exception as e:
             logger.error(f"Failed to read encryption key from {ENCRYPTION_KEY_FILE}: {e}")
             return None
-    
+
     # Generate new key
     try:
         logger.info("No encryption key found - generating new key")
         new_key = Fernet.generate_key().decode()
-        
+
         # Create .secrets directory if it doesn't exist
         ENCRYPTION_KEY_FILE.parent.mkdir(parents=True, exist_ok=True)
-        
+
         # Save key to file
         ENCRYPTION_KEY_FILE.write_text(new_key)
-        
+
         # Set restrictive permissions (owner read/write only)
         ENCRYPTION_KEY_FILE.chmod(0o600)
-        
+
         logger.info(f"Generated and saved new encryption key to {ENCRYPTION_KEY_FILE}")
         return new_key
     except Exception as e:

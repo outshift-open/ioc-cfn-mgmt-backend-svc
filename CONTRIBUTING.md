@@ -1,203 +1,58 @@
-# Contributing to ioc-cfn-mgmt-plane
+# How to Contribute
 
-Thank you for your interest in contributing to the IoC CFN Management Plane Service!
+Thanks for your interest in contributing to `ioc-cfn-mgmt-backend-svc`! Here are a few
+general guidelines on contributing and reporting bugs that we ask you to review.
+Following these guidelines helps to communicate that you respect the time of the
+contributors managing and developing this open source project. In return, they
+should reciprocate that respect in addressing your issue, assessing changes, and
+helping you finalize your pull requests. In that spirit of mutual respect, we
+endeavor to review incoming issues and pull requests within 10 days, and will
+close any lingering issues or pull requests after 60 days of inactivity.
 
-## General Guidelines
+Please note that all of your interactions in the project are subject to our
+[Code of Conduct](/CODE_OF_CONDUCT.md). This includes creation of issues or pull
+requests, commenting on issues or pull requests, and extends to all interactions
+in any real-time space e.g., Slack, Discord, etc.
 
-- For pushing git tags/branches to this repo, please reach out to [IoC team](mailto:ccs-dev-team@cisco.com)
+## Reporting Issues
 
-## Development Setup
+Before reporting a new issue, please ensure that the issue was not already
+reported or fixed by searching through our [issues
+list](https://github.com/org_name/repo_name/issues).
 
-### Prerequisites
+When creating a new issue, please be sure to include a **title and clear
+description**, as much relevant information as possible, and, if possible, a
+test case.
 
-- Python 3.10+
-- Poetry: `curl -sSL https://install.python-poetry.org | python3 -`
-- Task (go-task): See [README.md](README.md#prerequisites) for installation options
-- PostgreSQL 17 with TimescaleDB (or use Docker Compose)
+**If you discover a security bug, please do not report it through GitHub.
+Instead, please see security procedures in [SECURITY.md](/SECURITY.md).**
 
-### Getting Started
+## Sending Pull Requests
 
-```bash
-# Clone the repository
-git clone <repository-url>
-cd ioc-cfn-mgmt-plane-svc
+Before sending a new pull request, take a look at existing pull requests and
+issues to see if the proposed change or fix has been discussed in the past, or
+if the change was already implemented but not yet released.
 
-# Start databases
-task docker-compose-db-up
+We expect new pull requests to include tests for any affected behavior, and, as
+we follow semantic versioning, we may reserve breaking changes until the next
+major version release.
 
-# Install dependencies and run migrations
-task run  # Installs deps, applies migrations, runs server
+## Other Ways to Contribute
 
-# Or for development with hot reload
-task dev
-```
+We welcome anyone that wants to contribute to `ioc-cfn-mgmt-backend-svc` to triage and
+reply to open issues to help troubleshoot and fix existing bugs. Here is what
+you can do:
 
-## Coding Conventions
+- Help ensure that existing issues follows the recommendations from the
+  _[Reporting Issues](#reporting-issues)_ section, providing feedback to the
+  issue's author on what might be missing.
+- Review and update the existing content of our
+  [Wiki](https://github.com/org_name/repo_name/wiki) with up-to-date
+  instructions and code samples.
+- Review existing pull requests, and testing patches against real existing
+  applications that use `ioc-cfn-mgmt-backend-svc`.
+- Write a test, or add a missing test case to an existing test.
 
-### Naming Conventions
+Thanks again for your interest on contributing to `ioc-cfn-mgmt-backend-svc`!
 
-**File Naming:**
-- ✅ Use full descriptive names, not abbreviations
-- ✅ Good: `cognitive_fabric_node.py`, `multi_agentic_system.py`
-- ❌ Avoid: `cfn.py`, `mas.py`
-
-**Class Naming:**
-- ✅ Use full descriptive names with PascalCase
-- ✅ Good: `CognitiveFabricNodeService`, `WorkspaceService`
-- ❌ Avoid: `CFNService`, `WSService`
-
-**Service Method Naming:**
-- ✅ Simple action verbs (class name provides context)
-- ✅ Good: `register()`, `update()`, `deregister()`, `get()`, `list()`
-- ❌ Avoid: `register_cognitive_fabric_node()`, `get_cfn()`
-
-**API Field Naming:**
-- API fields may use abbreviations (e.g., `cfn_id`, `mas_id`) for brevity
-- This is part of the API contract and acceptable for backward compatibility
-
-### Service Patterns
-
-**Service Singletons:**
-```python
-# In service file (e.g., cognitive_fabric_node.py)
-class CognitiveFabricNodeService:
-    def register(self, workspace_id, data, user_id):
-        pass
-
-# Singleton instance at bottom of file
-cognitive_fabric_node_service = CognitiveFabricNodeService()
-```
-
-**Service Exports:**
-```python
-# In services/__init__.py
-from .cognitive_fabric_node import cognitive_fabric_node_service, CognitiveFabricNodeService
-```
-
-## Testing
-
-### Running Tests
-
-```bash
-# Run all tests
-task test
-
-# Run specific test file
-poetry run pytest tests/test_cognitive_fabric_node.py -v
-
-# Run with coverage
-task test-coverage
-```
-
-### Test Database
-
-Tests use a separate `tkf_test` database. The test fixtures automatically:
-- Create necessary tables
-- Clean up data after each test
-- Use pytest-asyncio for async support
-
-### Test Conventions
-
-- DELETE endpoints return 204 (No Content) status code on success, not 200
-- API POST (Create) returns 201 Created with resource in response body
-- API GET (Read) returns 200 OK with resource(s)
-- API PUT (Update) returns 200 OK with updated resource
-- API DELETE returns 204 No Content (no response body)
-
-## Database Migrations
-
-### Creating Migrations
-
-```bash
-# Create a new migration
-task db-migrate-new -- "description_of_changes"
-
-# Apply migrations
-task db-migrate-apply
-
-# Check migration status
-task db-migrate-status
-```
-
-### Migration Guidelines
-
-- Use Atlas for all schema changes
-- Migrations are stored in `src/server/database/relational_db/migrations/`
-- Always test migrations locally before committing
-- Include both up and down migration paths
-
-## Pull Request Process
-
-1. **Create a feature branch** from `main`
-   ```bash
-   git checkout -b feature/your-feature-name
-   ```
-
-2. **Make your changes** following coding conventions
-
-3. **Write/update tests** for your changes
-   ```bash
-   task test
-   ```
-
-4. **Run linting**
-   ```bash
-   task lint-check  # Check only
-   task lint        # Fix issues
-   ```
-
-5. **Commit your changes**
-   ```bash
-   git add <files>
-   git commit -m "Description of changes"
-   ```
-
-6. **Push and create PR**
-   ```bash
-   git push origin feature/your-feature-name
-   ```
-
-7. **PR Requirements:**
-   - All tests must pass
-   - Code must follow naming conventions
-   - Include migration files if schema changes
-   - Update documentation (README, CLAUDE.md) if needed
-
-## Common Tasks
-
-```bash
-task dev                    # Start dev server with hot reload
-task test                   # Run all tests
-task lint                   # Fix linting issues
-task docker-build           # Build Docker image
-task docker-compose-db-up   # Start databases only
-task db-migrate-apply       # Apply database migrations
-```
-
-For a complete list of available tasks:
-```bash
-task --list
-```
-
-## Architecture Notes
-
-### Service Structure
-
-- **Workspaces**: Top-level tenant isolation
-- **Users**: Belong to workspaces via `workspace_member` table
-- **API Keys**: User-scoped (not workspace-scoped) for flexibility
-- **CFN Nodes**: Workspace-scoped resources
-- **Multi-Agentic Systems**: Workspace-scoped resources
-
-### Authorization
-
-- API keys identify users (via `X-API-Key` header)
-- Workspace access determined by membership in `workspace_member` table
-- Only workspace admins and creators can list/manage workspaces
-- `super_admin` role has global access (future feature)
-
-## Getting Help
-
-- Review [CLAUDE.md](CLAUDE.md) for detailed architecture documentation
-- Check the [README.md](README.md) for quick start guides
-- Reach out to the team via [eti-sre-admins@cisco.com](mailto:eti-sre-admins@cisco.com)
+:heart:

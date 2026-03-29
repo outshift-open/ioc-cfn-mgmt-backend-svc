@@ -1,3 +1,7 @@
+# Copyright 2026 Cisco Systems, Inc. and its affiliates
+#
+# SPDX-License-Identifier: Apache-2.0
+
 import logging
 import os
 
@@ -5,6 +9,8 @@ from sqlalchemy import create_engine, text
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import Session, sessionmaker
 from sqlalchemy.pool import QueuePool
+
+from server.database.relational_db.models.cfn_audit import CfnAudit
 
 # Defaults reuse the same Postgres server but different database name
 CFN_CP_DB_DEFAULT = "cfn_cp"
@@ -75,6 +81,7 @@ class CfnCpDB:
                 )
 
                 self.verify_connectivity()
+                self.ensure_schema()
 
                 self._session_factory = sessionmaker(autocommit=False, autoflush=False, bind=self._engine)
                 self.logger.debug("CfnCpDB session factory created successfully")
@@ -149,3 +156,13 @@ class CfnCpDB:
                 conn.commit()
         except SQLAlchemyError as e:
             raise RuntimeError(f"CfnCpDB connection failed: {str(e)}")
+
+    def ensure_schema(self) -> None:
+        """Create the minimal cfn_cp schema needed by the management plane."""
+        if self._engine is None:
+            raise RuntimeError("CfnCpDB engine not initialized. Call init() first.")
+
+        try:
+            CfnAudit.__table__.create(bind=self._engine, checkfirst=True)
+        except SQLAlchemyError as e:
+            raise RuntimeError(f"Failed to ensure cfn_cp schema: {str(e)}")

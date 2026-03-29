@@ -1,32 +1,10 @@
 services:
-  ### Database Services ###
-  ioc-mgmt-relational-db:
-    image: postgres:17-alpine
-    platform: ${DOCKER_DEFAULT_PLATFORM}
-    profiles:
-      - db-only
-      - full-stack
-    environment:
-      POSTGRES_DB: ${POSTGRES_DB:-ioc}
-      POSTGRES_USER: ${POSTGRES_USER}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
-    ports:
-      - "${POSTGRES_HOST_PORT:-5432}:5432"
-    volumes:
-      - postgres_data:/var/lib/postgresql/data
-      - ./scripts/init-multi-db.sh:/docker-entrypoint-initdb.d/init-multi-db.sh:ro
-    healthcheck:
-      test:
-        ["CMD-SHELL", "pg_isready -d ${POSTGRES_DB:-ioc} -U ${POSTGRES_USER}"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-
   # Backing Database for IoC Knowledge Memory Service
   # Graph(Agensgraph) + PgVector + Postgres Database
   # Port Mapping: 5456:5432
   #   - Host Port: 5456 (to avoid conflicts with local PostgreSQL on 5432)
   #   - Container Port: 5432 (PostgreSQL default, cannot be changed without config)
+  #   - it will have cfn_mgmt_db and ioc_knowledge_db both
   ioc-knowledge-db:
     image: ghcr.io/cisco-eti/ioc-knowledge-memory-svc-db:1.0
     platform: linux/amd64
@@ -41,6 +19,7 @@ services:
       - "${IOC_KNOWLEDGE_DB_PORT:-5456}:5432"
     volumes:
       - ioc_knowledge_db_data:/var/lib/postgresql/data
+      - ./scripts/init-multi-db.sh:/docker-entrypoint-initdb.d/init-multi-db.sh:ro
     restart: unless-stopped
     healthcheck:
       test:
@@ -53,27 +32,25 @@ services:
       retries: 5
       start_period: 30s
 
-  # AgensGraph Viewer - Web UI for AgensGraph Database
+  # Graph Database Viewer - AgensGraph UI
   # Port Mapping: 5457:3000
-  #   - Host Port: 5457 (accessible from your machine)
-  #   - Container Port: 3000 (AGViewer's default internal port)
   ioc-graph-db-viewer:
     image: skaiworldwide/agviewer:latest
+    platform: ${DOCKER_DEFAULT_PLATFORM}
     profiles:
       - db-only
       - full-stack
-    environment:
-      DB_HOST: ioc-knowledge-db
-      DB_PORT: 5432
-      DB_USER: ${IOC_KNOWLEDGE_DB_USER}
-      DB_PASSWORD: ${IOC_KNOWLEDGE_DB_PASSWORD}
-      DB_NAME: ${IOC_KNOWLEDGE_DB:-ioc-knowledge-db}
     ports:
-      - "${IOC_KNOWLEDGE_DB_GRAPH_UI_PORT:-5457}:3000"
+      - "5457:3000"
+    environment:
+      - DB_HOST=ioc-knowledge-db
+      - DB_PORT=5432
+      - DB_USER=${IOC_KNOWLEDGE_DB_USER}
+      - DB_PASSWORD=${IOC_KNOWLEDGE_DB_PASSWORD}
+      - DB_NAME=${IOC_KNOWLEDGE_DB:-ioc-knowledge-db}
     restart: unless-stopped
     depends_on:
       - ioc-knowledge-db
-
   ### End Database Services ###
 
   ### Application Services ###
@@ -98,18 +75,18 @@ services:
       - APPLICATION_VERSION=dev
       - LOG_LEVEL=${LOG_LEVEL:-INFO}
       - ADMIN_USER_PASSWORD=${ADMIN_USER_PASSWORD}
-      - POSTGRES_HOST=ioc-mgmt-relational-db
-      - POSTGRES_PORT=${POSTGRES_CONTAINER_PORT:-5432}
-      - POSTGRES_DB=${POSTGRES_DB:-ioc}
-      - POSTGRES_USER=${POSTGRES_USER}
-      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+      - POSTGRES_HOST=ioc-knowledge-db
+      - POSTGRES_PORT=5432
+      - POSTGRES_DB=cfn_mgmt
+      - POSTGRES_USER=${IOC_KNOWLEDGE_DB_USER}
+      - POSTGRES_PASSWORD=${IOC_KNOWLEDGE_DB_PASSWORD}
       - PORT=9000
       - CFN_DEV_MODE=${CFN_DEV_MODE}
     volumes:
       - ./.secrets:/home/app/.secrets:ro
     restart: unless-stopped
     depends_on:
-      ioc-mgmt-relational-db:
+      ioc-knowledge-db:
         condition: service_healthy
     healthcheck:
       test: ["CMD", "curl", "-f", "http://ioc-cfn-mgmt-plane-svc:9000/health"]
@@ -139,7 +116,41 @@ services:
       ioc-cfn-mgmt-plane-svc:
         condition: service_healthy
 
-  # CFN Service - Cognitive Fabric Node service
+  # Knowledge Memory Service - Graph + Vector Memory Storage
+  # Port Mapping: 9003:9003 (same port inside and outside container)
+  ioc-knowledge-memory-svc:
+    image: ghcr.io/cisco-eti/ioc-knowledge-memory-svc:main
+    platform: ${DOCKER_DEFAULT_PLATFORM}
+    profiles:
+      - full-stack
+    ports:
+      - "9003:9003"
+    environment:
+      - SERVICE_NAME=ioc-knowledge-memory-svc
+      - APPLICATION_VERSION=dev
+      - LOG_LEVEL=${LOG_LEVEL:-INFO}
+      - MEMORY_PROVIDER_REGISTRATION_URL=http://ioc-cfn-mgmt-plane-svc:9000
+      - MEMORY_PROVIDER_ID=${MEMORY_PROVIDER_ID:-de54dacb-60ab-476a-9e83-64e09f867358}
+      - IOC_KNOWLEDGE_DB_HOST=ioc-knowledge-db
+      - IOC_KNOWLEDGE_DB=${IOC_KNOWLEDGE_DB:-ioc-knowledge-db}
+      - IOC_KNOWLEDGE_DB_USER=${IOC_KNOWLEDGE_DB_USER}
+      - IOC_KNOWLEDGE_DB_PASSWORD=${IOC_KNOWLEDGE_DB_PASSWORD}
+      - IOC_KNOWLEDGE_DB_PORT=5432
+      - EMBEDDING_VECTOR_SIZE=${EMBEDDING_VECTOR_SIZE:-384}
+    restart: unless-stopped
+    depends_on:
+      ioc-knowledge-db:
+        condition: service_healthy
+      ioc-cfn-mgmt-plane-svc:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9003/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  # CFN Service - Cognition Fabric Node service
   # Port Mapping: 9002:9002 (same port inside and outside container)
   ioc-cfn-svc:
     image: ghcr.io/cisco-eti/ioc-cfn-svc:latest
@@ -151,91 +162,30 @@ services:
     ports:
       - "9002:9002"
     environment:
-      PORT: "9002"
-      APP_NAME: "ioc-cfn-svc"
-      MGMT_URL: http://ioc-cfn-mgmt-plane-svc:9000
-      CFN_NAME: ${CFN_NAME:-cfn-new}
-      HEARTBEAT_INTERVAL_SECONDS: ${HEARTBEAT_INTERVAL_SECONDS:-10}
-      MCP_ENABLED: ${MCP_ENABLED:-false}
-      MCP_PORT: ${MCP_PORT:-9002}
-      DB_HOST: ioc-mgmt-relational-db
-      DB_PORT: ${POSTGRES_CONTAINER_PORT:-5432}
-      DB_NAME: ${DB_NAME:-cfn_cp}
-      DB_USER: ${POSTGRES_USER}
-      DB_PASSWORD: ${POSTGRES_PASSWORD}
-      DB_SSL_MODE: ${DB_SSL_MODE:-disable}
-      KNOWLEDGE_MEMORY_SVC_URL: http://ioc-knowledge-memory-svc:9003
-      COGNITION_ENGINE_SVC_URL: http://ioc-cfn-cognition-engine:9004
+      - PORT=${PORT:-9002}
+      - LOG_LEVEL=${LOG_LEVEL:-INFO}
+      - MGMT_URL=http://ioc-cfn-mgmt-plane-svc:9000
+      - CFN_NAME=${CFN_NAME:-cfn-new}
+      - HEARTBEAT_INTERVAL_SECONDS=${HEARTBEAT_INTERVAL_SECONDS:-10}
+      - SERVICE_NAME=${SERVICE_NAME:-ioc-cfn-svc}
+      - DB_NAME=${IOC_KNOWLEDGE_DB}
+      - DB_USER=${IOC_KNOWLEDGE_DB_USER}
+      - DB_PASSWORD=${IOC_KNOWLEDGE_DB_PASSWORD}
+      - DB_HOST=ioc-knowledge-db
+      - DB_PORT=5432
+      - KNOWLEDGE_MEMORY_SVC_URL=http://ioc-knowledge-memory-svc:9003
+      - LLM_PROVIDER=${LLM_PROVIDER:-azure-openai}
+      - AZURE_OPENAI_ENDPOINT=${AZURE_OPENAI_ENDPOINT}
+      - AZURE_OPENAI_API_KEY=${AZURE_OPENAI_API_KEY}
+      - AZURE_OPENAI_DEPLOYMENT=${AZURE_OPENAI_DEPLOYMENT}
+      - AZURE_OPENAI_API_VERSION=${AZURE_OPENAI_VERSION:-}
     depends_on:
-      ioc-mgmt-relational-db:
+      ioc-knowledge-db:
         condition: service_healthy
       ioc-cfn-mgmt-plane-svc:
         condition: service_healthy
       ioc-knowledge-memory-svc:
         condition: service_healthy
-      ioc-cfn-cognition-engine:
-        condition: service_healthy
-
-  # IoC Knowledge Memory Service - Memory and knowledge management
-  # Port Mapping: 9003:9003 (same port inside and outside container)
-  ioc-knowledge-memory-svc:
-    image: ghcr.io/cisco-eti/ioc-knowledge-memory-svc:2026-03-06-8540690
-    platform: linux/amd64
-    profiles:
-      - full-stack
-    ports:
-      - "9003:9003"
-    environment:
-      - SERVICE_NAME=ioc-knowledge-memory-svc
-      - APPLICATION_VERSION=dev
-      - LOG_LEVEL=${LOG_LEVEL:-INFO}
-      - PORT=9003
-      - IOC_KNOWLEDGE_DB_HOST=ioc-knowledge-db
-      - IOC_KNOWLEDGE_DB=${IOC_KNOWLEDGE_DB:-ioc-knowledge-db}
-      - IOC_KNOWLEDGE_DB_USER=${IOC_KNOWLEDGE_DB_USER}
-      - IOC_KNOWLEDGE_DB_PASSWORD=${IOC_KNOWLEDGE_DB_PASSWORD}
-      - IOC_KNOWLEDGE_DB_PORT=5432
-      - MEMORY_PROVIDER_REGISTRATION_URL=http://ioc-cfn-mgmt-plane-svc:9000
-      - EMBEDDING_VECTOR_SIZE=${EMBEDDING_VECTOR_SIZE:-384}
-    restart: unless-stopped
-    depends_on:
-      ioc-knowledge-db:
-        condition: service_healthy
-      ioc-graph-db-viewer:
-        condition: service_started
-      ioc-cfn-mgmt-plane-svc:
-        condition: service_healthy
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:9003/health"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-      start_period: 40s
-
-  ioc-cfn-cognition-engine:
-    image: ghcr.io/cisco-eti/ioc-cfn-cognition-engine:latest
-    ports:
-      - "9004:9004"
-    platform: ${DOCKER_DEFAULT_PLATFORM}
-    restart: unless-stopped
-    environment:
-      - AZURE_OPENAI_ENDPOINT=${AZURE_OPENAI_ENDPOINT}
-      - AZURE_OPENAI_API_KEY=${AZURE_OPENAI_API_KEY}
-      - AZURE_OPENAI_DEPLOYMENT=${AZURE_OPENAI_DEPLOYMENT}
-      # Auto-register with management plane on startup
-      - MGMT_PLANE_URL=http://ioc-cfn-mgmt-plane-svc:9000
-      - COGNITION_ENGINE_HOST=ioc-cfn-cognition-engine
-      - COGNITION_ENGINE_PORT=9004
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:9004/health"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-      start_period: 40s
-    depends_on:
-      ioc-cfn-mgmt-plane-svc:
-        condition: service_healthy
 
 volumes:
-  postgres_data:
   ioc_knowledge_db_data:

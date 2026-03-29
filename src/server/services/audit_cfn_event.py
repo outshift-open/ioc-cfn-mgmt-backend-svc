@@ -1,3 +1,7 @@
+# Copyright 2026 Cisco Systems, Inc. and its affiliates
+#
+# SPDX-License-Identifier: Apache-2.0
+
 import logging
 from typing import Optional
 
@@ -24,9 +28,7 @@ class AuditCfnEventService:
         session = db.get_session()
         self.logger.debug(f"Retrieving audit event: {audit_event_id}")
         try:
-            audit_event: Optional[CfnAudit] = (
-                session.query(CfnAudit).filter(CfnAudit.id == audit_event_id).first()
-            )
+            audit_event: Optional[CfnAudit] = session.query(CfnAudit).filter(CfnAudit.id == audit_event_id).first()
             self.logger.debug(f"Successfully retrieved audit event: {audit_event}")
             return audit_event
         except Exception as e:
@@ -68,12 +70,7 @@ class AuditCfnEventService:
                 query = query.filter(CfnAudit.audit_type == audit_type)
 
             total: int = query.count()
-            audit_events: list[CfnAudit] = (
-                query.order_by(CfnAudit.created_on.desc())
-                .offset(skip)
-                .limit(limit)
-                .all()
-            )
+            audit_events: list[CfnAudit] = query.order_by(CfnAudit.created_on.desc()).offset(skip).limit(limit).all()
             self.logger.debug(f"Successfully listed {len(audit_events)} audit events")
             return audit_events, total
         except Exception as e:

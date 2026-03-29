@@ -38,6 +38,10 @@ full-stack.md
 .env.*
 *.log
 
+# Large local directories
+.venv/
+.git/
+
 # Build artifacts
 *.egg-info
 dist/

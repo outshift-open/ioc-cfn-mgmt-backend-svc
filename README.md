@@ -22,6 +22,7 @@ Provide the following env vars in env.conf:
 - `AZURE_OPENAI_ENDPOINT`
 - `AZURE_OPENAI_API_KEY`
 - `AZURE_OPENAI_DEPLOYMENT`
+- `AZURE_OPENAI_API_VERSION` // optional, remove if not needed
 
 ### Dependencies for the Relational DB
 
@@ -52,17 +53,6 @@ task run                     # installs deps, applies db migrations, then runs
 ```bash
 task docker-compose-full-stack-up    # Start complete stack (application + databases + cfn-svc)
 ```
-
-> **Note:** The full-stack profile includes `ioc-cfn-svc` (port 9002), which now depends on
-> `ioc-mgmt-relational-db` (PostgreSQL), `ioc-cfn-mgmt-plane-svc`,
-> `ioc-knowledge-memory-svc`, and `ioc-cfn-cognition-engine`. Startup is gated on all four
-> services being healthy. The service shares database credentials
-> (`POSTGRES_USER`, `POSTGRES_PASSWORD`, `POSTGRES_PORT`) from `env.conf` and uses a
-> separate database (`DB_NAME=cfn_cp`).
->
-> The `ioc-cfn-cognition-engine` service additionally requires the following environment
-> variables to be set: `AZURE_OPENAI_ENDPOINT`, `AZURE_OPENAI_API_KEY`,
-> and `AZURE_OPENAI_DEPLOYMENT` in `.env`.
 
 ### Alternative Quick Start Methods
 

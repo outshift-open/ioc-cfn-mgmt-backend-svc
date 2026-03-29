@@ -1,3 +1,7 @@
+# Copyright 2026 Cisco Systems, Inc. and its affiliates
+#
+# SPDX-License-Identifier: Apache-2.0
+
 """CFN Audit Event API endpoints.
 
 Read-only endpoints for querying audit events from the cfn_cp database,

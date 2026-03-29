@@ -1,3 +1,7 @@
+# Copyright 2026 Cisco Systems, Inc. and its affiliates
+#
+# SPDX-License-Identifier: Apache-2.0
+
 """Memory Provider service - Business logic for Memory Provider operations
 
 Memory Providers are shared across workspaces (cross-workspace resource).
