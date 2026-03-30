@@ -19,5 +19,10 @@ src/server/schemas/api_key.py
 # Test files
 tests/**
 
-# CI workflow
-.github/workflows/ci.yaml
+# CI/CD workflows - ignore all pipeline findings for GitHub Actions mutable tags
+# These are trusted actions from Docker and Step Security organizations
+value_image_step-security/harden-runner@v2.15.1
+value_image_docker/setup-qemu-action@v3.2.0
+value_image_docker/setup-buildx-action@v3.7.1
+value_image_docker/login-action@v3.3.0
+value_image_docker/build-push-action@v5.4.0

@@ -4,8 +4,20 @@ on:
   push:
     branches: [main, clawbee]
     tags: ["*"]
+    paths:
+      - 'Dockerfile'
+      - '.github/workflows/docker-build-push.yaml'
+      - 'src/**'
+      - 'app/**'
+      - 'requirements*.txt'
   pull_request:
     branches: [main, clawbee]
+    paths:
+      - 'Dockerfile'
+      - '.github/workflows/docker-build-push.yaml'
+      - 'src/**'
+      - 'app/**'
+      - 'requirements*.txt'
   workflow_dispatch:
 
 permissions:
@@ -13,101 +25,222 @@ permissions:
   packages: write
 
 jobs:
-  build-and-push:
+  determine-build-strategy:
+    name: Determine Build Strategy
     runs-on: ubuntu-latest
-    # Skip Docker build for Dependabot PRs
-    if: github.event_name != 'pull_request' || github.event.pull_request.user.login != 'dependabot[bot]'
-
+    outputs:
+      platforms: ${{ steps.strategy.outputs.platforms }}
+      push: ${{ steps.strategy.outputs.push }}
+      build_enabled: ${{ steps.strategy.outputs.build_enabled }}
+      event_type: ${{ steps.strategy.outputs.event_type }}
+      build_type: ${{ steps.strategy.outputs.build_type }}
     steps:
+      - name: Determine build strategy
+        id: strategy
+        run: |
+          EVENT_TYPE="${{ github.event_name }}"
+          echo "event_type=${EVENT_TYPE}" >> "$GITHUB_OUTPUT"
+          
+          # Skip Docker build for Dependabot PRs
+          if [[ "${EVENT_TYPE}" == "pull_request" && "${{ github.event.pull_request.user.login }}" == "dependabot[bot]" ]]; then
+            echo "build_enabled=false" >> "$GITHUB_OUTPUT"
+            echo "::notice::Skipping build for Dependabot PR"
+            exit 0
+          fi
+          
+          # Determine platforms, push strategy, and build type based on event type
+          if [[ "${EVENT_TYPE}" == "pull_request" ]]; then
+            # PR: build only, single platform for speed
+            echo "platforms=linux/amd64" >> "$GITHUB_OUTPUT"
+            echo "push=false" >> "$GITHUB_OUTPUT"
+            echo "build_type=pr" >> "$GITHUB_OUTPUT"
+            echo "build_enabled=true" >> "$GITHUB_OUTPUT"
+            echo "::notice::PR detected - building single platform (amd64) without push"
+          elif [[ "${EVENT_TYPE}" == "push" ]]; then
+            # Determine if this is main, clawbee, or a tag
+            if [[ "${{ github.ref }}" == "refs/heads/main" ]]; then
+              echo "build_type=main" >> "$GITHUB_OUTPUT"
+              echo "::notice::Main branch detected"
+            elif [[ "${{ github.ref }}" == "refs/heads/clawbee" ]]; then
+              echo "build_type=clawbee" >> "$GITHUB_OUTPUT"
+              echo "::notice::Clawbee branch detected"
+            elif [[ "${{ github.ref }}" == refs/tags/* ]]; then
+              echo "build_type=tag" >> "$GITHUB_OUTPUT"
+              echo "::notice::Tag detected"
+            else
+              echo "build_type=push" >> "$GITHUB_OUTPUT"
+              echo "::notice::Generic push detected"
+            fi
+            # Push: multi-platform, push enabled
+            echo "platforms=linux/amd64,linux/arm64" >> "$GITHUB_OUTPUT"
+            echo "push=true" >> "$GITHUB_OUTPUT"
+            echo "build_enabled=true" >> "$GITHUB_OUTPUT"
+            echo "::notice::Push detected - building multi-platform (amd64, arm64) with push"
+          elif [[ "${EVENT_TYPE}" == "workflow_dispatch" ]]; then
+            # Manual: multi-platform, push enabled
+            echo "platforms=linux/amd64,linux/arm64" >> "$GITHUB_OUTPUT"
+            echo "push=true" >> "$GITHUB_OUTPUT"
+            echo "build_type=manual" >> "$GITHUB_OUTPUT"
+            echo "build_enabled=true" >> "$GITHUB_OUTPUT"
+            echo "::notice::Manual dispatch - building multi-platform (amd64, arm64) with push"
+          else
+            echo "build_enabled=false" >> "$GITHUB_OUTPUT"
+            echo "::warning::Unknown event type: ${EVENT_TYPE}"
+          fi
+
+  build-and-push:
+    name: Build and Push Docker Image
+    needs: determine-build-strategy
+    if: needs.determine-build-strategy.outputs.build_enabled == 'true'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+      security-events: write
+    steps:
+      - name: Harden runner
+        uses: step-security/harden-runner@v2.15.1
+        with:
+          egress-policy: audit
+
       - name: Pre-cleanup Docker images
-        run: docker system prune -af || true
+        run: |
+          echo "::group::Docker system prune"
+          docker system prune -af || true
+          echo "::endgroup::"
 
       - name: Checkout repository
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          fetch-depth: 0
 
       - name: Set up QEMU
-        uses: docker/setup-qemu-action@c7c53464625b32c7a7e944ae62b3e17d2b600130 # v3.7.0
+        uses: docker/setup-qemu-action@v3.2.0
+        with:
+          platforms: ${{ needs.determine-build-strategy.outputs.platforms }}
 
       - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@8d2750c68a42422c14e847fe6c8ac0403b4cbd6f # v3.12.0
+        uses: docker/setup-buildx-action@v3.7.1
+        with:
+          version: latest
+          buildkitd-flags: --allow-insecure-entitlement security.insecure
 
-      - name: Get Git tag (if any)
-        id: get_tag
-        run: |
-          echo "tag_name=${GITHUB_REF#refs/tags/}" >> "$GITHUB_OUTPUT"
-
-      - name: Generate metadata
+      - name: Generate build metadata
         id: metadata
         run: |
-          echo "date=$(date -u +'%Y-%m-%dT%H:%M:%SZ')" >> "$GITHUB_OUTPUT"
-          echo "date_formatted=$(date -u +'%Y-%m-%d')" >> "$GITHUB_OUTPUT"
+          echo "build_date=$(date -u +'%Y-%m-%dT%H:%M:%SZ')" >> "$GITHUB_OUTPUT"
+          echo "build_date_formatted=$(date -u +'%Y-%m-%d')" >> "$GITHUB_OUTPUT"
           echo "short_sha=${GITHUB_SHA:0:7}" >> "$GITHUB_OUTPUT"
+          echo "git_tag=${GITHUB_REF#refs/tags/}" >> "$GITHUB_OUTPUT"
+          echo "git_branch=${GITHUB_REF#refs/heads/}" >> "$GITHUB_OUTPUT"
 
-      - name: Log Event Type
+      - name: Generate Docker image tags
+        id: tags
         run: |
-          echo "Event: ${{ github.event_name }}"
+          REGISTRY="ghcr.io"
+          OWNER="${{ github.repository_owner }}"
+          REPO="ioc-cfn-mgmt-plane-svc"
+          IMAGE="${REGISTRY}/${OWNER}/${REPO}"
+          BUILD_TYPE="${{ needs.determine-build-strategy.outputs.build_type }}"
+          SHORT_SHA="${{ steps.metadata.outputs.short_sha }}"
+          BUILD_DATE="${{ steps.metadata.outputs.build_date_formatted }}"
+          GIT_TAG="${{ steps.metadata.outputs.git_tag }}"
+          
+          TAGS=""
+          
+          case "${BUILD_TYPE}" in
+            main)
+              # Main branch: latest + date-sha
+              TAGS="${IMAGE}:latest ${IMAGE}:${BUILD_DATE}-${SHORT_SHA}"
+              echo "::notice::Main branch tags: ${TAGS}"
+              ;;
+            clawbee)
+              # Clawbee branch: clawbee-latest + clawbee-date-sha
+              TAGS="${IMAGE}:clawbee-latest ${IMAGE}:clawbee-${BUILD_DATE}-${SHORT_SHA}"
+              echo "::notice::Clawbee branch tags: ${TAGS}"
+              ;;
+            tag)
+              # Release tag: use tag name
+              TAGS="${IMAGE}:${GIT_TAG}"
+              echo "::notice::Release tag: ${TAGS}"
+              ;;
+            pr)
+              # Pull request: pr-sha (no push, so tag is for reference only)
+              TAGS="${IMAGE}:pr-${SHORT_SHA}"
+              echo "::notice::PR tag: ${TAGS}"
+              ;;
+            manual)
+              # Manual dispatch: manual-sha
+              TAGS="${IMAGE}:manual-${SHORT_SHA}"
+              echo "::notice::Manual dispatch tag: ${TAGS}"
+              ;;
+            *)
+              # Default: sha-based tag
+              TAGS="${IMAGE}:${SHORT_SHA}"
+              echo "::notice::Default tag: ${TAGS}"
+              ;;
+          esac
+          
+          # Output tags as comma-separated string for docker/build-push-action
+          TAGS_CSV=$(echo "${TAGS}" | tr ' ' ',')
+          echo "tags=${TAGS_CSV}" >> "$GITHUB_OUTPUT"
+          echo "tags_list=${TAGS}" >> "$GITHUB_OUTPUT"
+
+      - name: Log build context
+        run: |
+          echo "::group::Build Context"
+          echo "Event Type: ${{ needs.determine-build-strategy.outputs.event_type }}"
+          echo "Build Type: ${{ needs.determine-build-strategy.outputs.build_type }}"
           echo "Ref: ${{ github.ref }}"
-          echo "Tag: ${{ steps.get_tag.outputs.tag_name }}"
+          echo "SHA: ${{ github.sha }}"
+          echo "Short SHA: ${{ steps.metadata.outputs.short_sha }}"
+          echo "Build Date: ${{ steps.metadata.outputs.build_date }}"
+          echo "Platforms: ${{ needs.determine-build-strategy.outputs.platforms }}"
+          echo "Push Enabled: ${{ needs.determine-build-strategy.outputs.push }}"
+          echo "Docker Tags:"
+          echo "${{ steps.tags.outputs.tags_list }}"
+          echo "::endgroup::"
 
       - name: Log in to GitHub Container Registry
-        uses: docker/login-action@c94ce9fb468520275223c153574b00df6fe4bcc9 # v3.7.0
+        uses: docker/login-action@v3.3.0
         with:
           registry: ghcr.io
           username: ${{ secrets.GHCR_USERNAME }}
           password: ${{ secrets.GHCR_TOKEN }}
           logout: false
 
-      - name: Build Docker image (PR - build only, no push, single platform)
-        if: github.event_name == 'pull_request'
-        uses: docker/build-push-action@10e90e3645eae34f1e60eeb005ba3a3d33f178e8 # v6.19.2
+      - name: Build and push Docker image
+        uses: docker/build-push-action@v5.4.0
         with:
           context: .
-          file: Dockerfile
-          push: false
-          platforms: linux/amd64
+          file: ./Dockerfile
+          platforms: ${{ needs.determine-build-strategy.outputs.platforms }}
+          push: ${{ needs.determine-build-strategy.outputs.push }}
+          tags: ${{ steps.tags.outputs.tags }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
           provenance: false
+          build-args: |
+            BUILD_DATE=${{ steps.metadata.outputs.build_date }}
+            VCS_REF=${{ github.sha }}
+            VERSION=${{ steps.metadata.outputs.short_sha }}
 
-      - name: Build and push Docker image (main)
-        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-        uses: docker/build-push-action@10e90e3645eae34f1e60eeb005ba3a3d33f178e8
-        with:
-          context: .
-          file: Dockerfile
-          push: true
-          platforms: linux/amd64, linux/arm64
-          tags: |
-            ghcr.io/${{ github.repository_owner }}/ioc-cfn-mgmt-plane-svc:latest
-            ghcr.io/${{ github.repository_owner }}/ioc-cfn-mgmt-plane-svc:${{ steps.metadata.outputs.date_formatted }}-${{ steps.metadata.outputs.short_sha }}
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
-          provenance: false
+      - name: Log build completion
+        if: always()
+        run: |
+          echo "::group::Build Summary"
+          echo "Status: ${{ job.status }}"
+          echo "Event: ${{ needs.determine-build-strategy.outputs.event_type }}"
+          echo "Build Type: ${{ needs.determine-build-strategy.outputs.build_type }}"
+          echo "Platforms: ${{ needs.determine-build-strategy.outputs.platforms }}"
+          echo "Push: ${{ needs.determine-build-strategy.outputs.push }}"
+          echo "Build Date: ${{ steps.metadata.outputs.build_date }}"
+          echo "Tags: ${{ steps.tags.outputs.tags_list }}"
+          echo "::endgroup::"
 
-      - name: Build and push Docker image (clawbee)
-        if: github.event_name == 'push' && github.ref == 'refs/heads/clawbee'
-        uses: docker/build-push-action@10e90e3645eae34f1e60eeb005ba3a3d33f178e8 # v6.19.2
-        with:
-          context: .
-          file: Dockerfile
-          push: true
-          platforms: linux/amd64, linux/arm64
-          tags: |
-            ghcr.io/${{ github.repository_owner }}/ioc-cfn-mgmt-plane-svc:clawbee-latest
-            ghcr.io/${{ github.repository_owner }}/ioc-cfn-mgmt-plane-svc:clawbee-${{ steps.metadata.outputs.date_formatted }}-${{ steps.metadata.outputs.short_sha }}
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
-          provenance: false
-
-      - name: Build and push Docker image (tag)
-        if: startsWith(github.ref, 'refs/tags/')
-        uses: docker/build-push-action@10e90e3645eae34f1e60eeb005ba3a3d33f178e8 # v6.19.2
-        with:
-          context: .
-          file: Dockerfile
-          push: true
-          platforms: linux/amd64, linux/arm64
-          tags: ghcr.io/${{ github.repository_owner }}/ioc-cfn-mgmt-plane-svc:${{ steps.get_tag.outputs.tag_name }}
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
-          provenance: false
+      - name: Upload build cache diagnostics
+        if: failure()
+        run: |
+          echo "::group::Build Cache Diagnostics"
+          docker buildx du || true
+          echo "::endgroup::"
