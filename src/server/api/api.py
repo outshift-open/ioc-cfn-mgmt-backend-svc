@@ -5,7 +5,6 @@
 from fastapi import APIRouter
 
 from server.api.endpoints.audit import router as audits_router
-from server.api.endpoints.audit_cfn_event import router as audit_cfn_events_router
 from server.api.endpoints.auth import router as auth_router
 from server.api.endpoints.cognitive_agent import router as cognitive_agent_router
 from server.api.endpoints.cognitive_engine import router as cognitive_engine_router
@@ -29,7 +28,6 @@ api_router.include_router(multi_agentic_system_router, prefix="/workspaces", tag
 api_router.include_router(cognitive_agent_router, prefix="/workspaces", tags=["cognitive-agents"])
 api_router.include_router(cognitive_engine_router, prefix="/workspaces", tags=["cognition-engines"])
 api_router.include_router(policy_router, prefix="/workspaces", tags=["policies"])
-api_router.include_router(audit_cfn_events_router, prefix="/audit-events", tags=["audit-events"])
 
 # hidden endpoints
 api_router.include_router(auth_router, prefix="/auth", tags=["authentication"], include_in_schema=False)
