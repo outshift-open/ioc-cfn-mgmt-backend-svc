@@ -9,12 +9,7 @@ IoC CFN Management Backend Service - FastAPI backend for workspaces, users, API 
 
 - Python 3.10+
 - Poetry: `curl -sSL https://install.python-poetry.org | python3 -`
-- Task:
-  - **macOS**: `brew install go-task`
-  - **Linux**: `apt install task`, `dnf install go-task`, or `snap install task --classic`
-  - **Cross-platform**: `npm install -g @go-task/cli`
-  - **Go users**: `go install github.com/go-task/task/v3/cmd/task@latest`
-  - **Manual install**: `sh -c "$(curl --location https://taskfile.dev/install.sh)" -- -d -b ~/.local/bin`
+- Make (usually pre-installed on Unix-like systems)
 
 ### Provide LLM Credentials
 
@@ -31,6 +26,33 @@ For details please refer to the [README](src/server/database/relational_db/READM
 - [PostgreSQL 17 Alpine](https://hub.docker.com/_/postgres)
 - [Atlas](https://atlasgo.io/guides/orms/sqlalchemy/getting-started)
 
+## Architecture
+
+### Services
+
+The full stack deployment includes the following services:
+
+| Service | Port | Purpose |
+|---------|------|---------|
+| **ioc-cfn-mgmt-backend-svc** | 9000 | Management plane backend API |
+| **ioc-cognition-fabric-node-svc** | 9002 | CFN service with embedded cognitive agents |
+| **ioc-cfn-cognition-engine** | 9004 | Cognitive agents (ingestion, evidence, semantic negotiation, caching) |
+| **ioc-knowledge-memory-svc** | 9003 | Knowledge graph + vector memory storage |
+| **ioc-knowledge-db** | 5456 | PostgreSQL with AgensGraph + PgVector extensions |
+| **ioc-mgmt-relational-db** | 5433 | PostgreSQL for management data |
+
+### Service Flow
+
+```
+Client/API → Management Backend (9000)
+                ↓
+              CFN Service (9002)
+                ↓
+           Cognition Engine (9004) → Knowledge Memory (9003)
+                                         ↓
+                                     Knowledge DB (5456)
+```
+
 ## Quick Start
 
 ### Deployment Options
@@ -38,29 +60,29 @@ For details please refer to the [README](src/server/database/relational_db/READM
 **Option 1: I have deployed sql DB locally**
 
 ```bash
-task run    # installs deps, applies db migrations, then runs
+make run    # installs deps, applies db migrations, then runs
 ```
 
 **Option 2: I don't have any db**
 
 ```bash
-task docker-compose-db-up    # Start only databases (PostgreSQL) with db-only profile
-task run                     # installs deps, applies db migrations, then runs
+make docker-compose-db-up    # Start only databases (PostgreSQL) with db-only profile
+make run                     # installs deps, applies db migrations, then runs
 ```
 
 **Option 3: Full stack deployment**
 
 ```bash
-task docker-compose-full-stack-up    # Start complete stack (application + databases + cfn-svc)
+make docker-compose-full-stack-up    # Start complete stack with all services
 ```
 
 ### Alternative Quick Start Methods
 
-**Manual setup (if you have Poetry/Task already)**
+**Manual setup (if you have Poetry/Make already)**
 
 ```bash
 poetry install
-task dev
+make dev
 ```
 
 **API Documentation:** http://localhost:9000/docs
@@ -71,13 +93,14 @@ Memory provider credentials are encrypted using a Fernet key. The key is automat
 
 ## Development
 
-**Using Task**
+**Using Make**
 
 ```bash
-task dev              # Start development server
-task test             # Run all tests
-task docker-build     # Build Docker image
-task docker-run       # Run Docker container
+make dev              # Start development server
+make test             # Run all tests
+make docker-build     # Build Docker image
+make docker-run       # Run Docker container
+make help             # Show all available targets
 ```
 
 **Using Poetry directly**
@@ -90,8 +113,8 @@ poetry run python -m server.main
 **Using Docker**
 
 ```bash
-task docker-compose-full-stack-up    # Full stack (mgmt-backend + cfn-svc + ui + databases)
-task docker-compose-db-up            # Databases only
+make docker-compose-full-stack-up    # Full stack (mgmt-backend + cfn-svc + cognition-engine + knowledge-memory + databases)
+make docker-compose-db-up            # Databases only
 ```
 
 ## API Endpoints

@@ -51,9 +51,8 @@ services:
     ports:
       - "9000:9000"
     environment:
-      - SERVICE_NAME=ioc-cfn-mgmt-plane-svc
       - APPLICATION_VERSION=dev
-      - LOG_LEVEL=${LOG_LEVEL:-INFO}
+      - LOG_LEVEL=INFO
       - ADMIN_USER_PASSWORD=${ADMIN_USER_PASSWORD}
       - POSTGRES_HOST=ioc-knowledge-db
       - POSTGRES_PORT=5432
@@ -75,32 +74,11 @@ services:
       retries: 3
       start_period: 40s
 
-  # Mgmt. Plane UI - Next.js frontend for management plane
-  # Port Mapping: 9001:9001 (same port inside and outside container)
-  ioc-cfn-mgmt-plane-ui:
-    image: ghcr.io/cisco-eti/ioc-cfn-mgmt-plane-ui:latest
-    platform: ${DOCKER_DEFAULT_PLATFORM}
-    profiles:
-      - full-stack
-    ports:
-      - "9001:9001"
-    environment:
-      - NODE_ENV=production
-      - PORT=9001
-      - CFN_UI_API_BASE_URL=http://ioc-cfn-mgmt-plane-svc:9000
-      - NEXT_PUBLIC_CFN_UI_API_BASE_URL=http://localhost:9000
-      - NEXTAUTH_URL=${NEXTAUTH_URL:-http://localhost:9001}
-      - NEXTAUTH_SECRET=${NEXTAUTH_SECRET}
-    restart: unless-stopped
-    depends_on:
-      ioc-cfn-mgmt-plane-svc:
-        condition: service_healthy
-
   # CFN Service - Cognition Fabric Node service
   # Port Mapping: 9002:9002 (same port inside and outside container)
-  ioc-cfn-svc:
+  ioc-cognition-fabric-node-svc:
     image: ghcr.io/cisco-eti/ioc-cognition-fabric-node-svc:2026-03-26-f88e19a
-    container_name: ioc-cfn-svc
+    container_name: ioc-cognition-fabric-node-svc
     platform: ${DOCKER_DEFAULT_PLATFORM}
     profiles:
       - full-stack
@@ -113,7 +91,7 @@ services:
       - MGMT_URL=http://ioc-cfn-mgmt-plane-svc:9000
       - CFN_NAME=${CFN_NAME:-cfn-new}
       - HEARTBEAT_INTERVAL_SECONDS=${HEARTBEAT_INTERVAL_SECONDS:-10}
-      - SERVICE_NAME=${SERVICE_NAME:-ioc-cfn-svc}
+      - SERVICE_NAME=${SERVICE_NAME:-ioc-cognition-fabric-node-svc}
       - DB_NAME=${IOC_KNOWLEDGE_DB}
       - DB_USER=${IOC_KNOWLEDGE_DB_USER}
       - DB_PASSWORD=${IOC_KNOWLEDGE_DB_PASSWORD}
@@ -123,7 +101,7 @@ services:
       - AZURE_OPENAI_ENDPOINT=${AZURE_OPENAI_ENDPOINT}
       - AZURE_OPENAI_API_KEY=${AZURE_OPENAI_API_KEY}
       - AZURE_OPENAI_DEPLOYMENT=${AZURE_OPENAI_DEPLOYMENT}
-      - AZURE_OPENAI_API_VERSION=${AZURE_OPENAI_VERSION:-}
+      - AZURE_OPENAI_API_VERSION=${AZURE_OPENAI_API_VERSION}
     depends_on:
       ioc-knowledge-db:
         condition: service_healthy
