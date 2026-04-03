@@ -16,9 +16,10 @@ WORKDIR /home/app
 COPY pyproject.toml poetry.lock ./
 
 # Install poetry and dependencies
+# Use CFLAGS to work around regopy ARM64 build issues
 RUN pip3 install --no-cache-dir poetry \
     && poetry config virtualenvs.create false \
-    && poetry install --only=main --no-root --compile
+    && CFLAGS="-Wno-error=array-bounds" poetry install --only=main --no-root --compile
 
 # Runtime stage
 FROM python:3.11-slim AS runtime
