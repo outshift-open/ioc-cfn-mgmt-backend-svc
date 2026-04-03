@@ -14,10 +14,10 @@ IoC CFN Management Backend Service - FastAPI backend for workspaces, users, API 
 ### Provide LLM Credentials
 
 Provide the following env vars in env.conf:
-- `AZURE_OPENAI_ENDPOINT`
-- `AZURE_OPENAI_API_KEY`
-- `AZURE_OPENAI_DEPLOYMENT`
-- `AZURE_OPENAI_API_VERSION` // optional, remove if not needed
+- `LLM_MODEL` (e.g., `azure/gpt-4o`, `azure/gpt-4`, `gpt-4`)
+- `LLM_API_KEY` (Your Azure OpenAI or OpenAI API key)
+- `LLM_BASE_URL` (e.g., `https://your-resource.openai.azure.com/`)
+- `AZURE_API_VERSION` (e.g., `2025-01-01-preview`) // optional for Azure OpenAI
 
 ### Dependencies for the Relational DB
 
