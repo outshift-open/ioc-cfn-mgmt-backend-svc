@@ -27,7 +27,7 @@ RUN pip3 install --upgrade pip && pip3 install poetry
 # Use CFLAGS to work around regopy ARM64 build issues
 RUN --mount=type=cache,target=/root/.cache/pip \
     --mount=type=cache,target=/root/.cache/pypoetry \
-    && poetry config virtualenvs.create false \
+    poetry config virtualenvs.create false \
     && CFLAGS="-Wno-error=array-bounds" poetry install --only=main --no-root
 
 # Runtime stage
