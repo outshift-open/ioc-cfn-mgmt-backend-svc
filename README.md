@@ -1,6 +1,6 @@
 # ioc-cfn-mgmt-plane
 
-[![Docker](https://img.shields.io/badge/docker-ghcr.io-blue?logo=docker)](https://github.com/orgs/cisco-eti/packages/container/package/ioc-cfn-mgmt-plane-svc)
+[![Docker](https://img.shields.io/badge/docker-ghcr.io-blue?logo=docker)](https://github.com/orgs/outshift-open/packages/container/package/ioc-cfn-mgmt-plane-svc)
 [![GitHub Pages Site](https://img.shields.io/badge/GitHub%20Pages-Visit-green?logo=github)](https://scaling-potato-qm8j7n7.pages.github.io/)
 
 IoC CFN Management Backend Service - FastAPI backend for workspaces, users, API keys, Cognitive Fabric Nodes, and Multi-Agentic Systems
@@ -17,7 +17,6 @@ Provide the following env vars in env.conf:
 - `LLM_MODEL` (e.g., `azure/gpt-4o`, `azure/gpt-4`, `gpt-4`)
 - `LLM_API_KEY` (Your Azure OpenAI or OpenAI API key)
 - `LLM_BASE_URL` (e.g., `https://your-resource.openai.azure.com/`)
-- `AZURE_API_VERSION` (e.g., `2025-01-01-preview`) // optional for Azure OpenAI
 
 ### Dependencies for the Relational DB
 
