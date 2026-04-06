@@ -1,4 +1,7 @@
 #!/bin/bash
+# Copyright 2026 Cisco Systems, Inc. and its affiliates
+#
+# SPDX-License-Identifier: Apache-2.0
 # ---------------------------------------------------------------------------
 # Lightweight SQL migration runner (no external tools required)
 # Uses a "schema_migrations" table to track applied migrations.
