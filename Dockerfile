@@ -1,5 +1,5 @@
 # Build stage
-FROM python:3.11-slim AS builder
+FROM python:3.14-slim AS builder
 
 # Install build dependencies
 RUN apt-get update && apt-get install -y --no-install-recommends \
@@ -22,7 +22,7 @@ RUN pip3 install --no-cache-dir poetry \
     && CFLAGS="-Wno-error=array-bounds" poetry install --only=main --no-root --compile
 
 # Runtime stage
-FROM python:3.11-slim AS runtime
+FROM python:3.14-slim AS runtime
 
 # Link this container image to the GitHub repository
 LABEL org.opencontainers.image.source=https://github.com/cisco-eti/ioc-cfn-mgmt-plane-svc
