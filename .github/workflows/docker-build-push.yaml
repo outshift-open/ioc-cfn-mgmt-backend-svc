@@ -69,17 +69,17 @@ jobs:
               echo "::notice::Generic push detected"
             fi
             # Push: multi-platform, push enabled
-            echo "platforms=linux/amd64,linux/arm64" >> "$GITHUB_OUTPUT"
+            echo "platforms=linux/amd64" >> "$GITHUB_OUTPUT"
             echo "push=true" >> "$GITHUB_OUTPUT"
             echo "build_enabled=true" >> "$GITHUB_OUTPUT"
-            echo "::notice::Push detected - building multi-platform (amd64, arm64) with push"
+            echo "::notice::Push detected - building multi-platform (amd64) with push"
           elif [[ "${EVENT_TYPE}" == "workflow_dispatch" ]]; then
             # Manual: multi-platform, push enabled
             echo "platforms=linux/amd64" >> "$GITHUB_OUTPUT"
             echo "push=true" >> "$GITHUB_OUTPUT"
             echo "build_type=manual" >> "$GITHUB_OUTPUT"
             echo "build_enabled=true" >> "$GITHUB_OUTPUT"
-            echo "::notice::Manual dispatch - building multi-platform (amd64, arm64) with push"
+            echo "::notice::Manual dispatch - building multi-platform (amd64) with push"
           else
             echo "build_enabled=false" >> "$GITHUB_OUTPUT"
             echo "::warning::Unknown event type: ${EVENT_TYPE}"
