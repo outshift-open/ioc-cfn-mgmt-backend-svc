@@ -4,12 +4,12 @@ Run the full stack (UI + Backend + DB) using docker-compose.
 ## Prerequisites
 Authenticate github to access and pull Docker images from GitHub Container Registry (GHCR) where IoC images are hosted.
 
-Authorise cisco-eti docker hub account to pull images:
+Authorise outshift-open docker hub account to pull images:
 - go to https://github.com/settings/tokens
 - If you don't have a token yet, create a new one with `read:packages` scope
 - If you already have a token, ensure it has `read:packages` scope
 - Click on "Configure SSO" beside delete button
-- Authorize the token for cisco-eti organization
+- Authorize the token for outshift-open organization
 - Use the token to login to Docker Hub:
 ```bash
 export GITHUB_TOKEN="xxxxxxxxxxxxx"  # replace with your token
