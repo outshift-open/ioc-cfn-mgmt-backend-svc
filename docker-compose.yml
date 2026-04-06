@@ -77,7 +77,7 @@ services:
   # CFN Service - Cognition Fabric Node service
   # Port Mapping: 9002:9002 (same port inside and outside container)
   ioc-cognition-fabric-node-svc:
-    image: ghcr.io/outshift-open/ioc-cognition-fabric-node-svc:0.1.0
+    image: ghcr.io/outshift-open/ioc-cognition-fabric-node-svc:0.1.1
     container_name: ioc-cognition-fabric-node-svc
     platform: ${DOCKER_DEFAULT_PLATFORM}
     profiles:
