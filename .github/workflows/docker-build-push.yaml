@@ -2,7 +2,7 @@ name: Build and Push Docker Image
 
 on:
   push:
-    branches: [main, clawbee]
+    branches: [main]
     tags: ["*"]
     paths:
       - 'Dockerfile'
@@ -11,7 +11,7 @@ on:
       - 'app/**'
       - 'requirements*.txt'
   pull_request:
-    branches: [main, clawbee]
+    branches: [main]
     paths:
       - 'Dockerfile'
       - '.github/workflows/docker-build-push.yaml'
@@ -57,13 +57,10 @@ jobs:
             echo "build_enabled=true" >> "$GITHUB_OUTPUT"
             echo "::notice::PR detected - building single platform (amd64) without push"
           elif [[ "${EVENT_TYPE}" == "push" ]]; then
-            # Determine if this is main, clawbee, or a tag
+            # Determine if this is main or a tag
             if [[ "${{ github.ref }}" == "refs/heads/main" ]]; then
               echo "build_type=main" >> "$GITHUB_OUTPUT"
               echo "::notice::Main branch detected"
-            elif [[ "${{ github.ref }}" == "refs/heads/clawbee" ]]; then
-              echo "build_type=clawbee" >> "$GITHUB_OUTPUT"
-              echo "::notice::Clawbee branch detected"
             elif [[ "${{ github.ref }}" == refs/tags/* ]]; then
               echo "build_type=tag" >> "$GITHUB_OUTPUT"
               echo "::notice::Tag detected"
@@ -154,11 +151,6 @@ jobs:
               TAGS="${IMAGE}:latest ${IMAGE}:${BUILD_DATE}-${SHORT_SHA}"
               echo "::notice::Main branch tags: ${TAGS}"
               ;;
-            clawbee)
-              # Clawbee branch: clawbee-latest + clawbee-date-sha
-              TAGS="${IMAGE}:clawbee-latest ${IMAGE}:clawbee-${BUILD_DATE}-${SHORT_SHA}"
-              echo "::notice::Clawbee branch tags: ${TAGS}"
-              ;;
             tag)
               # Release tag: use tag name
               TAGS="${IMAGE}:${GIT_TAG}"
@@ -205,8 +197,8 @@ jobs:
         uses: docker/login-action@v4.0.0
         with:
           registry: ghcr.io
-          username: ${{ secrets.GHCR_USERNAME }}
-          password: ${{ secrets.GHCR_TOKEN }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
           logout: false
 
       - name: Build and push Docker image

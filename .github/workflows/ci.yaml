@@ -5,11 +5,9 @@ on:
   push:
     branches:
       - "main"
-      - "clawbee"
   pull_request:
     branches:
       - "main"
-      - "clawbee"
   workflow_dispatch:
 
 # Grant read access for GITHUB_TOKEN on all jobs
