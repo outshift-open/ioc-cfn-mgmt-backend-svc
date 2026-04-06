@@ -12,14 +12,23 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 RUN useradd -u 1001 app && mkdir /home/app
 WORKDIR /home/app
 
+# Use BuildKit cache mounts for pip and poetry
+# This keeps the downloaded wheels and metadata between builds
+ENV PIP_CACHE_DIR=/root/.cache/pip
+ENV POETRY_CACHE_DIR=/root/.cache/pypoetry
+
 # Copy dependency files
 COPY pyproject.toml poetry.lock ./
 
-# Install poetry and dependencies
+# Upgrade pip and install poetry
+RUN pip3 install --upgrade pip && pip3 install poetry
+
+# Install dependencies
 # Use CFLAGS to work around regopy ARM64 build issues
-RUN pip3 install --no-cache-dir poetry \
+RUN --mount=type=cache,target=/root/.cache/pip \
+    --mount=type=cache,target=/root/.cache/pypoetry \
     && poetry config virtualenvs.create false \
-    && CFLAGS="-Wno-error=array-bounds" poetry install --only=main --no-root --compile
+    && CFLAGS="-Wno-error=array-bounds" poetry install --only=main --no-root
 
 # Runtime stage
 FROM python:3.11-slim AS runtime
