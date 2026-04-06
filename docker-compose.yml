@@ -6,7 +6,7 @@ services:
   #   - Container Port: 5432 (PostgreSQL default, cannot be changed without config)
   #   - it will have cfn_mgmt_db and ioc_knowledge_db both
   ioc-knowledge-db:
-    image: ghcr.io/cisco-eti/ioc-knowledge-memory-svc-db:1.0
+    image: ghcr.io/outshift-open/ioc-knowledge-memory-svc-db:0.1.0
     platform: linux/amd64
     profiles:
       - db-only
@@ -44,7 +44,7 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
-    image: ghcr.io/cisco-eti/ioc-cfn-mgmt-plane-svc:clawbee-2026-03-25-a9f4ae4
+    image: ghcr.io/outshift-open/ioc-cfn-mgmt-plane-svc:0.1.0
     platform: ${DOCKER_DEFAULT_PLATFORM}
     profiles:
       - full-stack
@@ -77,7 +77,7 @@ services:
   # CFN Service - Cognition Fabric Node service
   # Port Mapping: 9002:9002 (same port inside and outside container)
   ioc-cognition-fabric-node-svc:
-    image: ghcr.io/cisco-eti/ioc-cognition-fabric-node-svc:2026-04-03-dce867d
+    image: ghcr.io/outshift-open/ioc-cognition-fabric-node-svc:0.1.0
     container_name: ioc-cognition-fabric-node-svc
     platform: ${DOCKER_DEFAULT_PLATFORM}
     profiles:
@@ -97,10 +97,10 @@ services:
       - DB_PASSWORD=${IOC_KNOWLEDGE_DB_PASSWORD}
       - DB_HOST=ioc-knowledge-db
       - DB_PORT=5432
+      - DISABLE_VALIDATION=false
       - LLM_MODEL=${LLM_MODEL}
       - LLM_API_KEY=${LLM_API_KEY}
       - LLM_BASE_URL=${LLM_BASE_URL}
-      - AZURE_API_VERSION=${AZURE_API_VERSION}
     depends_on:
       ioc-knowledge-db:
         condition: service_healthy
