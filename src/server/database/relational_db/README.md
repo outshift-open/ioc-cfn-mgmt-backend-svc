@@ -7,7 +7,7 @@ https://hub.docker.com/_/postgres
 ```
 docker compose -f docker/db.yaml up -d
 ```
-Optionally - Set the below env variables in a .env file at the repo root (If using non-default values).
+Optionally - Set the below env variables in the env.conf file at the repo root (If using non-default values).
 ```
 'POSTGRES_DB', 'cfn_mgmt'
 'POSTGRES_USER', 'postgresUser'

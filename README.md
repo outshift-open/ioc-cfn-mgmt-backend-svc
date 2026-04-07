@@ -16,6 +16,30 @@ IoC CFN Management Backend Service - FastAPI backend for workspaces, users, API 
   - **Go users**: `go install github.com/go-task/task/v3/cmd/task@latest`
   - **Manual install**: `sh -c "$(curl --location https://taskfile.dev/install.sh)" -- -d -b ~/.local/bin`
 
+### GitHub Container Registry Authentication (for Full Stack deployment)
+
+To pull Docker images from GitHub Container Registry (GHCR):
+
+1. Go to https://github.com/settings/tokens
+2. Create a new token with `read:packages` scope (or ensure existing token has this scope)
+3. Click "Configure SSO" beside delete button
+4. Authorize the token for cisco-eti organization
+5. Login to Docker:
+
+```bash
+export GITHUB_TOKEN="xxxxxxxxxxxxx"  # replace with your token
+echo "$GITHUB_TOKEN" | docker login ghcr.io -u "YOUR_GITHUB_USERNAME" --password-stdin
+```
+
+### Environment Configuration
+
+Edit the environment configuration file:
+
+```bash
+# Edit env.conf to set your configuration values
+vi env.conf  # or use your preferred editor
+```
+
 ### Provide LLM Credentials
 
 Provide the following env vars in env.conf:
@@ -50,9 +74,30 @@ task run                     # installs deps, applies db migrations, then runs
 
 **Option 3: Full stack deployment**
 
+Run the full stack (UI + Backend + DB + CFN Service) using docker-compose:
+
 ```bash
-task docker-compose-full-stack-up    # Start complete stack (application + databases + cfn-svc)
+# Edit env.conf to set your configuration values (IMAGE_TAG, credentials, etc.)
+
+# Start services (pulls latest images)
+task docker-compose-full-stack-up
+
+# Stop services (preserves volumes)
+task docker-compose-full-stack-down
+
+# Stop services and remove volumes
+task docker-compose-full-stack-down-with-volumes
 ```
+
+> **Note:** The full-stack profile includes `ioc-cfn-svc` (port 9002), which now depends on
+> `ioc-knowledge-db` (PostgreSQL), `ioc-cfn-mgmt-plane-svc`,
+> and `ioc-knowledge-memory-svc`. Startup is gated on all services being healthy.
+> The service shares database credentials (`IOC_KNOWLEDGE_DB_USER`, `IOC_KNOWLEDGE_DB_PASSWORD`)
+> from `env.conf`.
+>
+> LLM integration requires the following environment variables to be set:
+> `AZURE_OPENAI_ENDPOINT`, `AZURE_OPENAI_API_KEY`, `AZURE_OPENAI_DEPLOYMENT`,
+> and optionally `AZURE_OPENAI_API_VERSION` in `env.conf`.
 
 ### Alternative Quick Start Methods
 
@@ -68,6 +113,21 @@ task dev
 ### Encryption Keys
 
 Memory provider credentials are encrypted using a Fernet key. The key is automatically generated on first run and stored in `.secrets/encryption.key` (gitignored). Each developer gets a unique key.
+
+## Service Endpoints
+
+Once all services are running (full-stack deployment), access them at:
+
+- **IoC Management UI**: http://localhost:9001 (username and password are defined in env.conf)
+- **IoC Management API**: http://localhost:9000/docs
+- **CFN Service**: http://localhost:9002
+- **Knowledge Memory Service**: http://localhost:9003
+- **AgensGraph Database**: localhost:5456
+- **AgensGraph Viewer**: http://localhost:5457
+- **Cognition Engine - Reasoning and Evidence Gathering**: Port 9004
+- **Cognition Engine - Semantic Negotiation**: Port 9004
+
+To enable these services, uncomment their definitions in docker-compose.yml.
 
 ## Development
 

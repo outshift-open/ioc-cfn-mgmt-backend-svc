@@ -31,7 +31,6 @@ Taskfile.yaml
 docker-compose.yml
 poetry.toml
 CONTRIBUTING.md
-full-stack.md
 
 # Environment
 .env

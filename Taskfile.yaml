@@ -104,7 +104,7 @@ tasks:
   docker-compose-full-stack-up-build:
     desc: Start all services with docker-compose, rebuilding images
     cmds:
-      - docker compose --env-file env.conf --profile full-stack up --build --pull always -d
+      - docker compose --env-file env.conf --profile full-stack up --build -d
       - docker compose --env-file env.conf --profile full-stack logs -f
 
   docker-compose-full-stack-down:
