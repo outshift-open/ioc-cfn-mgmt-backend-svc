@@ -19,6 +19,7 @@ from server.api.endpoints.workspace_invitations import (
 )
 from server.api.endpoints.workspace_members import router as workspace_members_router
 from server.api.endpoints.workspaces import router as workspaces_router
+from server.diagnostics import router as diagnostics_router
 
 api_router = APIRouter()
 
@@ -30,6 +31,8 @@ api_router.include_router(cognitive_agent_router, prefix="/workspaces", tags=["c
 api_router.include_router(cognitive_engine_router, prefix="/workspaces", tags=["cognition-engines"])
 api_router.include_router(policy_router, prefix="/workspaces", tags=["policies"])
 api_router.include_router(audit_cfn_events_router, prefix="/audit-events", tags=["audit-events"])
+
+api_router.include_router(diagnostics_router, prefix="/internal/diagnostics", tags=["diagnostics"], include_in_schema=False)
 
 # hidden endpoints
 api_router.include_router(auth_router, prefix="/auth", tags=["authentication"], include_in_schema=False)

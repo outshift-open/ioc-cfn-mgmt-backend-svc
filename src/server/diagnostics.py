@@ -7,39 +7,28 @@
 import datetime
 import os
 
-from fastapi import Response, status
+from fastapi import APIRouter, Response, status
 from fastapi.responses import JSONResponse
-from prometheus_client import CONTENT_TYPE_LATEST, generate_latest
-from pydantic import BaseModel
+from prometheus_client import REGISTRY
+from pydantic import BaseModel, ConfigDict, Field
 
 from app_logging import get_loggers_info, update_log_level
-from server.common import app, service_name
+from server.common import service_name
 from server.health_check import HealthState, check_self
 
-
-# Prometheus metrics endpoint
-@app.get("/metrics", include_in_schema=False)
-async def prometheus_metrics_endpoint():
-    """Prometheus metrics endpoint.
-
-    Returns:
-        Prometheus metrics in text format
-    """
-    return Response(generate_latest(), media_type=CONTENT_TYPE_LATEST)
+router = APIRouter()
 
 
-# Pydantic models for request/response validation
 class LogLevelUpdate(BaseModel):
     """Model for updating log level."""
 
-    module_name: str
-    log_level: str
+    model_config = ConfigDict(populate_by_name=True)
+
+    module_name: str = Field(alias="module-name")
+    log_level: str = Field(alias="log-level")
 
 
-################################################
-# IoC Management Backend Standard Diagnostic API Endpoints
-################################################
-@app.get("/api/internal/diagnostics/health")
+@router.get("/health")
 async def ioc_health():
     """IoC standard health endpoint for liveness probe.
     Returns a simple status for k8s liveness probe and also includes
@@ -51,23 +40,21 @@ async def ioc_health():
     service_state = check_self()
     timestamp = datetime.datetime.now().isoformat()
 
-    # Construct response with both simple status and detailed info
-    status = "UP" if service_state in [HealthState.UP, HealthState.DEGRADED] else "DOWN"
+    status_str = "UP" if service_state in [HealthState.UP, HealthState.DEGRADED] else "DOWN"
     response_body = {
-        "status": status,
+        "status": status_str,
         "service_name": service_name,
         "service_state": service_state.name,
         "last_updated": timestamp,
     }
 
-    # Return appropriate status code for k8s liveness probe
     if service_state in [HealthState.UP, HealthState.DEGRADED]:
         return JSONResponse(content=response_body, status_code=200)
     else:
         return JSONResponse(content=response_body, status_code=500)
 
 
-@app.get("/api/internal/diagnostics/info")
+@router.get("/info")
 async def ioc_info():
     """IoC Management Backend standard info endpoint with git commit information.
 
@@ -85,20 +72,57 @@ async def ioc_info():
     }
 
 
-@app.get("/api/internal/diagnostics/metrics", include_in_schema=False)
-async def metrics_endpoint():
-    """Application metrics endpoint.
+@router.get("/metrics")
+async def list_metrics():
+    """List all metrics published by this service.
 
     Returns:
-        Application metrics in JSON format
+        List of metric descriptors from the Prometheus registry
     """
-    return {
-        "uptime": os.environ.get("MOCK_APP_UPTIME", "unknown"),
-        "requests_handled": os.environ.get("MOCK_REQUESTS_HANDLED", "unknown"),
-    }
+    metrics = []
+    for metric in REGISTRY.collect():
+        metrics.append(
+            {
+                "name": metric.name,
+                "type": metric.type,
+                "help": metric.documentation,
+            }
+        )
+    return {"metrics": metrics}
 
 
-@app.get("/api/internal/diagnostics/loggers")
+@router.get("/metrics/{metric_name}")
+async def get_metric(metric_name: str):
+    """Get current value of a specific metric by name.
+
+    Args:
+        metric_name: Prometheus metric name
+
+    Returns:
+        Metric descriptor with current sample values, or 404 if not found
+    """
+    for metric in REGISTRY.collect():
+        if metric.name == metric_name:
+            return {
+                "name": metric.name,
+                "type": metric.type,
+                "help": metric.documentation,
+                "samples": [
+                    {
+                        "name": sample.name,
+                        "labels": dict(sample.labels),
+                        "value": sample.value,
+                    }
+                    for sample in metric.samples
+                ],
+            }
+    return JSONResponse(
+        content={"error": f"Metric '{metric_name}' not found"},
+        status_code=404,
+    )
+
+
+@router.get("/loggers")
 async def get_loggers():
     """Get current log level configuration.
 
@@ -108,8 +132,8 @@ async def get_loggers():
     return get_loggers_info()
 
 
-@app.post(
-    "/api/internal/diagnostics/loggers",
+@router.put(
+    "/loggers",
     status_code=status.HTTP_204_NO_CONTENT,
 )
 async def update_loggers(log_config: LogLevelUpdate):
@@ -127,21 +151,3 @@ async def update_loggers(log_config: LogLevelUpdate):
         return JSONResponse(content={"error": error_msg}, status_code=400)
 
     return Response(status_code=status.HTTP_204_NO_CONTENT)
-
-
-@app.get("/healthz")
-def healthz():
-    service_state = check_self()
-
-    timestamp = datetime.now().isoformat()
-    response_body = {
-        "service_name": service_name,
-        "service_state": service_state.name,
-        "last_updated": timestamp,
-    }
-
-    # Return appropriate status code for k8s liveness probe
-    if service_state == HealthState.UP or service_state == HealthState.DEGRADED:
-        return JSONResponse(content=response_body, status_code=200)
-    else:
-        return JSONResponse(content=response_body, status_code=500)
