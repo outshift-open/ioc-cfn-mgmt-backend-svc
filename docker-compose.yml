@@ -6,7 +6,7 @@ services:
   #   - Container Port: 5432 (PostgreSQL default, cannot be changed without config)
   #   - it will have cfn_mgmt_db and ioc_knowledge_db both
   ioc-knowledge-db:
-    image: ghcr.io/cisco-eti/ioc-knowledge-memory-svc-db:1.0
+    image: ghcr.io/cisco-eti/ioc-knowledge-memory-svc-db:2.1
     platform: linux/amd64
     profiles:
       - db-only
@@ -119,7 +119,7 @@ services:
   # Knowledge Memory Service - Graph + Vector Memory Storage
   # Port Mapping: 9003:9003 (same port inside and outside container)
   ioc-knowledge-memory-svc:
-    image: ghcr.io/cisco-eti/ioc-knowledge-memory-svc:${IMAGE_TAG:-latest}
+    image: ghcr.io/cisco-eti/ioc-knowledge-memory-svc:2026-04-08-63560c7
     platform: linux/amd64
     profiles:
       - full-stack
@@ -184,7 +184,7 @@ services:
         condition: service_healthy
 
   ioc-cfn-cognition-engine:
-    image: ghcr.io/cisco-eti/ioc-cfn-cognition-engine:latest
+    image: ghcr.io/cisco-eti/ioc-cfn-cognition-engine:2026-04-13-6172854
     ports:
       - "9004:9004"
     platform: ${DOCKER_DEFAULT_PLATFORM}
@@ -192,9 +192,9 @@ services:
       - full-stack
     restart: unless-stopped
     environment:
-      - AZURE_OPENAI_ENDPOINT=${AZURE_OPENAI_ENDPOINT}
-      - AZURE_OPENAI_API_KEY=${AZURE_OPENAI_API_KEY}
-      - AZURE_OPENAI_DEPLOYMENT=${AZURE_OPENAI_DEPLOYMENT}
+      - LLM_BASE_URL=${LLM_BASE_URL}
+      - LLM_API_KEY=${LLM_API_KEY}
+      - LLM_MODEL=${LLM_MODEL}
       - ENABLE_DEDUP=true
       # Auto-register with management plane on startup
       - MGMT_PLANE_URL=http://ioc-cfn-mgmt-plane-svc:9000
