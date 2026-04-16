@@ -2,7 +2,7 @@
 #
 # SPDX-License-Identifier: Apache-2.0
 
-from typing import Optional, Dict, Any
+from typing import Optional, Dict, Any, List
 from datetime import datetime
 from uuid import UUID
 from pydantic import BaseModel, Field, ConfigDict
@@ -27,8 +27,17 @@ class AuditCfnEventResponse(BaseModel):
     last_modified_on: datetime = Field(..., description="Timestamp when the event was last modified")
 
 
-class AuditCfnEventListResponse(BaseModel):
-    """Response model for listing CFN audit events."""
+class AuditCfnPageInfo(BaseModel):
+    """Pagination metadata matching the upstream cfn-svc response."""
 
-    total: int = Field(..., description="Total number of audit events matching the query")
-    audit_events: list[AuditCfnEventResponse] = Field(..., description="List of audit events")
+    page: int = Field(..., description="Current 0-based page number")
+    pageSize: int = Field(..., description="Requested page size")
+    pageCount: int = Field(..., description="Number of elements returned in this page")
+    totalElements: int = Field(..., description="Total number of matching records across all pages")
+
+
+class AuditCfnEventListResponse(BaseModel):
+    """Paginated list response matching the upstream cfn-svc shape."""
+
+    data: List[AuditCfnEventResponse] = Field(..., description="List of audit events")
+    pageInfo: AuditCfnPageInfo = Field(..., description="Pagination metadata")

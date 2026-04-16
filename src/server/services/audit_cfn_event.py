@@ -3,81 +3,144 @@
 # SPDX-License-Identifier: Apache-2.0
 
 import logging
+import os
+import time
 from typing import Optional
 
-from server.database.relational_db.cfn_cp_db import CfnCpDB
-from server.database.relational_db.models.cfn_audit import CfnAudit
+import requests
+
+CFN_SVC_URL_DEFAULT = "http://localhost:9002"
+CFN_SVC_AUDIT_PATH = "/api/internal/mgmt/audit"
+CFN_SVC_TIMEOUT_SECONDS = 10
+CFN_SVC_MAX_RETRIES = 3
+CFN_SVC_RETRY_DELAY_SECONDS = 1
+
+
+class CfnUpstreamError(Exception):
+    """Raised when cfn-svc returns a client error (e.g. 400) that should be passed through."""
+
+    def __init__(self, status_code: int, detail: dict):
+        self.status_code = status_code
+        self.detail = detail
+        super().__init__(f"cfn-svc returned {status_code}")
+
+FALLBACK_DEFAULT_PAGE_SIZE = 20
+FALLBACK_MAX_PAGE_SIZE = 100
+
+
+def _get_default_page_size() -> int:
+    """Return DEFAULT_PAGE_SIZE from env, falling back to 20."""
+    try:
+        val = int(os.getenv("DEFAULT_PAGE_SIZE", str(FALLBACK_DEFAULT_PAGE_SIZE)))
+        return val if val > 0 else FALLBACK_DEFAULT_PAGE_SIZE
+    except (ValueError, TypeError):
+        return FALLBACK_DEFAULT_PAGE_SIZE
+
+
+def _get_max_page_size() -> int:
+    """Return MAX_PAGE_SIZE from env, falling back to 100."""
+    try:
+        val = int(os.getenv("MAX_PAGE_SIZE", str(FALLBACK_MAX_PAGE_SIZE)))
+        return val if val > 0 else FALLBACK_MAX_PAGE_SIZE
+    except (ValueError, TypeError):
+        return FALLBACK_MAX_PAGE_SIZE
 
 
 class AuditCfnEventService:
-    """Service for querying CFN audit events from the cfn_cp database."""
+    """Service for querying CFN audit events via HTTP calls to ioc-cfn-svc."""
 
     def __init__(self):
         self.logger = logging.getLogger(__name__)
 
-    def get_audit_event(self, audit_event_id: str) -> Optional[CfnAudit]:
-        """Retrieve a specific audit event by ID.
+    def _get_base_url(self) -> str:
+        """Get the cfn-svc base URL from environment."""
+        return os.getenv("CFN_SVC_URL", CFN_SVC_URL_DEFAULT)
+
+    def _get_with_retries(self, url: str, params: dict = None) -> requests.Response:
+        """GET with simple retry logic."""
+        last_error = None
+        for attempt in range(1, CFN_SVC_MAX_RETRIES + 1):
+            try:
+                response = requests.get(url, params=params, timeout=CFN_SVC_TIMEOUT_SECONDS)
+                return response
+            except requests.exceptions.RequestException as e:
+                last_error = e
+                self.logger.warning(f"cfn-svc request failed (attempt {attempt}/{CFN_SVC_MAX_RETRIES}): {str(e)}")
+                if attempt < CFN_SVC_MAX_RETRIES:
+                    time.sleep(CFN_SVC_RETRY_DELAY_SECONDS * attempt)
+        raise last_error
+
+    def get_audit_event(self, audit_event_id: str) -> Optional[dict]:
+        """Retrieve a specific audit event by ID via cfn-svc HTTP API.
 
         Args:
             audit_event_id: The UUID of the audit event to retrieve
 
         Returns:
-            CfnAudit: The audit event record if found, None otherwise
+            dict: The audit event data if found, None otherwise
         """
-        db = CfnCpDB()
-        session = db.get_session()
-        self.logger.debug(f"Retrieving audit event: {audit_event_id}")
+        url = f"{self._get_base_url()}{CFN_SVC_AUDIT_PATH}/{audit_event_id}"
+        self.logger.debug(f"Retrieving audit event from cfn-svc: {url}")
         try:
-            audit_event: Optional[CfnAudit] = session.query(CfnAudit).filter(CfnAudit.id == audit_event_id).first()
-            self.logger.debug(f"Successfully retrieved audit event: {audit_event}")
-            return audit_event
+            response = self._get_with_retries(url)
+            if response.status_code == 404:
+                return None
+            if response.status_code == 400:
+                raise CfnUpstreamError(400, response.json())
+            response.raise_for_status()
+            return response.json()
+        except CfnUpstreamError:
+            raise
         except Exception as e:
-            self.logger.error(f"Failed to retrieve audit event: {str(e)}")
-            raise e
-        finally:
-            session.close()
+            self.logger.error(f"Failed to retrieve audit event {audit_event_id} from cfn-svc: {str(e)}")
+            raise
 
     def list_audit_events(
         self,
-        skip: int = 0,
-        limit: int = 100,
+        page: int = 0,
+        page_size: int = None,
         resource_type: Optional[str] = None,
         audit_type: Optional[str] = None,
-    ) -> tuple[list[CfnAudit], int]:
-        """List audit events with optional filtering and pagination.
+    ) -> dict:
+        """List audit events via cfn-svc HTTP API with optional filtering and pagination.
 
         Args:
-            skip: Number of records to skip
-            limit: Maximum number of records to return
+            page: 0-based page number (default 0)
+            page_size: Number of records per page (default from DEFAULT_PAGE_SIZE env, clamped to MAX_PAGE_SIZE)
             resource_type: Optional filter by resource_type (e.g. MAS, WORKSPACE)
             audit_type: Optional filter by audit_type (e.g. RESOURCE_CREATED)
 
         Returns:
-            tuple: (list of audit event records, total count)
+            dict: Response containing 'data' (list of audit events) and 'pageInfo'
         """
-        db = CfnCpDB()
-        session = db.get_session()
-        self.logger.debug(
-            f"Listing audit events with skip={skip}, limit={limit}, "
-            f"resource_type={resource_type}, audit_type={audit_type}"
-        )
+        if page_size is None or page_size <= 0:
+            page_size = _get_default_page_size()
+        max_ps = _get_max_page_size()
+        if page_size > max_ps:
+            page_size = max_ps
+
+        url = f"{self._get_base_url()}{CFN_SVC_AUDIT_PATH}"
+        params = {"page": page, "pageSize": page_size}
+        if resource_type:
+            params["resource_type"] = resource_type
+        if audit_type:
+            params["audit_type"] = audit_type
+
+        self.logger.debug(f"Listing audit events from cfn-svc: {url} with params={params}")
         try:
-            query = session.query(CfnAudit)
-
-            if resource_type:
-                query = query.filter(CfnAudit.resource_type == resource_type)
-            if audit_type:
-                query = query.filter(CfnAudit.audit_type == audit_type)
-
-            total: int = query.count()
-            audit_events: list[CfnAudit] = query.order_by(CfnAudit.created_on.desc()).offset(skip).limit(limit).all()
-            self.logger.debug(f"Successfully listed {len(audit_events)} audit events")
-            return audit_events, total
+            response = self._get_with_retries(url, params=params)
+            if response.status_code == 400:
+                raise CfnUpstreamError(400, response.json())
+            response.raise_for_status()
+            result = response.json()
+            page_count = len(result.get("data", []))
+            self.logger.debug(f"Successfully listed {page_count} audit events from cfn-svc")
+            return result
+        except CfnUpstreamError:
+            raise
         except Exception as e:
-            self.logger.error(f"Failed to list audit events: {str(e)}")
-            raise e
-        finally:
-            session.close()
+            self.logger.error(f"Failed to list audit events from cfn-svc: {str(e)}")
+            raise
 
 
 # Global service instance

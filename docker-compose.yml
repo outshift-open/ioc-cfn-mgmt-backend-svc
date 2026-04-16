@@ -82,6 +82,7 @@ services:
       - POSTGRES_PASSWORD=${IOC_KNOWLEDGE_DB_PASSWORD}
       - PORT=9000
       - CFN_DEV_MODE=${CFN_DEV_MODE}
+      - CFN_SVC_URL=${CFN_SVC_URL:-http://ioc-cfn-svc:9002}
     volumes:
       - ./.secrets:/home/app/.secrets:ro
     restart: unless-stopped
