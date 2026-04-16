@@ -2222,35 +2222,33 @@
           "audit-events"
         ],
         "summary": "List CFN Audit Events",
-        "description": "Retrieve a paginated list of audit events from the CFN control-plane database (cfn_cp). Supports optional filtering by `resource_type` and `audit_type`.",
+        "description": "Retrieve a paginated list of audit events from ioc-cfn-svc. Supports optional filtering by `resource_type` and `audit_type`.",
         "operationId": "list_audit_events_api_audit_events__get",
         "parameters": [
           {
-            "name": "skip",
+            "name": "page",
             "in": "query",
             "required": false,
             "schema": {
               "type": "integer",
               "minimum": 0,
-              "description": "Number of records to skip for pagination",
+              "description": "0-based page number",
               "default": 0,
-              "title": "Skip"
+              "title": "Page"
             },
-            "description": "Number of records to skip for pagination"
+            "description": "0-based page number"
           },
           {
-            "name": "limit",
+            "name": "pageSize",
             "in": "query",
             "required": false,
             "schema": {
               "type": "integer",
-              "maximum": 1000,
               "minimum": 1,
-              "description": "Maximum number of records to return",
-              "default": 100,
-              "title": "Limit"
+              "description": "Number of records per page. Defaults to DEFAULT_PAGE_SIZE env var (fallback 20). Clamped to MAX_PAGE_SIZE env var (fallback 100).",
+              "title": "Pagesize"
             },
-            "description": "Maximum number of records to return"
+            "description": "Number of records per page. Defaults to DEFAULT_PAGE_SIZE env var (fallback 20). Clamped to MAX_PAGE_SIZE env var (fallback 100)."
           },
           {
             "name": "resource_type",
@@ -2265,10 +2263,10 @@
                   "type": "null"
                 }
               ],
-              "description": "Filter by resource type (e.g. MAS, WORKSPACE, COGNITIVE_FABRIC_NODE)",
+              "description": "Filter by resource type (e.g. MAS, MAS-AGENT, COGNITION_ENGINE, POLICY_ENFORCER, MEMORY_PROVIDER, WORKFLOW, TASK)",
               "title": "Resource Type"
             },
-            "description": "Filter by resource type (e.g. MAS, WORKSPACE, COGNITIVE_FABRIC_NODE)"
+            "description": "Filter by resource type (e.g. MAS, MAS-AGENT, COGNITION_ENGINE, POLICY_ENFORCER, MEMORY_PROVIDER, WORKFLOW, TASK)"
           },
           {
             "name": "audit_type",
@@ -2283,15 +2281,15 @@
                   "type": "null"
                 }
               ],
-              "description": "Filter by audit type (e.g. RESOURCE_CREATED, RESOURCE_UPDATED, RESOURCE_DELETED)",
+              "description": "Filter by audit type (e.g. RESOURCE_CREATED, RESOURCE_UPDATED, RESOURCE_DELETED, RESOURCE_PURGED, RESOURCE_PRUNED, KNOWLEDGE_INGESTION, KNOWLEDGE_QUERY, MEMORY_OPERATION, SHARED_MEMORY_OPERATION, AGENT_MEMORY_OPERATION)",
               "title": "Audit Type"
             },
-            "description": "Filter by audit type (e.g. RESOURCE_CREATED, RESOURCE_UPDATED, RESOURCE_DELETED)"
+            "description": "Filter by audit type (e.g. RESOURCE_CREATED, RESOURCE_UPDATED, RESOURCE_DELETED, RESOURCE_PURGED, RESOURCE_PRUNED, KNOWLEDGE_INGESTION, KNOWLEDGE_QUERY, MEMORY_OPERATION, SHARED_MEMORY_OPERATION, AGENT_MEMORY_OPERATION)"
           }
         ],
         "responses": {
           "200": {
-            "description": "List of audit events returned successfully",
+            "description": "Paginated list of audit events returned successfully",
             "content": {
               "application/json": {
                 "schema": {
@@ -2301,7 +2299,7 @@
             }
           },
           "500": {
-            "description": "Internal server error while querying cfn_cp database"
+            "description": "Internal server error while querying ioc-cfn-svc"
           },
           "422": {
             "description": "Validation Error",
@@ -2316,22 +2314,22 @@
         }
       }
     },
-    "/api/audit-events/{audit_event_id}": {
+    "/api/audit-events/{eventId}": {
       "get": {
         "tags": [
           "audit-events"
         ],
         "summary": "Get CFN Audit Event by ID",
-        "description": "Retrieve a single audit event from the CFN control-plane database by its UUID.",
-        "operationId": "get_audit_event_api_audit_events__audit_event_id__get",
+        "description": "Retrieve a single audit event from ioc-cfn-svc by its UUID.",
+        "operationId": "get_audit_event_api_audit_events__eventId__get",
         "parameters": [
           {
-            "name": "audit_event_id",
+            "name": "eventId",
             "in": "path",
             "required": true,
             "schema": {
               "type": "string",
-              "title": "Audit Event Id"
+              "title": "Eventid"
             }
           }
         ],
@@ -2346,11 +2344,14 @@
               }
             }
           },
+          "400": {
+            "description": "Invalid event ID"
+          },
           "404": {
             "description": "Audit event not found"
           },
           "500": {
-            "description": "Internal server error while querying cfn_cp database"
+            "description": "Internal server error while querying ioc-cfn-svc"
           },
           "422": {
             "description": "Validation Error",
@@ -2449,27 +2450,26 @@
       },
       "AuditCfnEventListResponse": {
         "properties": {
-          "total": {
-            "type": "integer",
-            "title": "Total",
-            "description": "Total number of audit events matching the query"
-          },
-          "audit_events": {
+          "data": {
             "items": {
               "$ref": "#/components/schemas/AuditCfnEventResponse"
             },
             "type": "array",
-            "title": "Audit Events",
+            "title": "Data",
             "description": "List of audit events"
+          },
+          "pageInfo": {
+            "$ref": "#/components/schemas/AuditCfnPageInfo",
+            "description": "Pagination metadata"
           }
         },
         "type": "object",
         "required": [
-          "total",
-          "audit_events"
+          "data",
+          "pageInfo"
         ],
         "title": "AuditCfnEventListResponse",
-        "description": "Response model for listing CFN audit events."
+        "description": "Paginated list response matching the upstream cfn-svc shape."
       },
       "AuditCfnEventResponse": {
         "properties": {
@@ -2575,6 +2575,39 @@
         ],
         "title": "AuditCfnEventResponse",
         "description": "Response model for CFN audit events from cfn_cp database."
+      },
+      "AuditCfnPageInfo": {
+        "properties": {
+          "page": {
+            "type": "integer",
+            "title": "Page",
+            "description": "Current 0-based page number"
+          },
+          "pageSize": {
+            "type": "integer",
+            "title": "Pagesize",
+            "description": "Requested page size"
+          },
+          "pageCount": {
+            "type": "integer",
+            "title": "Pagecount",
+            "description": "Number of elements returned in this page"
+          },
+          "totalElements": {
+            "type": "integer",
+            "title": "Totalelements",
+            "description": "Total number of matching records across all pages"
+          }
+        },
+        "type": "object",
+        "required": [
+          "page",
+          "pageSize",
+          "pageCount",
+          "totalElements"
+        ],
+        "title": "AuditCfnPageInfo",
+        "description": "Pagination metadata matching the upstream cfn-svc response."
       },
       "CognitiveAgentCreate": {
         "properties": {

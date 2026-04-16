@@ -8,7 +8,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Repository Overview
 
-This is a multi-service TKF (Trusted Knowledge Fabric) platform with two main services:
+This is a multi-service platform with two main services:
 
 1. **ioc-cfn-mgmt-plane-ui** - Next.js frontend (port 9001)
 2. **ioc-cfn-mgmt-plane** - FastAPI backend service (port 9000)
