@@ -132,16 +132,35 @@ tasks:
     cmds:
       - docker compose --env-file env.conf --profile db-only down -v
 
-  # Database migration tasks
+  # Database migration tasks (Alembic)
   db-migrate-apply:
-    desc: Apply pending database migrations
+    desc: Apply pending database migrations (alembic upgrade head)
+    env:
+      PYTHONPATH: "{{.SRC_DIR}}"
     cmds:
-      - ./scripts/migrate.sh apply
+      - poetry run alembic upgrade head
 
   db-migrate-status:
-    desc: Show database migration status
+    desc: Show current migration revision and history
+    env:
+      PYTHONPATH: "{{.SRC_DIR}}"
     cmds:
-      - ./scripts/migrate.sh status
+      - poetry run alembic current
+      - poetry run alembic history --verbose
+
+  db-migrate-revision:
+    desc: Generate a new Alembic migration (autogenerate from models)
+    env:
+      PYTHONPATH: "{{.SRC_DIR}}"
+    cmds:
+      - poetry run alembic revision --autogenerate -m "{{.CLI_ARGS}}"
+
+  db-migrate-downgrade:
+    desc: Downgrade database by one revision
+    env:
+      PYTHONPATH: "{{.SRC_DIR}}"
+    cmds:
+      - poetry run alembic downgrade -1
 
   db-seed:
     desc: Seed the database with initial data

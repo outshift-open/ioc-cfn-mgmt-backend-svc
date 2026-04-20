@@ -44,14 +44,16 @@ WORKDIR /home/app
 COPY --from=builder /usr/local/lib/python3.11/site-packages /usr/local/lib/python3.11/site-packages
 COPY --from=builder /usr/local/bin /usr/local/bin
 
-# Copy application source and scripts
+# Copy application source, scripts, and Alembic migrations
 COPY --chown=app:app src/ ./src/
 COPY --chown=app:app scripts/ ./scripts/
+COPY --chown=app:app alembic/ ./alembic/
+COPY --chown=app:app alembic.ini ./
 COPY --chown=app:app pyproject.toml ./
 COPY --chown=app:app docker-entrypoint.sh ./
 
-# Make scripts executable
-RUN chmod +x docker-entrypoint.sh scripts/migrate.sh
+# Make entrypoint executable
+RUN chmod +x docker-entrypoint.sh
 
 # Switch to app user
 USER app
