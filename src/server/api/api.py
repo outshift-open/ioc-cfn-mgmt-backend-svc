@@ -6,6 +6,7 @@ from fastapi import APIRouter
 
 from server.api.endpoints.audit import router as audits_router
 from server.api.endpoints.audit_cfn_event import router as audit_cfn_events_router
+from server.api.endpoints.knowledge_graph_cfn import router as knowledge_graph_cfn_router
 from server.api.endpoints.auth import router as auth_router
 from server.api.endpoints.cognitive_agent import router as cognitive_agent_router
 from server.api.endpoints.cognitive_engine import router as cognitive_engine_router
@@ -31,6 +32,11 @@ api_router.include_router(cognitive_agent_router, prefix="/workspaces", tags=["c
 api_router.include_router(cognitive_engine_router, prefix="/workspaces", tags=["cognition-engines"])
 api_router.include_router(policy_router, prefix="/workspaces", tags=["policies"])
 api_router.include_router(audit_cfn_events_router, prefix="/audit-events", tags=["audit-events"])
+api_router.include_router(
+    knowledge_graph_cfn_router,
+    prefix="/workspaces/{workspaceId}/multi-agentic-systems/{masId}/knowledge-graph",
+    tags=["knowledge-graph"],
+)
 
 api_router.include_router(diagnostics_router, prefix="/internal/diagnostics", tags=["diagnostics"], include_in_schema=False)
 
