@@ -2281,10 +2281,10 @@
                   "type": "null"
                 }
               ],
-              "description": "Filter by audit type (e.g. RESOURCE_CREATED, RESOURCE_UPDATED, RESOURCE_DELETED, RESOURCE_PURGED, RESOURCE_PRUNED, KNOWLEDGE_INGESTION, KNOWLEDGE_QUERY, MEMORY_OPERATION, SHARED_MEMORY_OPERATION, AGENT_MEMORY_OPERATION)",
+              "description": "Filter by audit type (e.g. RESOURCE_CREATED, RESOURCE_UPDATED, RESOURCE_DELETED, RESOURCE_PURGED, RESOURCE_PRUNED, KNOWLEDGE_INGESTION, KNOWLEDGE_QUERY, MEMORY_OPERATION, SHARED_MEMORY_OPERATION, AGENT_MEMORY_OPERATION, SEMANTIC_NEGOTIATION)",
               "title": "Audit Type"
             },
-            "description": "Filter by audit type (e.g. RESOURCE_CREATED, RESOURCE_UPDATED, RESOURCE_DELETED, RESOURCE_PURGED, RESOURCE_PRUNED, KNOWLEDGE_INGESTION, KNOWLEDGE_QUERY, MEMORY_OPERATION, SHARED_MEMORY_OPERATION, AGENT_MEMORY_OPERATION)"
+            "description": "Filter by audit type (e.g. RESOURCE_CREATED, RESOURCE_UPDATED, RESOURCE_DELETED, RESOURCE_PURGED, RESOURCE_PRUNED, KNOWLEDGE_INGESTION, KNOWLEDGE_QUERY, MEMORY_OPERATION, SHARED_MEMORY_OPERATION, AGENT_MEMORY_OPERATION, SEMANTIC_NEGOTIATION)"
           }
         ],
         "responses": {
@@ -2352,6 +2352,65 @@
           },
           "500": {
             "description": "Internal server error while querying ioc-cfn-svc"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/workspaces/{workspaceId}/multi-agentic-systems/{masId}/knowledge-graph": {
+      "get": {
+        "tags": [
+          "knowledge-graph"
+        ],
+        "summary": "Fetch Knowledge Graph",
+        "description": "Retrieves the Knowledge Graph for a multi-agentic system.",
+        "operationId": "fetch_knowledge_graph_api_workspaces__workspaceId__multi_agentic_systems__masId__knowledge_graph_get",
+        "parameters": [
+          {
+            "name": "workspaceId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Workspaceid"
+            }
+          },
+          {
+            "name": "masId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Masid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Knowledge graph returned successfully",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid request"
+          },
+          "404": {
+            "description": "Knowledge graph not found"
+          },
+          "500": {
+            "description": "Internal server error"
           },
           "422": {
             "description": "Validation Error",
