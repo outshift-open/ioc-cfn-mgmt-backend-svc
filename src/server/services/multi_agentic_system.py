@@ -166,6 +166,11 @@ class MultiAgenticSystemService:
 
                 cognitive_fabric_node_service.update_config_for_workspace(workspace_id)
 
+                # Onboard per-MAS vector store (non-fatal: logs on failure, does not block MAS creation)
+                from server.services.vector_store_cfn import vector_store_cfn_service
+
+                vector_store_cfn_service.onboard_vector_store(workspace_id, new_mas.id)
+
                 # add to audits table
                 audit_service.create_audit(
                     AuditRequest(
