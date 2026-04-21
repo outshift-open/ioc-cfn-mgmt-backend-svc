@@ -120,7 +120,7 @@ services:
   # Knowledge Memory Service - Graph + Vector Memory Storage
   # Port Mapping: 9003:9003 (same port inside and outside container)
   ioc-knowledge-memory-svc:
-    image: ghcr.io/cisco-eti/ioc-knowledge-memory-svc:2026-04-14-b7cec2e
+    image: ghcr.io/cisco-eti/ioc-knowledge-memory-svc:2026-04-21-4d804fe
     platform: linux/amd64
     profiles:
       - full-stack
@@ -154,7 +154,7 @@ services:
   # CFN Service - Cognition Fabric Node service
   # Port Mapping: 9002:9002 (same port inside and outside container)
   ioc-cfn-svc:
-    image: ghcr.io/cisco-eti/ioc-cfn-svc:latest
+    image: ghcr.io/cisco-eti/ioc-cfn-svc:2026-04-21-2dde65b
     container_name: ioc-cfn-svc
     platform: ${DOCKER_DEFAULT_PLATFORM}
     profiles:
