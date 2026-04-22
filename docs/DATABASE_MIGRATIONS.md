@@ -252,7 +252,7 @@ def upgrade():
 
 ## Environment Variables
 
-Alembic reads the same env vars as the app (loaded from `env.conf` locally):
+Alembic reads the same env vars as the app (loaded from `.env` locally):
 
 | Variable | Default | Used for |
 |----------|---------|----------|

@@ -1,7 +1,7 @@
 version: "3"
 
 dotenv:
-  - env.conf
+  - .env
 
 vars:
   TASK_VERSION: v3.39.2
@@ -93,44 +93,44 @@ tasks:
   docker-run:
     desc: Run Docker container with docker-compose
     cmds:
-      - docker compose --env-file env.conf up ioc-cfn-mgmt-plane-svc
+      - docker compose --env-file .env up ioc-cfn-mgmt-plane-svc
 
   docker-compose-full-stack-up:
     desc: Start all services with docker-compose
     cmds:
-      - docker compose --env-file env.conf --profile full-stack up --pull always -d
-      - docker compose --env-file env.conf --profile full-stack logs -f
+      - docker compose --env-file .env --profile full-stack up -d
+      - docker compose --env-file .env --profile full-stack logs -f
 
   docker-compose-full-stack-up-build:
     desc: Start all services with docker-compose, rebuilding images
     cmds:
-      - docker compose --env-file env.conf --profile full-stack up --build -d
-      - docker compose --env-file env.conf --profile full-stack logs -f
+      - docker compose --env-file .env --profile full-stack up --build -d
+      - docker compose --env-file .env --profile full-stack logs -f
 
   docker-compose-full-stack-down:
     desc: Stop all services with docker-compose
     cmds:
-      - docker compose --env-file env.conf --profile full-stack down
+      - docker compose --env-file .env --profile full-stack down
 
   docker-compose-full-stack-down-with-volumes:
     desc: Stop all services and remove volumes with docker-compose
     cmds:
-      - docker compose --env-file env.conf --profile full-stack down -v
+      - docker compose --env-file .env --profile full-stack down -v
 
   docker-compose-db-up:
     desc: Start only databases (PostgreSQL) with db-only profile
     cmds:
-      - docker compose --env-file env.conf --profile db-only up -d --pull always
+      - docker compose --env-file .env --profile db-only up -d --pull always
 
   docker-compose-db-down:
     desc: Stop only databases with db-only profile
     cmds:
-      - docker compose --env-file env.conf --profile db-only down
+      - docker compose --env-file .env --profile db-only down
 
   docker-compose-db-down-with-volumes:
     desc: Stop databases and remove volumes with db-only profile
     cmds:
-      - docker compose --env-file env.conf --profile db-only down -v
+      - docker compose --env-file .env --profile db-only down -v
 
   # Database migration tasks (Alembic)
   db-migrate-apply:
@@ -165,7 +165,9 @@ tasks:
   db-seed:
     desc: Seed the database with initial data
     cmds:
-      - poetry run psql postgresql://$POSTGRES_USER:$POSTGRES_PASSWORD@localhost:$POSTGRES_PORT/cfn_mgmt -f scripts/populate_software.sql
+      - poetry run psql
+        postgresql://$POSTGRES_USER:$POSTGRES_PASSWORD@localhost:$POSTGRES_PORT/cfn_mgmt
+        -f scripts/populate_software.sql
     dir: "{{.SRC_DIR}}/server/database/relational_db"
 
   help:

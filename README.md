@@ -33,16 +33,21 @@ echo "$GITHUB_TOKEN" | docker login ghcr.io -u "YOUR_GITHUB_USERNAME" --password
 
 ### Environment Configuration
 
-Edit the environment configuration file:
+1. Copy the example environment file:
 
 ```bash
-# Edit env.conf to set your configuration values
-vi env.conf  # or use your preferred editor
+cp .env.example .env
+```
+
+2. Edit `.env` to set your configuration values:
+
+```bash
+vi .env  # or use your preferred editor
 ```
 
 ### Provide LLM Credentials
 
-Provide the following env vars in env.conf:
+Provide the following env vars in `.env`:
 - `AZURE_OPENAI_ENDPOINT`
 - `AZURE_OPENAI_API_KEY`
 - `AZURE_OPENAI_DEPLOYMENT`
@@ -77,7 +82,7 @@ task run                     # installs deps, applies db migrations, then runs
 Run the full stack (UI + Backend + DB + CFN Service) using docker-compose:
 
 ```bash
-# Edit env.conf to set your configuration values (IMAGE_TAG, credentials, etc.)
+# Edit .env to set your configuration values (IMAGE_TAG, credentials, etc.)
 
 # Start services (pulls latest images)
 task docker-compose-full-stack-up
@@ -93,11 +98,11 @@ task docker-compose-full-stack-down-with-volumes
 > `ioc-knowledge-db` (PostgreSQL), `ioc-cfn-mgmt-plane-svc`,
 > and `ioc-knowledge-memory-svc`. Startup is gated on all services being healthy.
 > The service shares database credentials (`IOC_KNOWLEDGE_DB_USER`, `IOC_KNOWLEDGE_DB_PASSWORD`)
-> from `env.conf`.
+> from `.env`.
 >
 > LLM integration requires the following environment variables to be set:
 > `AZURE_OPENAI_ENDPOINT`, `AZURE_OPENAI_API_KEY`, `AZURE_OPENAI_DEPLOYMENT`,
-> and optionally `AZURE_OPENAI_API_VERSION` in `env.conf`.
+> and optionally `AZURE_OPENAI_API_VERSION` in `.env`.
 
 ### Alternative Quick Start Methods
 
@@ -118,7 +123,7 @@ Memory provider credentials are encrypted using a Fernet key. The key is automat
 
 Once all services are running (full-stack deployment), access them at:
 
-- **IoC Management UI**: http://localhost:9001 (username and password are defined in env.conf)
+- **IoC Management UI**: http://localhost:9001 (username and password are defined in `.env`)
 - **IoC Management API**: http://localhost:9000/docs
 - **CFN Service**: http://localhost:9002
 - **Knowledge Memory Service**: http://localhost:9003

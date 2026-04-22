@@ -18,7 +18,7 @@ from server.common import service_name
 from server.utils.repo_root import REPO_ROOT
 
 # Load environment variables first (before importing modules that read env vars)
-load_dotenv(dotenv_path=REPO_ROOT + "/env.conf", override=True)  # Load from repo root
+load_dotenv(dotenv_path=REPO_ROOT + "/.env", override=True)  # Load from repo root
 
 # Setup logging before importing application modules that instantiate singletons at import time
 setup_logging(service_name)
