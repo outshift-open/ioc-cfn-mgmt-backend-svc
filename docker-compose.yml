@@ -185,7 +185,7 @@ services:
         condition: service_healthy
 
   ioc-cfn-cognition-engine:
-    image: ghcr.io/cisco-eti/ioc-cfn-cognition-engine:2026-04-13-6172854
+    image: ghcr.io/cisco-eti/ioc-cfn-cognition-engine:2026-04-22-874be01
     ports:
       - "9004:9004"
     platform: ${DOCKER_DEFAULT_PLATFORM}
@@ -201,6 +201,7 @@ services:
       - MGMT_PLANE_URL=http://ioc-cfn-mgmt-plane-svc:9000
       - COGNITION_ENGINE_HOST=ioc-cfn-cognition-engine
       - COGNITION_ENGINE_PORT=9004
+      - CFN_URL=http://ioc-cfn-svc:9002
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:9004/health"]
       interval: 30s

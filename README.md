@@ -48,10 +48,9 @@ vi .env  # or use your preferred editor
 ### Provide LLM Credentials
 
 Provide the following env vars in `.env`:
-- `AZURE_OPENAI_ENDPOINT`
-- `AZURE_OPENAI_API_KEY`
-- `AZURE_OPENAI_DEPLOYMENT`
-- `AZURE_OPENAI_API_VERSION` // optional, remove if not needed
+- `LLM_BASE_URL`
+- `LLM_API_KEY`
+- `LLM_MODEL`
 
 ### Dependencies for the Relational DB
 
@@ -101,8 +100,7 @@ task docker-compose-full-stack-down-with-volumes
 > from `.env`.
 >
 > LLM integration requires the following environment variables to be set:
-> `AZURE_OPENAI_ENDPOINT`, `AZURE_OPENAI_API_KEY`, `AZURE_OPENAI_DEPLOYMENT`,
-> and optionally `AZURE_OPENAI_API_VERSION` in `.env`.
+> `LLM_BASE_URL`, `LLM_API_KEY`, and `LLM_MODEL` in `.env`.
 
 ### Alternative Quick Start Methods
 
