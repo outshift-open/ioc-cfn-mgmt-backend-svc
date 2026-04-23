@@ -171,7 +171,7 @@ services:
   # Port Mapping: 9002:9002 (same port inside and outside container)
   ioc-cfn-svc:
     # Image Link: https://github.com/orgs/cisco-eti/packages/container/package/ioc-cfn-svc
-    image: ghcr.io/cisco-eti/ioc-cfn-svc:2026-04-22-2b03dd1
+    image: ghcr.io/cisco-eti/ioc-cfn-svc:2026-04-23-11ed313
     container_name: ioc-cfn-svc
     platform: ${DOCKER_DEFAULT_PLATFORM}
     profiles:
