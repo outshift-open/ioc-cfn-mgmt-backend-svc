@@ -50,12 +50,12 @@ jobs:
           
           # Determine platforms, push strategy, and build type based on event type
           if [[ "${EVENT_TYPE}" == "pull_request" ]]; then
-            # PR: build only, multi-platform (no push)
-            echo "platforms=linux/amd64,linux/arm64" >> "$GITHUB_OUTPUT"
+            # PR: build only, single platform for speed
+            echo "platforms=linux/amd64" >> "$GITHUB_OUTPUT"
             echo "push=false" >> "$GITHUB_OUTPUT"
             echo "build_type=pr" >> "$GITHUB_OUTPUT"
             echo "build_enabled=true" >> "$GITHUB_OUTPUT"
-            echo "::notice::PR detected - building multi-platform (amd64, arm64) without push"
+            echo "::notice::PR detected - building single platform (amd64) without push"
           elif [[ "${EVENT_TYPE}" == "push" ]]; then
             # Determine if this is main or a tag
             if [[ "${{ github.ref }}" == "refs/heads/main" ]]; then
