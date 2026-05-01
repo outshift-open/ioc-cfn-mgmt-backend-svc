@@ -95,6 +95,11 @@ tasks:
     cmds:
       - docker compose --env-file .env up ioc-cfn-mgmt-plane-svc
 
+  docker-compose-full-stack-pull:
+    desc: Pull latest images for all services with docker-compose
+    cmds:
+      - docker compose --env-file .env --profile full-stack pull
+
   docker-compose-full-stack-up:
     desc: Start all services with docker-compose
     cmds:
