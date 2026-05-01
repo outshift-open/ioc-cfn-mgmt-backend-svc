@@ -1,6 +1,6 @@
 [project]
 name = "ioc-cfn-mgmt-plane-svc"
-version = "0.1.0"
+version = "0.1.1"
 description = "IoC CFN Management Backend Service"
 readme = "README.md"
 requires-python = ">=3.10,<4.0.0"

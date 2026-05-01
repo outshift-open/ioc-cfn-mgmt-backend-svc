@@ -60,19 +60,21 @@ jobs:
             # Determine if this is main or a tag
             if [[ "${{ github.ref }}" == "refs/heads/main" ]]; then
               echo "build_type=main" >> "$GITHUB_OUTPUT"
+              echo "platforms=linux/amd64" >> "$GITHUB_OUTPUT"
               echo "::notice::Main branch detected"
             elif [[ "${{ github.ref }}" == refs/tags/* ]]; then
               echo "build_type=tag" >> "$GITHUB_OUTPUT"
-              echo "::notice::Tag detected"
+              echo "platforms=linux/amd64,linux/arm64" >> "$GITHUB_OUTPUT"
+              echo "::notice::Tag detected - building multi-platform (amd64, arm64)"
             else
               echo "build_type=push" >> "$GITHUB_OUTPUT"
+              echo "platforms=linux/amd64" >> "$GITHUB_OUTPUT"
               echo "::notice::Generic push detected"
             fi
-            # Push: multi-platform, push enabled
-            echo "platforms=linux/amd64" >> "$GITHUB_OUTPUT"
+            # Push: push enabled
             echo "push=true" >> "$GITHUB_OUTPUT"
             echo "build_enabled=true" >> "$GITHUB_OUTPUT"
-            echo "::notice::Push detected - building multi-platform (amd64) with push"
+            echo "::notice::Push detected - building with push"
           elif [[ "${EVENT_TYPE}" == "workflow_dispatch" ]]; then
             # Manual: multi-platform, push enabled
             echo "platforms=linux/amd64" >> "$GITHUB_OUTPUT"
