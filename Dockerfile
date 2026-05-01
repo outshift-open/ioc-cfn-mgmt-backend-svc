@@ -4,7 +4,6 @@ FROM python:3.11-slim AS builder
 # Install build dependencies
 RUN apt-get update && apt-get install -y --no-install-recommends \
     build-essential \
-    cmake \
     libpq-dev \
     git \
     && rm -rf /var/lib/apt/lists/*
