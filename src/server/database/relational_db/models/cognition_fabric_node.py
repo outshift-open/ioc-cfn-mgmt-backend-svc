@@ -8,8 +8,8 @@ from sqlalchemy.dialects.postgresql import JSONB
 from server.database.relational_db.models import Base
 
 
-class CognitiveFabricNode(Base):
-    __tablename__ = "cognitive_fabric_node"
+class CognitionFabricNode(Base):
+    __tablename__ = "cognition_fabric_node"
 
     # Primary key - CFN's persistent ID (not auto-generated)
     cfn_id = Column(String(255), primary_key=True, nullable=False)
@@ -59,7 +59,7 @@ class CognitiveFabricNode(Base):
     )
 
     def __repr__(self):
-        return f"<CognitiveFabricNode(cfn_id='{self.cfn_id}', cfn_name='{self.cfn_name}', " f"status='{self.status}')>"
+        return f"<CognitionFabricNode(cfn_id='{self.cfn_id}', cfn_name='{self.cfn_name}', " f"status='{self.status}')>"
 
 
 class CfnWorkspace(Base):
@@ -69,7 +69,7 @@ class CfnWorkspace(Base):
 
     cfn_id = Column(
         String(255),
-        ForeignKey("cognitive_fabric_node.cfn_id", ondelete="CASCADE"),
+        ForeignKey("cognition_fabric_node.cfn_id", ondelete="CASCADE"),
         primary_key=True,
         nullable=False,
     )

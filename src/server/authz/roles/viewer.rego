@@ -6,8 +6,7 @@ import data.authz.operations.users
 import data.authz.operations.api_keys
 import data.authz.operations.softwares
 import data.authz.operations.cognition_fabric_node
-import data.authz.operations.cognitive_engine
-import data.authz.operations.cognitive_agent
+import data.authz.operations.cognition_engine
 import data.authz.operations.memory_provider
 import data.authz.operations.multi_agentic_system
 import data.authz.operations.policy
@@ -45,14 +44,8 @@ allow if {
 
 allow if {
 	input.user.role == "viewer"
-	input.resource == "cognitive_engine"
-	input.operation in cognitive_engine.viewer
-}
-
-allow if {
-	input.user.role == "viewer"
-	input.resource == "cognitive_agent"
-	input.operation in cognitive_agent.viewer
+	input.resource == "cognition_engine"
+	input.operation in cognition_engine.viewer
 }
 
 allow if {

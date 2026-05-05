@@ -54,7 +54,7 @@ class TestAuthzRBAC:
         assert not authz_service.check_permission(guest_user, "update", "workspace")
         assert not authz_service.check_permission(guest_user, "delete", "workspace")
 
-    def test_admin_has_full_cognitive_fabric_node_access(self):
+    def test_admin_has_full_cognition_fabric_node_access(self):
         """Admin role should have full CFN access"""
         admin_user = {"id": "admin-123", "role": "admin"}
 
@@ -76,7 +76,7 @@ class TestAuthzRBAC:
         # Admin can get CFN node details
         assert authz_service.check_permission(admin_user, "get", "cognition_fabric_node")
 
-    def test_viewer_has_readonly_cognitive_fabric_node_access(self):
+    def test_viewer_has_readonly_cognition_fabric_node_access(self):
         """Viewer role should have read-only CFN access"""
         viewer_user = {"id": "viewer-123", "role": "viewer"}
 
@@ -98,7 +98,7 @@ class TestAuthzRBAC:
         # Viewer cannot send heartbeat
         assert not authz_service.check_permission(viewer_user, "heartbeat", "cognition_fabric_node")
 
-    def test_guest_has_no_cognitive_fabric_node_access(self):
+    def test_guest_has_no_cognition_fabric_node_access(self):
         """Guest role should have no CFN access"""
         guest_user = {"id": "guest-123", "role": "guest"}
 

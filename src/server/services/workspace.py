@@ -27,12 +27,6 @@ from server.schemas.workspace import (
     WorkspaceUpdate,
 )
 from server.schemas.workspace_member import WorkspaceMemberDetail
-from server.services.audit import (
-    AuditEventType,
-    AuditRequest,
-    ResourceType,
-    audit_service,
-)
 from server.utils import generate_uuid
 
 logger = logging.getLogger(__name__)
@@ -143,7 +137,7 @@ class WorkspaceService:
             HTTPException: 404 if CFN not found, 400 if CFN required but not provided, 409 on conflict
         """
         from server.database.relational_db.models.cognition_fabric_node import (
-            CognitiveFabricNode as CognitiveFabricNodeModel,
+            CognitionFabricNode as CognitionFabricNodeModel,
         )
 
         try:
@@ -154,10 +148,10 @@ class WorkspaceService:
                 # Validate CFN if provided
                 if workspace_data.cfn_id:
                     cfn = (
-                        session.query(CognitiveFabricNodeModel)
+                        session.query(CognitionFabricNodeModel)
                         .filter(
-                            CognitiveFabricNodeModel.cfn_id == workspace_data.cfn_id,
-                            CognitiveFabricNodeModel.deleted_at.is_(None),
+                            CognitionFabricNodeModel.cfn_id == workspace_data.cfn_id,
+                            CognitionFabricNodeModel.deleted_at.is_(None),
                         )
                         .first()
                     )
@@ -213,11 +207,11 @@ class WorkspaceService:
                 session.refresh(new_workspace)
 
                 if workspace_data.cfn_id:
-                    from server.services.cognition_fabric_node import cognitive_fabric_node_service
+                    from server.services.cognition_fabric_node import cognition_fabric_node_service
 
                     cfn = (
-                        session.query(CognitiveFabricNodeModel)
-                        .filter(CognitiveFabricNodeModel.cfn_id == workspace_data.cfn_id)
+                        session.query(CognitionFabricNodeModel)
+                        .filter(CognitionFabricNodeModel.cfn_id == workspace_data.cfn_id)
                         .first()
                     )
                     if cfn:
@@ -229,7 +223,7 @@ class WorkspaceService:
                             .all()
                         )
                         ws_ids = [ws.id for ws in workspace_ids]
-                        cfn.config = cognitive_fabric_node_service.generate_config(
+                        cfn.config = cognition_fabric_node_service.generate_config(
                             cfn.cfn_id, ws_ids, cfn.cfn_config, now
                         )
                         session.commit()
@@ -245,20 +239,6 @@ class WorkspaceService:
                 )
 
                 response = WorkspaceResponse(id=new_workspace.id)  # type: ignore[arg-type]
-
-                # add to audits table
-                cfn_info = f" and associated with CFN {workspace_data.cfn_id}" if workspace_data.cfn_id else ""
-                audit_service.create_audit(
-                    AuditRequest(
-                        resource_type=ResourceType.WORKSPACE,
-                        audit_type=AuditEventType.RESOURCE_CREATED,
-                        audit_resource_id=new_workspace.id,  # type: ignore[arg-type]
-                        created_by="",  # TODO: get user from apikey
-                        created_at=new_workspace.created_at,  # type: ignore[arg-type]
-                        audit_information=workspace_data.model_dump(),
-                        audit_extra_information=f"Workspace created successfully{cfn_info}",
-                    )
-                )
 
                 return response
 
@@ -521,14 +501,14 @@ class WorkspaceService:
                 if workspace_data.cfn_id is not None:
                     # Validate new CFN exists and is enabled
                     from server.database.relational_db.models.cognition_fabric_node import (
-                        CognitiveFabricNode as CognitiveFabricNodeModel,
+                        CognitionFabricNode as CognitionFabricNodeModel,
                     )
 
                     cfn = (
-                        session.query(CognitiveFabricNodeModel)
+                        session.query(CognitionFabricNodeModel)
                         .filter(
-                            CognitiveFabricNodeModel.cfn_id == workspace_data.cfn_id,
-                            CognitiveFabricNodeModel.deleted_at.is_(None),
+                            CognitionFabricNodeModel.cfn_id == workspace_data.cfn_id,
+                            CognitionFabricNodeModel.deleted_at.is_(None),
                         )
                         .first()
                     )
@@ -555,17 +535,17 @@ class WorkspaceService:
                 # Update CFN config_timestamp if workspace's CFN association changed
                 if workspace_data.cfn_id is not None and old_cfn_id != workspace_data.cfn_id:
                     from server.database.relational_db.models.cognition_fabric_node import (
-                        CognitiveFabricNode as CognitiveFabricNodeModel,
+                        CognitionFabricNode as CognitionFabricNodeModel,
                     )
-                    from server.services.cognition_fabric_node import cognitive_fabric_node_service
+                    from server.services.cognition_fabric_node import cognition_fabric_node_service
 
                     now = datetime.now(timezone.utc)
 
                     # Update old CFN if it existed (workspace removed from it)
                     if old_cfn_id:
                         old_cfn = (
-                            session.query(CognitiveFabricNodeModel)
-                            .filter(CognitiveFabricNodeModel.cfn_id == old_cfn_id)
+                            session.query(CognitionFabricNodeModel)
+                            .filter(CognitionFabricNodeModel.cfn_id == old_cfn_id)
                             .first()
                         )
                         if old_cfn:
@@ -577,15 +557,15 @@ class WorkspaceService:
                                 .all()
                             )
                             old_ws_ids = [ws.id for ws in old_workspace_ids]
-                            old_cfn.config = cognitive_fabric_node_service.generate_config(
+                            old_cfn.config = cognition_fabric_node_service.generate_config(
                                 old_cfn.cfn_id, old_ws_ids, old_cfn.cfn_config, now
                             )
 
                     # Update new CFN (workspace added to it)
                     if workspace_data.cfn_id:
                         new_cfn = (
-                            session.query(CognitiveFabricNodeModel)
-                            .filter(CognitiveFabricNodeModel.cfn_id == workspace_data.cfn_id)
+                            session.query(CognitionFabricNodeModel)
+                            .filter(CognitionFabricNodeModel.cfn_id == workspace_data.cfn_id)
                             .first()
                         )
                         if new_cfn:
@@ -599,7 +579,7 @@ class WorkspaceService:
                                 .all()
                             )
                             new_ws_ids = [ws.id for ws in new_workspace_ids]
-                            new_cfn.config = cognitive_fabric_node_service.generate_config(
+                            new_cfn.config = cognition_fabric_node_service.generate_config(
                                 new_cfn.cfn_id, new_ws_ids, new_cfn.cfn_config, now
                             )
 
@@ -626,19 +606,6 @@ class WorkspaceService:
                     created_by_username=creator_username,
                     members=members,
                     config=workspace.config,  # type: ignore[arg-type]
-                )
-
-                # add to audits table
-                audit_service.create_audit(
-                    AuditRequest(
-                        resource_type=ResourceType.WORKSPACE,
-                        audit_type=AuditEventType.RESOURCE_UPDATED,
-                        audit_resource_id=workspace_id,
-                        updated_by="",  # TODO: get user from apikey
-                        updated_at=workspace.updated_at,  # type: ignore[arg-type]
-                        audit_information=workspace_data.model_dump(),
-                        audit_extra_information="success",
-                    )
                 )
 
                 return response
@@ -749,13 +716,13 @@ class WorkspaceService:
                 # Update CFN config_timestamp if workspace was associated with a CFN
                 if deleted_workspace_cfn_id:
                     from server.database.relational_db.models.cognition_fabric_node import (
-                        CognitiveFabricNode as CognitiveFabricNodeModel,
+                        CognitionFabricNode as CognitionFabricNodeModel,
                     )
-                    from server.services.cognition_fabric_node import cognitive_fabric_node_service
+                    from server.services.cognition_fabric_node import cognition_fabric_node_service
 
                     cfn = (
-                        session.query(CognitiveFabricNodeModel)
-                        .filter(CognitiveFabricNodeModel.cfn_id == deleted_workspace_cfn_id)
+                        session.query(CognitionFabricNodeModel)
+                        .filter(CognitionFabricNodeModel.cfn_id == deleted_workspace_cfn_id)
                         .first()
                     )
                     if cfn:
@@ -770,22 +737,10 @@ class WorkspaceService:
                             .all()
                         )
                         ws_ids = [ws.id for ws in workspace_ids]
-                        cfn.config = cognitive_fabric_node_service.generate_config(
+                        cfn.config = cognition_fabric_node_service.generate_config(
                             cfn.cfn_id, ws_ids, cfn.cfn_config, now
                         )
                         session.commit()
-
-                # add to audits table
-                audit_service.create_audit(
-                    AuditRequest(
-                        resource_type=ResourceType.WORKSPACE,
-                        audit_type=AuditEventType.RESOURCE_DELETED,
-                        audit_resource_id=workspace_id,
-                        deleted_by="",  # TODO: get user from apikey
-                        deleted_at=workspace.deleted_at,  # type: ignore[arg-type]
-                        audit_extra_information=message,
-                    )
-                )
 
                 return {"message": message}
 

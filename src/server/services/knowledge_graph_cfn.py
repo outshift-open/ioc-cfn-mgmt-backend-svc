@@ -9,7 +9,9 @@ import time
 import requests
 
 CFN_SVC_URL_DEFAULT = "http://localhost:9002"
-CFN_SVC_KNOWLEDGE_GRAPH_PATH = "/api/internal/mgmt/workspaces/{workspace_id}/multi-agentic-systems/{mas_id}/knowledge-graph"
+CFN_SVC_KNOWLEDGE_GRAPH_PATH = (
+    "/api/internal/mgmt/workspaces/{workspace_id}/multi-agentic-systems/{mas_id}/knowledge-graph"
+)
 CFN_SVC_TIMEOUT_SECONDS = 10
 CFN_SVC_MAX_RETRIES = 3
 CFN_SVC_RETRY_DELAY_SECONDS = 1

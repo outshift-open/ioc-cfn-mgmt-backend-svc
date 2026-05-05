@@ -37,6 +37,4 @@ def fetch_knowledge_graph(workspaceId: str, masId: str):
     except CfnUpstreamError as exc:
         return JSONResponse(status_code=exc.status_code, content=exc.detail)
     except Exception as e:
-        return JSONResponse(
-            status_code=500, content={"error": f"failed to fetch knowledge graph: {str(e)}"}
-        )
+        return JSONResponse(status_code=500, content={"error": f"failed to fetch knowledge graph: {str(e)}"})

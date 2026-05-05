@@ -20,7 +20,7 @@ class Workspace(Base):
     # CFN association - workspace chooses which CFN to run on
     cfn_id = Column(
         String(255),
-        ForeignKey("cognitive_fabric_node.cfn_id", ondelete="RESTRICT"),
+        ForeignKey("cognition_fabric_node.cfn_id", ondelete="RESTRICT"),
         nullable=True,  # Nullable to support default workspace without CFN
     )
 

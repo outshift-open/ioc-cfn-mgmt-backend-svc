@@ -7,7 +7,6 @@
 import hashlib
 import logging
 import os
-from datetime import datetime
 
 from fastapi import HTTPException, status
 
@@ -16,12 +15,6 @@ from server.database.relational_db.db import RelationalDB
 from server.database.relational_db.models.api_key import ApiKey as ApiKeyModel
 from server.database.relational_db.models.user import User as UserModel
 from server.schemas.user import User, UserResponse, Users
-from server.services.audit import (
-    AuditEventType,
-    AuditRequest,
-    ResourceType,
-    audit_service,
-)
 from server.utils import generate_uuid
 
 # Get logger instance (logging is setup in main.py)
@@ -96,23 +89,6 @@ class UserService:
                         f"Domain: {ADMIN_USER_DOMAIN_DEFAULT}, "
                         f"Role: {ADMIN_USER_ROLE_DEFAULT} "
                         f"with ID: {user_id}"
-                    )
-
-                    # add to audits table
-                    audit_service.create_audit(
-                        AuditRequest(
-                            resource_type=ResourceType.USER,
-                            audit_type=AuditEventType.RESOURCE_CREATED,
-                            audit_resource_id=user_id,
-                            created_by="",  # TODO: get user from apikey
-                            audit_information={
-                                "username": ADMIN_USER_USERNAME_DEFAULT,
-                                "domain": ADMIN_USER_DOMAIN_DEFAULT,
-                                "role": ADMIN_USER_ROLE_DEFAULT,
-                            },
-                            audit_extra_information="success",
-                            created_at=datetime.utcnow(),
-                        )
                     )
 
                 # Create or get default API key for admin user

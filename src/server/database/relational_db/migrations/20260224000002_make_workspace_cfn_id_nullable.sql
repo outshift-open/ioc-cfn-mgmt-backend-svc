@@ -9,4 +9,4 @@ ALTER TABLE "workspace" ALTER COLUMN "cfn_id" DROP NOT NULL;
 
 -- Re-add the foreign key constraint
 ALTER TABLE "workspace" ADD CONSTRAINT "fk_workspace_cfn"
-  FOREIGN KEY ("cfn_id") REFERENCES "cognitive_fabric_node" ("cfn_id") ON DELETE RESTRICT;
+  FOREIGN KEY ("cfn_id") REFERENCES "cognition_fabric_node" ("cfn_id") ON DELETE RESTRICT;

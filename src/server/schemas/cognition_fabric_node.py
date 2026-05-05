@@ -9,15 +9,15 @@ from typing import Any, Dict, List, Optional
 from pydantic import BaseModel, ConfigDict, Field
 
 
-class CognitiveFabricNodeStatus(str, Enum):
-    """Cognitive Fabric Node status enumeration"""
+class CognitionFabricNodeStatus(str, Enum):
+    """Cognition Fabric Node status enumeration"""
 
     ONLINE = "online"
     OFFLINE = "offline"
 
 
-class CognitiveFabricNodeRegisterRequest(BaseModel):
-    """Schema for Cognitive Fabric Node registration request"""
+class CognitionFabricNodeRegisterRequest(BaseModel):
+    """Schema for Cognition Fabric Node registration request"""
 
     model_config = ConfigDict(
         json_schema_extra={
@@ -53,8 +53,8 @@ class CognitiveFabricNodeRegisterRequest(BaseModel):
     )
 
 
-class CognitiveFabricNodeUpdateRequest(BaseModel):
-    """Schema for updating Cognitive Fabric Node"""
+class CognitionFabricNodeUpdateRequest(BaseModel):
+    """Schema for updating Cognition Fabric Node"""
 
     model_config = ConfigDict(
         json_schema_extra={
@@ -90,8 +90,8 @@ class CognitiveFabricNodeUpdateRequest(BaseModel):
     )
 
 
-class CognitiveFabricNodeResponse(BaseModel):
-    """Schema for Cognitive Fabric Node response (common response format)"""
+class CognitionFabricNodeResponse(BaseModel):
+    """Schema for Cognition Fabric Node response (common response format)"""
 
     model_config = ConfigDict(
         json_schema_extra={
@@ -114,11 +114,11 @@ class CognitiveFabricNodeResponse(BaseModel):
         }
     )
 
-    cfn_id: str = Field(..., description="Cognitive Fabric Node identifier")
+    cfn_id: str = Field(..., description="Cognition Fabric Node identifier")
     workspace_ids: List[str] = Field(default_factory=list, description="Associated workspace identifiers")
-    cfn_name: str = Field(..., description="Cognitive Fabric Node name")
+    cfn_name: str = Field(..., description="Cognition Fabric Node name")
     config: Optional[Dict[str, Any]] = Field(None, description="Aggregated configuration including cfn_config")
-    status: CognitiveFabricNodeStatus = Field(..., description="Current node status")
+    status: CognitionFabricNodeStatus = Field(..., description="Current node status")
     last_seen: datetime = Field(..., description="Last heartbeat timestamp")
     enabled: bool = Field(..., description="Whether node is enabled")
     ip_address: Optional[str] = Field(None, description="IP address of the CFN node")
@@ -129,8 +129,8 @@ class CognitiveFabricNodeResponse(BaseModel):
     updated_by: Optional[str] = Field(None, description="Last updater user ID")
 
 
-class CognitiveFabricNodeListItem(BaseModel):
-    """Schema for Cognitive Fabric Node in list view"""
+class CognitionFabricNodeListItem(BaseModel):
+    """Schema for Cognition Fabric Node in list view"""
 
     model_config = ConfigDict(
         json_schema_extra={
@@ -146,17 +146,17 @@ class CognitiveFabricNodeListItem(BaseModel):
         }
     )
 
-    cfn_id: str = Field(..., description="Cognitive Fabric Node identifier")
+    cfn_id: str = Field(..., description="Cognition Fabric Node identifier")
     workspace_ids: List[str] = Field(default_factory=list, description="Associated workspace identifiers")
-    cfn_name: str = Field(..., description="Cognitive Fabric Node name")
-    status: CognitiveFabricNodeStatus = Field(..., description="Current node status")
+    cfn_name: str = Field(..., description="Cognition Fabric Node name")
+    status: CognitionFabricNodeStatus = Field(..., description="Current node status")
     last_seen: datetime = Field(..., description="Last heartbeat timestamp")
     enabled: bool = Field(..., description="Whether node is enabled")
     created_at: datetime = Field(..., description="Creation timestamp")
 
 
-class CognitiveFabricNodeList(BaseModel):
-    """Schema for listing Cognitive Fabric Nodes"""
+class CognitionFabricNodeList(BaseModel):
+    """Schema for listing Cognition Fabric Nodes"""
 
     model_config = ConfigDict(
         json_schema_extra={
@@ -177,11 +177,11 @@ class CognitiveFabricNodeList(BaseModel):
         }
     )
 
-    nodes: List[CognitiveFabricNodeListItem] = Field(..., description="List of Cognitive Fabric Nodes")
-    total: int = Field(..., description="Total number of Cognitive Fabric Nodes")
+    nodes: List[CognitionFabricNodeListItem] = Field(..., description="List of Cognition Fabric Nodes")
+    total: int = Field(..., description="Total number of Cognition Fabric Nodes")
 
 
-class CognitiveFabricNodeHeartbeatResponse(BaseModel):
+class CognitionFabricNodeHeartbeatResponse(BaseModel):
     """Schema for heartbeat response"""
 
     model_config = ConfigDict(
@@ -194,13 +194,13 @@ class CognitiveFabricNodeHeartbeatResponse(BaseModel):
         }
     )
 
-    status: CognitiveFabricNodeStatus = Field(..., description="Current node status")
+    status: CognitionFabricNodeStatus = Field(..., description="Current node status")
     last_seen: datetime = Field(..., description="Last heartbeat timestamp")
     config_timestamp: datetime = Field(..., description="Current config timestamp for change detection")
 
 
-class CognitiveFabricNodeSummaryResponse(BaseModel):
-    """Schema for Cognitive Fabric Node summary response"""
+class CognitionFabricNodeSummaryResponse(BaseModel):
+    """Schema for Cognition Fabric Node summary response"""
 
     model_config = ConfigDict(
         json_schema_extra={
@@ -224,10 +224,10 @@ class CognitiveFabricNodeSummaryResponse(BaseModel):
         }
     )
 
-    id: str = Field(..., description="Cognitive Fabric Node identifier")
-    name: str = Field(..., description="Cognitive Fabric Node name")
+    id: str = Field(..., description="Cognition Fabric Node identifier")
+    name: str = Field(..., description="Cognition Fabric Node name")
     config: Dict[str, Any] = Field(..., description="Configuration with workspaces and config_timestamp")
-    status: CognitiveFabricNodeStatus = Field(..., description="Current node status")
+    status: CognitionFabricNodeStatus = Field(..., description="Current node status")
     last_seen: datetime = Field(..., description="Last heartbeat timestamp")
     enabled: bool = Field(..., description="Whether node is enabled")
     ip_address: Optional[str] = Field(None, description="IP address of the CFN node")

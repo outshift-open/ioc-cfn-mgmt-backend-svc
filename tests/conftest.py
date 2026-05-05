@@ -15,7 +15,7 @@ from server.database.relational_db.db import RelationalDB
 from server.database.relational_db.models import Base
 from server.database.relational_db.models.api_key import ApiKey
 from server.database.relational_db.models.cognition_fabric_node import (
-    CognitiveFabricNode,
+    CognitionFabricNode,
 )
 from server.database.relational_db.models.multi_agentic_system import MultiAgenticSystem
 from server.database.relational_db.models.user import User
@@ -154,7 +154,7 @@ def setup_test_environment():
             session.query(WorkspaceMember).delete()
             session.query(ApiKey).delete()
             session.query(User).delete()
-            session.query(CognitiveFabricNode).delete()
+            session.query(CognitionFabricNode).delete()
             session.query(MultiAgenticSystem).delete()
             session.query(Workspace).delete()
             session.commit()

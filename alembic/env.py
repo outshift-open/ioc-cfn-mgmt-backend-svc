@@ -21,10 +21,8 @@ from server.database.relational_db.models import Base
 
 # Each import registers that model's tables on Base.metadata.
 import server.database.relational_db.models.api_key  # noqa: F401
-import server.database.relational_db.models.audit  # noqa: F401
 import server.database.relational_db.models.cognition_fabric_node  # noqa: F401
-import server.database.relational_db.models.cognitive_agent  # noqa: F401
-import server.database.relational_db.models.cognitive_engine  # noqa: F401
+import server.database.relational_db.models.cognition_engine  # noqa: F401
 import server.database.relational_db.models.memory_provider  # noqa: F401
 import server.database.relational_db.models.multi_agentic_system  # noqa: F401
 import server.database.relational_db.models.policies  # noqa: F401

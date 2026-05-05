@@ -14,11 +14,11 @@ depends_on: Union[str, Sequence[str], None] = None
 
 
 def upgrade() -> None:
-    op.execute("""ALTER TABLE "cognitive_fabric_node" ADD COLUMN "ip_address" VARCHAR(45) NULL, ADD COLUMN "port" VARCHAR(5) NULL""")
-    op.execute("""COMMENT ON COLUMN "cognitive_fabric_node"."ip_address" IS 'IP address of the CFN node (IPv4 or IPv6)'""")
-    op.execute("""COMMENT ON COLUMN "cognitive_fabric_node"."port" IS 'Port number of the CFN node (1-65535)'""")
+    op.execute("""ALTER TABLE "cognition_fabric_node" ADD COLUMN "ip_address" VARCHAR(45) NULL, ADD COLUMN "port" VARCHAR(5) NULL""")
+    op.execute("""COMMENT ON COLUMN "cognition_fabric_node"."ip_address" IS 'IP address of the CFN node (IPv4 or IPv6)'""")
+    op.execute("""COMMENT ON COLUMN "cognition_fabric_node"."port" IS 'Port number of the CFN node (1-65535)'""")
 
 
 def downgrade() -> None:
-    op.execute("""ALTER TABLE "cognitive_fabric_node" DROP COLUMN IF EXISTS "port" """)
-    op.execute("""ALTER TABLE "cognitive_fabric_node" DROP COLUMN IF EXISTS "ip_address" """)
+    op.execute("""ALTER TABLE "cognition_fabric_node" DROP COLUMN IF EXISTS "port" """)
+    op.execute("""ALTER TABLE "cognition_fabric_node" DROP COLUMN IF EXISTS "ip_address" """)

@@ -61,13 +61,13 @@
           "cognition-fabric-nodes"
         ],
         "summary": "Create Cfn Node",
-        "description": "Register a new CFN node\n\n- **cfn_id**: Persistent CFN identifier (provided by CFN, immutable)\n- **cfn_name**: Human-readable CFN name (globally unique, can be updated later)\n- **cfn_config**: Optional current CFN configuration\n\nCFN is identifies to the management plane.\nRegistration creates the CFN record without workspace association.\nWorkspace association happens during workspace creation.\n\n**Response includes:**\n- **cfn_id**: The CFN identifier\n- **cfn_name**: The CFN name\n- **status**: Current status (offline)\n- **config**: Configuration for the CFN to apply locally\n  - cognitive_fabric_node: CFN-specific operational settings (non-workspace scoped)\n  - memory_providers: Global memory providers (non-workspace scoped)\n  - workspaces: Associated workspaces with MAS, cognitive agents, engines\n\nCFN must send heartbeat to change status from offline to online.",
+        "description": "Register a new CFN node\n\n- **cfn_id**: Persistent CFN identifier (provided by CFN, immutable)\n- **cfn_name**: Human-readable CFN name (globally unique, can be updated later)\n- **cfn_config**: Optional current CFN configuration\n\nCFN is identifies to the management plane.\nRegistration creates the CFN record without workspace association.\nWorkspace association happens during workspace creation.\n\n**Response includes:**\n- **cfn_id**: The CFN identifier\n- **cfn_name**: The CFN name\n- **status**: Current status (offline)\n- **config**: Configuration for the CFN to apply locally\n  - cognition_fabric_node: CFN-specific operational settings (non-workspace scoped)\n  - memory_providers: Global memory providers (non-workspace scoped)\n  - workspaces: Associated workspaces with MAS, cognitive agents, engines\n\nCFN must send heartbeat to change status from offline to online.",
         "operationId": "create_cfn_node_api_cognition_fabric_nodes_register_post",
         "requestBody": {
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/CognitiveFabricNodeRegisterRequest"
+                "$ref": "#/components/schemas/CognitionFabricNodeRegisterRequest"
               }
             }
           },
@@ -79,7 +79,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/CognitiveFabricNodeResponse"
+                  "$ref": "#/components/schemas/CognitionFabricNodeResponse"
                 }
               }
             }
@@ -108,7 +108,7 @@
           "cognition-fabric-nodes"
         ],
         "summary": "Create Cfn Node",
-        "description": "Register a new CFN node\n\n- **cfn_id**: Persistent CFN identifier (provided by CFN, immutable)\n- **cfn_name**: Human-readable CFN name (globally unique, can be updated later)\n- **cfn_config**: Optional current CFN configuration\n\nCFN is identifies to the management plane.\nRegistration creates the CFN record without workspace association.\nWorkspace association happens during workspace creation.\n\n**Response includes:**\n- **cfn_id**: The CFN identifier\n- **cfn_name**: The CFN name\n- **status**: Current status (offline)\n- **config**: Configuration for the CFN to apply locally\n  - cognitive_fabric_node: CFN-specific operational settings (non-workspace scoped)\n  - memory_providers: Global memory providers (non-workspace scoped)\n  - workspaces: Associated workspaces with MAS, cognitive agents, engines\n\nCFN must send heartbeat to change status from offline to online.",
+        "description": "Register a new CFN node\n\n- **cfn_id**: Persistent CFN identifier (provided by CFN, immutable)\n- **cfn_name**: Human-readable CFN name (globally unique, can be updated later)\n- **cfn_config**: Optional current CFN configuration\n\nCFN is identifies to the management plane.\nRegistration creates the CFN record without workspace association.\nWorkspace association happens during workspace creation.\n\n**Response includes:**\n- **cfn_id**: The CFN identifier\n- **cfn_name**: The CFN name\n- **status**: Current status (offline)\n- **config**: Configuration for the CFN to apply locally\n  - cognition_fabric_node: CFN-specific operational settings (non-workspace scoped)\n  - memory_providers: Global memory providers (non-workspace scoped)\n  - workspaces: Associated workspaces with MAS, cognitive agents, engines\n\nCFN must send heartbeat to change status from offline to online.",
         "operationId": "create_cfn_node_api_cognition_fabric_nodes_post",
         "security": [
           {
@@ -120,7 +120,7 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/CognitiveFabricNodeRegisterRequest"
+                "$ref": "#/components/schemas/CognitionFabricNodeRegisterRequest"
               }
             }
           }
@@ -131,7 +131,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/CognitiveFabricNodeResponse"
+                  "$ref": "#/components/schemas/CognitionFabricNodeResponse"
                 }
               }
             }
@@ -204,7 +204,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/CognitiveFabricNodeList"
+                  "$ref": "#/components/schemas/CognitionFabricNodeList"
                 }
               }
             }
@@ -228,7 +228,7 @@
           "cognition-fabric-nodes"
         ],
         "summary": "Update Cfn Node",
-        "description": "Update CFN node information\n\n- **cfn_id**: CFN identifier (immutable)\n- **cfn_name**: Optional updated CFN name (globally unique)\n- **cfn_config**: Optional updated CFN configuration\n\n**Response includes:**\n- Full CFN details (cfn_id, workspace_ids, cfn_name, cfn_config, status, last_seen, enabled, timestamps)\n- **config**: Regenerated configuration for the CFN to apply\n  - cognitive_fabric_node: CFN-specific operational settings\n  - memory_providers: Global memory providers\n  - workspaces: List of workspace details with MAS, cognitive agents, engines\n\nThe config is automatically regenerated with each update to ensure CFN has the latest configuration.",
+        "description": "Update CFN node information\n\n- **cfn_id**: CFN identifier (immutable)\n- **cfn_name**: Optional updated CFN name (globally unique)\n- **cfn_config**: Optional updated CFN configuration\n\n**Response includes:**\n- Full CFN details (cfn_id, workspace_ids, cfn_name, cfn_config, status, last_seen, enabled, timestamps)\n- **config**: Regenerated configuration for the CFN to apply\n  - cognition_fabric_node: CFN-specific operational settings\n  - memory_providers: Global memory providers\n  - workspaces: List of workspace details with MAS, cognitive agents, engines\n\nThe config is automatically regenerated with each update to ensure CFN has the latest configuration.",
         "operationId": "update_cfn_node_api_cognition_fabric_nodes__cfn_id__put",
         "security": [
           {
@@ -251,7 +251,7 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/CognitiveFabricNodeUpdateRequest"
+                "$ref": "#/components/schemas/CognitionFabricNodeUpdateRequest"
               }
             }
           }
@@ -262,7 +262,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/CognitiveFabricNodeResponse"
+                  "$ref": "#/components/schemas/CognitionFabricNodeResponse"
                 }
               }
             }
@@ -347,7 +347,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/CognitiveFabricNodeResponse"
+                  "$ref": "#/components/schemas/CognitionFabricNodeResponse"
                 }
               }
             }
@@ -371,7 +371,7 @@
           "cognition-fabric-nodes"
         ],
         "summary": "Enable Cfn Node",
-        "description": "Enable a disabled CFN node\n\n- **cfn_id**: CFN identifier\n\nThis is an admin operation to re-enable a disabled CFN.\nAfter enabling, the CFN can call /register to reconnect and resume operations.\n\n**Response includes:**\n- Full CFN details with enabled=True and status=offline (until heartbeat is sent)\n- **config**: Configuration for the CFN to apply when it reconnects\n  - cognitive_fabric_node: CFN-specific operational settings\n  - memory_providers: Global memory providers\n  - workspaces: List of workspace details with MAS, cognitive agents, engines",
+        "description": "Enable a disabled CFN node\n\n- **cfn_id**: CFN identifier\n\nThis is an admin operation to re-enable a disabled CFN.\nAfter enabling, the CFN can call /register to reconnect and resume operations.\n\n**Response includes:**\n- Full CFN details with enabled=True and status=offline (until heartbeat is sent)\n- **config**: Configuration for the CFN to apply when it reconnects\n  - cognition_fabric_node: CFN-specific operational settings\n  - memory_providers: Global memory providers\n  - workspaces: List of workspace details with MAS, cognitive agents, engines",
         "operationId": "enable_cfn_node_api_cognition_fabric_nodes__cfn_id__enable_patch",
         "security": [
           {
@@ -395,7 +395,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/CognitiveFabricNodeResponse"
+                  "$ref": "#/components/schemas/CognitionFabricNodeResponse"
                 }
               }
             }
@@ -443,7 +443,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/CognitiveFabricNodeResponse"
+                  "$ref": "#/components/schemas/CognitionFabricNodeResponse"
                 }
               }
             }
@@ -491,7 +491,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/CognitiveFabricNodeHeartbeatResponse"
+                  "$ref": "#/components/schemas/CognitionFabricNodeHeartbeatResponse"
                 }
               }
             }
@@ -515,7 +515,7 @@
           "cognition-fabric-nodes"
         ],
         "summary": "Get Cfn Node Summary",
-        "description": "Get CFN node summary with detailed workspace configuration\n\n- **cfn_id**: CFN identifier\n\nReturns CFN summary including:\n- id, name\n- config (workspaces with cognitive_engines, multi_agentic_systems, and config_timestamp)\n- status (online, offline)\n- enabled flag\n- ip_address, port\n- created_at, updated_at, last_seen timestamps\n\nThe config.workspaces array contains full details of each workspace including:\n- workspace id and name\n- cognitive_engines (list of CEs in the workspace)\n- multi_agentic_systems (list of MAS in the workspace with full details)\n- policies (empty array for now)\n\nThis endpoint retrieves information for both enabled and disabled CFNs.\nDeleted CFNs will return 404 Not Found.",
+        "description": "Get CFN node summary with detailed workspace configuration\n\n- **cfn_id**: CFN identifier\n\nReturns CFN summary including:\n- id, name\n- config (workspaces with cognition_engines, multi_agentic_systems, and config_timestamp)\n- status (online, offline)\n- enabled flag\n- ip_address, port\n- created_at, updated_at, last_seen timestamps\n\nThe config.workspaces array contains full details of each workspace including:\n- workspace id and name\n- cognition_engines (list of CEs in the workspace)\n- multi_agentic_systems (list of MAS in the workspace with full details)\n- policies (empty array for now)\n\nThis endpoint retrieves information for both enabled and disabled CFNs.\nDeleted CFNs will return 404 Not Found.",
         "operationId": "get_cfn_node_summary_api_cognition_fabric_nodes__cfn_id__summary_get",
         "security": [
           {
@@ -539,7 +539,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/CognitiveFabricNodeSummaryResponse"
+                  "$ref": "#/components/schemas/CognitionFabricNodeSummaryResponse"
                 }
               }
             }
@@ -563,7 +563,7 @@
           "cognition-fabric-nodes"
         ],
         "summary": "Get Cfn Workspaces Config",
-        "description": "Get aggregated workspace configuration for a CFN node\n\nThis endpoint returns the consolidated configuration document that aggregates\nworkspace-scoped and global resources for the CFN service to apply.\n\n- **cfn_id**: CFN identifier\n\nReturns configuration with:\n- **version**: Configuration schema version (0.1.0)\n- **cognitive_fabric_node**: List of CFN-specific operational settings (non-workspace scoped)\n- **memory_providers**: List of global memory providers (non-workspace scoped)\n- **workspaces**: List of workspaces with their resources:\n  - workspace_id: Workspace identifier\n  - workspace_name: Workspace name\n  - multi_agentic_systems: MAS available in this workspace\n  - cognitive_agents: Cognitive agents in this workspace\n  - cognitive_engines: Cognitive engines in this workspace (not included for March 2026)\n  - policies: Policies in this workspace (not included for March 2026)",
+        "description": "Get aggregated workspace configuration for a CFN node\n\nThis endpoint returns the consolidated configuration document that aggregates\nworkspace-scoped and global resources for the CFN service to apply.\n\n- **cfn_id**: CFN identifier\n\nReturns configuration with:\n- **version**: Configuration schema version (0.1.0)\n- **cognition_fabric_node**: List of CFN-specific operational settings (non-workspace scoped)\n- **memory_providers**: List of global memory providers (non-workspace scoped)\n- **workspaces**: List of workspaces with their resources:\n  - workspace_id: Workspace identifier\n  - workspace_name: Workspace name\n  - multi_agentic_systems: MAS available in this workspace\n  - cognition_engines: Cognitive engines in this workspace (not included for March 2026)\n  - policies: Policies in this workspace (not included for March 2026)",
         "operationId": "get_cfn_workspaces_config_api_cognitive_fabric_node__cfn_id__workspaces_get",
         "security": [
           {
@@ -1361,291 +1361,6 @@
         }
       }
     },
-    "/api/workspaces/{workspace_id}/cognitive-agents": {
-      "post": {
-        "tags": [
-          "cognitive-agents"
-        ],
-        "summary": "Create Cognitive Agent",
-        "description": "Create a new cognitive agent in workspace",
-        "operationId": "create_cognitive_agent_api_workspaces__workspace_id__cognitive_agents_post",
-        "security": [
-          {
-            "HTTPBearer": []
-          }
-        ],
-        "parameters": [
-          {
-            "name": "workspace_id",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "title": "Workspace Id"
-            }
-          }
-        ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/CognitiveAgentCreate"
-              }
-            }
-          }
-        },
-        "responses": {
-          "201": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/CognitiveAgentDetail"
-                }
-              }
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
-          }
-        }
-      },
-      "get": {
-        "tags": [
-          "cognitive-agents"
-        ],
-        "summary": "List Cognitive Agents",
-        "description": "Get list of all cognitive agents in workspace",
-        "operationId": "list_cognitive_agents_api_workspaces__workspace_id__cognitive_agents_get",
-        "security": [
-          {
-            "HTTPBearer": []
-          }
-        ],
-        "parameters": [
-          {
-            "name": "workspace_id",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "title": "Workspace Id"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/CognitiveAgentList"
-                }
-              }
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/workspaces/{workspace_id}/cognitive-agents/{cognitive_agent_id}": {
-      "get": {
-        "tags": [
-          "cognitive-agents"
-        ],
-        "summary": "Get Cognitive Agent",
-        "description": "Get details of a specific cognitive agent",
-        "operationId": "get_cognitive_agent_api_workspaces__workspace_id__cognitive_agents__cognitive_agent_id__get",
-        "security": [
-          {
-            "HTTPBearer": []
-          }
-        ],
-        "parameters": [
-          {
-            "name": "workspace_id",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "title": "Workspace Id"
-            }
-          },
-          {
-            "name": "cognitive_agent_id",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "title": "Cognitive Agent Id"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/CognitiveAgentDetail"
-                }
-              }
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
-          }
-        }
-      },
-      "patch": {
-        "tags": [
-          "cognitive-agents"
-        ],
-        "summary": "Update Cognitive Agent",
-        "description": "Update an existing cognitive agent",
-        "operationId": "update_cognitive_agent_api_workspaces__workspace_id__cognitive_agents__cognitive_agent_id__patch",
-        "security": [
-          {
-            "HTTPBearer": []
-          }
-        ],
-        "parameters": [
-          {
-            "name": "workspace_id",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "title": "Workspace Id"
-            }
-          },
-          {
-            "name": "cognitive_agent_id",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "title": "Cognitive Agent Id"
-            }
-          }
-        ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/CognitiveAgentUpdate"
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/CognitiveAgentDetail"
-                }
-              }
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
-          }
-        }
-      },
-      "delete": {
-        "tags": [
-          "cognitive-agents"
-        ],
-        "summary": "Delete Cognitive Agent",
-        "description": "Delete a cognitive agent (soft delete)",
-        "operationId": "delete_cognitive_agent_api_workspaces__workspace_id__cognitive_agents__cognitive_agent_id__delete",
-        "security": [
-          {
-            "HTTPBearer": []
-          }
-        ],
-        "parameters": [
-          {
-            "name": "workspace_id",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "title": "Workspace Id"
-            }
-          },
-          {
-            "name": "cognitive_agent_id",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "title": "Cognitive Agent Id"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "additionalProperties": {
-                    "type": "string"
-                  },
-                  "title": "Response Delete Cognitive Agent Api Workspaces  Workspace Id  Cognitive Agents  Cognitive Agent Id  Delete"
-                }
-              }
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
     "/api/workspaces/{workspace_id}/cognition-engines": {
       "post": {
         "tags": [
@@ -1653,7 +1368,7 @@
         ],
         "summary": "Create Cognition Engine",
         "description": "Create a new cognition engine in workspace",
-        "operationId": "create_cognitive_engine_api_workspaces__workspace_id__cognition_engines_post",
+        "operationId": "create_cognition_engine_api_workspaces__workspace_id__cognition_engines_post",
         "security": [
           {
             "HTTPBearer": []
@@ -1675,7 +1390,7 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/CognitiveEngineCreate"
+                "$ref": "#/components/schemas/CognitionEngineCreate"
               }
             }
           }
@@ -1686,7 +1401,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/CognitiveEngineDetail"
+                  "$ref": "#/components/schemas/CognitionEngineDetail"
                 }
               }
             }
@@ -1709,7 +1424,7 @@
         ],
         "summary": "List Cognition Engines",
         "description": "Get list of all cognition engines in workspace",
-        "operationId": "list_cognitive_engines_api_workspaces__workspace_id__cognition_engines_get",
+        "operationId": "list_cognition_engines_api_workspaces__workspace_id__cognition_engines_get",
         "security": [
           {
             "HTTPBearer": []
@@ -1732,7 +1447,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/CognitiveEngineList"
+                  "$ref": "#/components/schemas/CognitionEngineList"
                 }
               }
             }
@@ -1750,14 +1465,14 @@
         }
       }
     },
-    "/api/workspaces/{workspace_id}/cognition-engines/{cognitive_engine_id}": {
+    "/api/workspaces/{workspace_id}/cognition-engines/{cognition_engine_id}": {
       "get": {
         "tags": [
           "cognition-engines"
         ],
         "summary": "Get Cognition Engine",
         "description": "Get details of a specific cognition engine",
-        "operationId": "get_cognitive_engine_api_workspaces__workspace_id__cognition_engines__cognitive_engine_id__get",
+        "operationId": "get_cognition_engine_api_workspaces__workspace_id__cognition_engines__cognition_engine_id__get",
         "security": [
           {
             "HTTPBearer": []
@@ -1774,12 +1489,12 @@
             }
           },
           {
-            "name": "cognitive_engine_id",
+            "name": "cognition_engine_id",
             "in": "path",
             "required": true,
             "schema": {
               "type": "string",
-              "title": "Cognitive Engine Id"
+              "title": "Cognition Engine Id"
             }
           }
         ],
@@ -1789,7 +1504,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/CognitiveEngineDetail"
+                  "$ref": "#/components/schemas/CognitionEngineDetail"
                 }
               }
             }
@@ -1812,7 +1527,7 @@
         ],
         "summary": "Update Cognition Engine",
         "description": "Update an existing cognition engine",
-        "operationId": "update_cognitive_engine_api_workspaces__workspace_id__cognition_engines__cognitive_engine_id__patch",
+        "operationId": "update_cognition_engine_api_workspaces__workspace_id__cognition_engines__cognition_engine_id__patch",
         "security": [
           {
             "HTTPBearer": []
@@ -1829,12 +1544,12 @@
             }
           },
           {
-            "name": "cognitive_engine_id",
+            "name": "cognition_engine_id",
             "in": "path",
             "required": true,
             "schema": {
               "type": "string",
-              "title": "Cognitive Engine Id"
+              "title": "Cognition Engine Id"
             }
           }
         ],
@@ -1843,7 +1558,7 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/CognitiveEngineUpdate"
+                "$ref": "#/components/schemas/CognitionEngineUpdate"
               }
             }
           }
@@ -1854,7 +1569,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/CognitiveEngineDetail"
+                  "$ref": "#/components/schemas/CognitionEngineDetail"
                 }
               }
             }
@@ -1877,7 +1592,7 @@
         ],
         "summary": "Delete Cognition Engine",
         "description": "Delete a cognition engine (soft delete)",
-        "operationId": "delete_cognitive_engine_api_workspaces__workspace_id__cognition_engines__cognitive_engine_id__delete",
+        "operationId": "delete_cognition_engine_api_workspaces__workspace_id__cognition_engines__cognition_engine_id__delete",
         "security": [
           {
             "HTTPBearer": []
@@ -1894,12 +1609,12 @@
             }
           },
           {
-            "name": "cognitive_engine_id",
+            "name": "cognition_engine_id",
             "in": "path",
             "required": true,
             "schema": {
               "type": "string",
-              "title": "Cognitive Engine Id"
+              "title": "Cognition Engine Id"
             }
           }
         ],
@@ -1913,7 +1628,7 @@
                   "additionalProperties": {
                     "type": "string"
                   },
-                  "title": "Response Delete Cognitive Engine Api Workspaces  Workspace Id  Cognition Engines  Cognitive Engine Id  Delete"
+                  "title": "Response Delete Cognition Engine Api Workspaces  Workspace Id  Cognition Engines  Cognition Engine Id  Delete"
                 }
               }
             }
@@ -2668,281 +2383,11 @@
         "title": "AuditCfnPageInfo",
         "description": "Pagination metadata matching the upstream cfn-svc response."
       },
-      "CognitiveAgentCreate": {
+      "CognitionEngineCreate": {
         "properties": {
-          "cognitive_agent_name": {
+          "cognition_engine_name": {
             "type": "string",
-            "title": "Cognitive Agent Name",
-            "description": "Agent name"
-          },
-          "description": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Description",
-            "description": "Agent description"
-          },
-          "config": {
-            "anyOf": [
-              {
-                "additionalProperties": true,
-                "type": "object"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Config",
-            "description": "Agent-specific configuration"
-          }
-        },
-        "type": "object",
-        "required": [
-          "cognitive_agent_name"
-        ],
-        "title": "CognitiveAgentCreate",
-        "description": "Schema for creating a cognitive agent"
-      },
-      "CognitiveAgentDetail": {
-        "properties": {
-          "cognitive_agent_id": {
-            "type": "string",
-            "title": "Cognitive Agent Id"
-          },
-          "workspace_id": {
-            "type": "string",
-            "title": "Workspace Id"
-          },
-          "cognitive_agent_name": {
-            "type": "string",
-            "title": "Cognitive Agent Name"
-          },
-          "description": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Description"
-          },
-          "config": {
-            "anyOf": [
-              {
-                "additionalProperties": true,
-                "type": "object"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Config"
-          },
-          "enabled": {
-            "type": "boolean",
-            "title": "Enabled"
-          },
-          "created_at": {
-            "type": "string",
-            "format": "date-time",
-            "title": "Created At"
-          },
-          "updated_at": {
-            "anyOf": [
-              {
-                "type": "string",
-                "format": "date-time"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Updated At"
-          },
-          "created_by": {
-            "type": "string",
-            "title": "Created By"
-          },
-          "updated_by": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Updated By"
-          }
-        },
-        "type": "object",
-        "required": [
-          "cognitive_agent_id",
-          "workspace_id",
-          "cognitive_agent_name",
-          "description",
-          "config",
-          "enabled",
-          "created_at",
-          "updated_at",
-          "created_by",
-          "updated_by"
-        ],
-        "title": "CognitiveAgentDetail",
-        "description": "Schema for detailed cognitive agent information"
-      },
-      "CognitiveAgentList": {
-        "properties": {
-          "agents": {
-            "items": {
-              "$ref": "#/components/schemas/CognitiveAgentListItem"
-            },
-            "type": "array",
-            "title": "Agents",
-            "description": "List of cognitive agents"
-          },
-          "total": {
-            "type": "integer",
-            "title": "Total",
-            "description": "Total number of agents"
-          }
-        },
-        "type": "object",
-        "required": [
-          "agents",
-          "total"
-        ],
-        "title": "CognitiveAgentList",
-        "description": "Schema for cognitive agent list response"
-      },
-      "CognitiveAgentListItem": {
-        "properties": {
-          "cognitive_agent_id": {
-            "type": "string",
-            "title": "Cognitive Agent Id"
-          },
-          "workspace_id": {
-            "type": "string",
-            "title": "Workspace Id"
-          },
-          "cognitive_agent_name": {
-            "type": "string",
-            "title": "Cognitive Agent Name"
-          },
-          "description": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Description"
-          },
-          "config": {
-            "anyOf": [
-              {
-                "additionalProperties": true,
-                "type": "object"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Config"
-          },
-          "enabled": {
-            "type": "boolean",
-            "title": "Enabled"
-          },
-          "created_at": {
-            "type": "string",
-            "format": "date-time",
-            "title": "Created At"
-          }
-        },
-        "type": "object",
-        "required": [
-          "cognitive_agent_id",
-          "workspace_id",
-          "cognitive_agent_name",
-          "description",
-          "config",
-          "enabled",
-          "created_at"
-        ],
-        "title": "CognitiveAgentListItem",
-        "description": "Schema for cognitive agent list item"
-      },
-      "CognitiveAgentUpdate": {
-        "properties": {
-          "cognitive_agent_name": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Cognitive Agent Name",
-            "description": "Agent name"
-          },
-          "description": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Description",
-            "description": "Agent description"
-          },
-          "config": {
-            "anyOf": [
-              {
-                "additionalProperties": true,
-                "type": "object"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Config",
-            "description": "Agent-specific configuration"
-          },
-          "enabled": {
-            "anyOf": [
-              {
-                "type": "boolean"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Enabled",
-            "description": "Whether agent is enabled"
-          }
-        },
-        "type": "object",
-        "title": "CognitiveAgentUpdate",
-        "description": "Schema for updating a cognitive agent"
-      },
-      "CognitiveEngineCreate": {
-        "properties": {
-          "cognitive_engine_name": {
-            "type": "string",
-            "title": "Cognitive Engine Name",
+            "title": "Cognition Engine Name",
             "description": "Engine name"
           },
           "config": {
@@ -2961,24 +2406,24 @@
         },
         "type": "object",
         "required": [
-          "cognitive_engine_name"
+          "cognition_engine_name"
         ],
-        "title": "CognitiveEngineCreate",
-        "description": "Schema for creating a cognitive engine"
+        "title": "CognitionEngineCreate",
+        "description": "Schema for creating a cognition engine"
       },
-      "CognitiveEngineDetail": {
+      "CognitionEngineDetail": {
         "properties": {
-          "cognitive_engine_id": {
+          "cognition_engine_id": {
             "type": "string",
-            "title": "Cognitive Engine Id"
+            "title": "Cognition Engine Id"
           },
           "workspace_id": {
             "type": "string",
             "title": "Workspace Id"
           },
-          "cognitive_engine_name": {
+          "cognition_engine_name": {
             "type": "string",
-            "title": "Cognitive Engine Name"
+            "title": "Cognition Engine Name"
           },
           "config": {
             "anyOf": [
@@ -3031,9 +2476,9 @@
         },
         "type": "object",
         "required": [
-          "cognitive_engine_id",
+          "cognition_engine_id",
           "workspace_id",
-          "cognitive_engine_name",
+          "cognition_engine_name",
           "config",
           "enabled",
           "created_at",
@@ -3041,18 +2486,18 @@
           "created_by",
           "updated_by"
         ],
-        "title": "CognitiveEngineDetail",
-        "description": "Schema for detailed cognitive engine information"
+        "title": "CognitionEngineDetail",
+        "description": "Schema for detailed cognition engine information"
       },
-      "CognitiveEngineList": {
+      "CognitionEngineList": {
         "properties": {
           "engines": {
             "items": {
-              "$ref": "#/components/schemas/CognitiveEngineListItem"
+              "$ref": "#/components/schemas/CognitionEngineListItem"
             },
             "type": "array",
             "title": "Engines",
-            "description": "List of cognitive engines"
+            "description": "List of cognition engines"
           },
           "total": {
             "type": "integer",
@@ -3065,22 +2510,22 @@
           "engines",
           "total"
         ],
-        "title": "CognitiveEngineList",
-        "description": "Schema for cognitive engine list response"
+        "title": "CognitionEngineList",
+        "description": "Schema for cognition engine list response"
       },
-      "CognitiveEngineListItem": {
+      "CognitionEngineListItem": {
         "properties": {
-          "cognitive_engine_id": {
+          "cognition_engine_id": {
             "type": "string",
-            "title": "Cognitive Engine Id"
+            "title": "Cognition Engine Id"
           },
           "workspace_id": {
             "type": "string",
             "title": "Workspace Id"
           },
-          "cognitive_engine_name": {
+          "cognition_engine_name": {
             "type": "string",
-            "title": "Cognitive Engine Name"
+            "title": "Cognition Engine Name"
           },
           "config": {
             "anyOf": [
@@ -3106,19 +2551,19 @@
         },
         "type": "object",
         "required": [
-          "cognitive_engine_id",
+          "cognition_engine_id",
           "workspace_id",
-          "cognitive_engine_name",
+          "cognition_engine_name",
           "config",
           "enabled",
           "created_at"
         ],
-        "title": "CognitiveEngineListItem",
-        "description": "Schema for cognitive engine list item"
+        "title": "CognitionEngineListItem",
+        "description": "Schema for cognition engine list item"
       },
-      "CognitiveEngineUpdate": {
+      "CognitionEngineUpdate": {
         "properties": {
-          "cognitive_engine_name": {
+          "cognition_engine_name": {
             "anyOf": [
               {
                 "type": "string"
@@ -3127,7 +2572,7 @@
                 "type": "null"
               }
             ],
-            "title": "Cognitive Engine Name",
+            "title": "Cognition Engine Name",
             "description": "Engine name"
           },
           "config": {
@@ -3157,13 +2602,13 @@
           }
         },
         "type": "object",
-        "title": "CognitiveEngineUpdate",
-        "description": "Schema for updating a cognitive engine"
+        "title": "CognitionEngineUpdate",
+        "description": "Schema for updating a cognition engine"
       },
-      "CognitiveFabricNodeHeartbeatResponse": {
+      "CognitionFabricNodeHeartbeatResponse": {
         "properties": {
           "status": {
-            "$ref": "#/components/schemas/CognitiveFabricNodeStatus",
+            "$ref": "#/components/schemas/CognitionFabricNodeStatus",
             "description": "Current node status"
           },
           "last_seen": {
@@ -3185,7 +2630,7 @@
           "last_seen",
           "config_timestamp"
         ],
-        "title": "CognitiveFabricNodeHeartbeatResponse",
+        "title": "CognitionFabricNodeHeartbeatResponse",
         "description": "Schema for heartbeat response",
         "example": {
           "config_timestamp": "2026-01-30T12:34:56Z",
@@ -3193,20 +2638,20 @@
           "status": "online"
         }
       },
-      "CognitiveFabricNodeList": {
+      "CognitionFabricNodeList": {
         "properties": {
           "nodes": {
             "items": {
-              "$ref": "#/components/schemas/CognitiveFabricNodeListItem"
+              "$ref": "#/components/schemas/CognitionFabricNodeListItem"
             },
             "type": "array",
             "title": "Nodes",
-            "description": "List of Cognitive Fabric Nodes"
+            "description": "List of Cognition Fabric Nodes"
           },
           "total": {
             "type": "integer",
             "title": "Total",
-            "description": "Total number of Cognitive Fabric Nodes"
+            "description": "Total number of Cognition Fabric Nodes"
           }
         },
         "type": "object",
@@ -3214,8 +2659,8 @@
           "nodes",
           "total"
         ],
-        "title": "CognitiveFabricNodeList",
-        "description": "Schema for listing Cognitive Fabric Nodes",
+        "title": "CognitionFabricNodeList",
+        "description": "Schema for listing Cognition Fabric Nodes",
         "example": {
           "nodes": [
             {
@@ -3233,12 +2678,12 @@
           "total": 1
         }
       },
-      "CognitiveFabricNodeListItem": {
+      "CognitionFabricNodeListItem": {
         "properties": {
           "cfn_id": {
             "type": "string",
             "title": "Cfn Id",
-            "description": "Cognitive Fabric Node identifier"
+            "description": "Cognition Fabric Node identifier"
           },
           "workspace_ids": {
             "items": {
@@ -3251,10 +2696,10 @@
           "cfn_name": {
             "type": "string",
             "title": "Cfn Name",
-            "description": "Cognitive Fabric Node name"
+            "description": "Cognition Fabric Node name"
           },
           "status": {
-            "$ref": "#/components/schemas/CognitiveFabricNodeStatus",
+            "$ref": "#/components/schemas/CognitionFabricNodeStatus",
             "description": "Current node status"
           },
           "last_seen": {
@@ -3284,8 +2729,8 @@
           "enabled",
           "created_at"
         ],
-        "title": "CognitiveFabricNodeListItem",
-        "description": "Schema for Cognitive Fabric Node in list view",
+        "title": "CognitionFabricNodeListItem",
+        "description": "Schema for Cognition Fabric Node in list view",
         "example": {
           "cfn_id": "cfn-persistent-id-123",
           "cfn_name": "cfn-node-prod-1",
@@ -3298,7 +2743,7 @@
           ]
         }
       },
-      "CognitiveFabricNodeRegisterRequest": {
+      "CognitionFabricNodeRegisterRequest": {
         "properties": {
           "cfn_name": {
             "type": "string",
@@ -3352,8 +2797,8 @@
         "required": [
           "cfn_name"
         ],
-        "title": "CognitiveFabricNodeRegisterRequest",
-        "description": "Schema for Cognitive Fabric Node registration request",
+        "title": "CognitionFabricNodeRegisterRequest",
+        "description": "Schema for Cognition Fabric Node registration request",
         "example": {
           "cfn_config": {
             "log_level": "info"
@@ -3363,12 +2808,12 @@
           "port": 8080
         }
       },
-      "CognitiveFabricNodeResponse": {
+      "CognitionFabricNodeResponse": {
         "properties": {
           "cfn_id": {
             "type": "string",
             "title": "Cfn Id",
-            "description": "Cognitive Fabric Node identifier"
+            "description": "Cognition Fabric Node identifier"
           },
           "workspace_ids": {
             "items": {
@@ -3381,7 +2826,7 @@
           "cfn_name": {
             "type": "string",
             "title": "Cfn Name",
-            "description": "Cognitive Fabric Node name"
+            "description": "Cognition Fabric Node name"
           },
           "config": {
             "anyOf": [
@@ -3397,7 +2842,7 @@
             "description": "Aggregated configuration including cfn_config"
           },
           "status": {
-            "$ref": "#/components/schemas/CognitiveFabricNodeStatus",
+            "$ref": "#/components/schemas/CognitionFabricNodeStatus",
             "description": "Current node status"
           },
           "last_seen": {
@@ -3488,8 +2933,8 @@
           "enabled",
           "created_at"
         ],
-        "title": "CognitiveFabricNodeResponse",
-        "description": "Schema for Cognitive Fabric Node response (common response format)",
+        "title": "CognitionFabricNodeResponse",
+        "description": "Schema for Cognition Fabric Node response (common response format)",
         "example": {
           "cfn_id": "cfn-persistent-id-123",
           "cfn_name": "cfn-node-prod-1",
@@ -3506,26 +2951,26 @@
           "workspace_ids": []
         }
       },
-      "CognitiveFabricNodeStatus": {
+      "CognitionFabricNodeStatus": {
         "type": "string",
         "enum": [
           "online",
           "offline"
         ],
-        "title": "CognitiveFabricNodeStatus",
-        "description": "Cognitive Fabric Node status enumeration"
+        "title": "CognitionFabricNodeStatus",
+        "description": "Cognition Fabric Node status enumeration"
       },
-      "CognitiveFabricNodeSummaryResponse": {
+      "CognitionFabricNodeSummaryResponse": {
         "properties": {
           "id": {
             "type": "string",
             "title": "Id",
-            "description": "Cognitive Fabric Node identifier"
+            "description": "Cognition Fabric Node identifier"
           },
           "name": {
             "type": "string",
             "title": "Name",
-            "description": "Cognitive Fabric Node name"
+            "description": "Cognition Fabric Node name"
           },
           "config": {
             "additionalProperties": true,
@@ -3534,7 +2979,7 @@
             "description": "Configuration with workspaces and config_timestamp"
           },
           "status": {
-            "$ref": "#/components/schemas/CognitiveFabricNodeStatus",
+            "$ref": "#/components/schemas/CognitionFabricNodeStatus",
             "description": "Current node status"
           },
           "last_seen": {
@@ -3626,8 +3071,8 @@
           "enabled",
           "created_at"
         ],
-        "title": "CognitiveFabricNodeSummaryResponse",
-        "description": "Schema for Cognitive Fabric Node summary response",
+        "title": "CognitionFabricNodeSummaryResponse",
+        "description": "Schema for Cognition Fabric Node summary response",
         "example": {
           "config": {
             "config_timestamp": "2026-03-09T21:10:03.939351Z",
@@ -3645,7 +3090,7 @@
           "updated_at": "2026-03-09T22:13:23.993225"
         }
       },
-      "CognitiveFabricNodeUpdateRequest": {
+      "CognitionFabricNodeUpdateRequest": {
         "properties": {
           "cfn_name": {
             "anyOf": [
@@ -3703,8 +3148,8 @@
           }
         },
         "type": "object",
-        "title": "CognitiveFabricNodeUpdateRequest",
-        "description": "Schema for updating Cognitive Fabric Node",
+        "title": "CognitionFabricNodeUpdateRequest",
+        "description": "Schema for updating Cognition Fabric Node",
         "example": {
           "cfn_config": {
             "log_level": "debug"

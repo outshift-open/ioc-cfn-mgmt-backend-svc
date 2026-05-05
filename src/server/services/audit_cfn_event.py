@@ -24,6 +24,7 @@ class CfnUpstreamError(Exception):
         self.detail = detail
         super().__init__(f"cfn-svc returned {status_code}")
 
+
 FALLBACK_DEFAULT_PAGE_SIZE = 20
 FALLBACK_MAX_PAGE_SIZE = 100
 

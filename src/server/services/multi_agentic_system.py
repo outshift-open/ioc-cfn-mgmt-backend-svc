@@ -21,7 +21,6 @@ from server.database.relational_db.models.multi_agentic_system import MultiAgent
 from server.database.relational_db.models.memory_provider import MemoryProvider as MemoryProviderModel
 from server.database.relational_db.db import RelationalDB
 from server.services.workspace import workspace_service
-from server.services.audit import AuditEventType, ResourceType, audit_service, AuditRequest
 from server.schemas.memory_provider import MemoryProviderDetail
 from server.utils import generate_uuid
 
@@ -162,27 +161,14 @@ class MultiAgenticSystemService:
                 )
 
                 # Update CFN config for this workspace
-                from server.services.cognition_fabric_node import cognitive_fabric_node_service
+                from server.services.cognition_fabric_node import cognition_fabric_node_service
 
-                cognitive_fabric_node_service.update_config_for_workspace(workspace_id)
+                cognition_fabric_node_service.update_config_for_workspace(workspace_id)
 
                 # Onboard per-MAS vector store (non-fatal: logs on failure, does not block MAS creation)
                 from server.services.vector_store_cfn import vector_store_cfn_service
 
                 vector_store_cfn_service.onboard_vector_store(workspace_id, new_mas.id)
-
-                # add to audits table
-                audit_service.create_audit(
-                    AuditRequest(
-                        resource_type=ResourceType.MAS,
-                        audit_type=AuditEventType.RESOURCE_CREATED,
-                        audit_resource_id=new_mas.id,
-                        created_by="",  # TODO: get user from apikey
-                        audit_information=mas_data.model_dump(),
-                        audit_extra_information="success",
-                        created_at=new_mas.created_at,
-                    )
-                )
 
                 return response
 
@@ -353,24 +339,11 @@ class MultiAgenticSystemService:
                 session.refresh(mas)
 
                 # Update CFN config for this workspace
-                from server.services.cognition_fabric_node import cognitive_fabric_node_service
+                from server.services.cognition_fabric_node import cognition_fabric_node_service
 
-                cognitive_fabric_node_service.update_config_for_workspace(workspace_id)
+                cognition_fabric_node_service.update_config_for_workspace(workspace_id)
 
                 response = self._enrich_with_memory_providers(session, mas)
-
-                # add to audits table
-                audit_service.create_audit(
-                    AuditRequest(
-                        resource_type=ResourceType.MAS,
-                        audit_type=AuditEventType.RESOURCE_UPDATED,
-                        audit_resource_id=mas_id,
-                        updated_by="",  # TODO: get user from apikey
-                        audit_information=mas_data.model_dump(),
-                        audit_extra_information="success",
-                        updated_at=mas.updated_at,
-                    )
-                )
 
                 return response
 
@@ -429,22 +402,9 @@ class MultiAgenticSystemService:
                 session.commit()
 
                 # Update CFN config for this workspace
-                from server.services.cognition_fabric_node import cognitive_fabric_node_service
+                from server.services.cognition_fabric_node import cognition_fabric_node_service
 
-                cognitive_fabric_node_service.update_config_for_workspace(workspace_id)
-
-                # add to audits table
-                audit_service.create_audit(
-                    AuditRequest(
-                        resource_type=ResourceType.MAS,
-                        audit_type=AuditEventType.RESOURCE_DELETED,
-                        audit_resource_id=mas_id,
-                        deleted_by="",  # TODO: get user from apikey
-                        audit_information={"purge": _purge},
-                        audit_extra_information=message,
-                        deleted_at=mas.deleted_at,
-                    )
-                )
+                cognition_fabric_node_service.update_config_for_workspace(workspace_id)
 
                 return {"message": message}
 

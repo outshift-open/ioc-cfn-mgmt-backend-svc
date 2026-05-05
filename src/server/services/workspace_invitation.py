@@ -23,12 +23,6 @@ from server.schemas.workspace_invitation import (
     WorkspaceInvitationList,
     WorkspaceInvitationResponse,
 )
-from server.services.audit import (
-    AuditEventType,
-    AuditRequest,
-    ResourceType,
-    audit_service,
-)
 from server.services.workspace_member import workspace_member_service
 from server.utils import generate_uuid
 
@@ -120,24 +114,6 @@ class WorkspaceInvitationService:
                 session.add(new_invitation)
                 session.commit()
                 session.refresh(new_invitation)
-
-                # Audit log
-                audit_service.create_audit(
-                    AuditRequest(
-                        resource_type=ResourceType.WORKSPACE_INVITATION,
-                        audit_type=AuditEventType.INVITATION_CREATED,
-                        audit_resource_id=new_invitation.id,  # type: ignore[arg-type]
-                        created_by=inviter_id,
-                        created_at=new_invitation.created_at,  # type: ignore[arg-type]
-                        audit_information={
-                            "workspace_id": workspace_id,
-                            "invitee_username": invitee_username,
-                            "role": role,
-                            "expires_at": expires_at.isoformat(),
-                        },
-                        audit_extra_information="Invitation created successfully",
-                    )
-                )
 
                 return WorkspaceInvitationResponse(id=new_invitation.id)  # type: ignore[arg-type]
 
@@ -378,23 +354,6 @@ class WorkspaceInvitationService:
                     created_by=user_id,
                 )
 
-                # Audit log
-                audit_service.create_audit(
-                    AuditRequest(
-                        resource_type=ResourceType.WORKSPACE_INVITATION,
-                        audit_type=AuditEventType.INVITATION_ACCEPTED,
-                        audit_resource_id=invitation.id,  # type: ignore[arg-type]
-                        updated_by=user_id,
-                        updated_at=now,
-                        audit_information={
-                            "workspace_id": invitation.workspace_id,
-                            "user_id": user_id,
-                            "role": invitation.role,
-                        },
-                        audit_extra_information="Invitation accepted",
-                    )
-                )
-
                 # Get workspace name for response
                 from server.database.relational_db.models.workspace import Workspace as WorkspaceModel
 
@@ -467,22 +426,6 @@ class WorkspaceInvitationService:
                 invitation.responded_at = now  # type: ignore[assignment]
                 session.commit()
 
-                # Audit log
-                audit_service.create_audit(
-                    AuditRequest(
-                        resource_type=ResourceType.WORKSPACE_INVITATION,
-                        audit_type=AuditEventType.INVITATION_DECLINED,
-                        audit_resource_id=invitation.id,  # type: ignore[arg-type]
-                        updated_by=user_id,
-                        updated_at=now,
-                        audit_information={
-                            "workspace_id": invitation.workspace_id,
-                            "user_id": user_id,
-                        },
-                        audit_extra_information="Invitation declined",
-                    )
-                )
-
                 return {"message": "Invitation declined"}
 
             finally:
@@ -533,22 +476,6 @@ class WorkspaceInvitationService:
                 invitation.deleted_at = now  # type: ignore[assignment]
                 session.commit()
 
-                # Audit log
-                audit_service.create_audit(
-                    AuditRequest(
-                        resource_type=ResourceType.WORKSPACE_INVITATION,
-                        audit_type=AuditEventType.INVITATION_CANCELLED,
-                        audit_resource_id=invitation.id,  # type: ignore[arg-type]
-                        deleted_by=canceller_id,
-                        deleted_at=now,
-                        audit_information={
-                            "workspace_id": invitation.workspace_id,
-                            "invitee_username": invitation.invitee_username,
-                        },
-                        audit_extra_information="Invitation cancelled",
-                    )
-                )
-
                 return {"message": "Invitation cancelled"}
 
             finally:
@@ -585,21 +512,6 @@ class WorkspaceInvitationService:
             for invitation in expired_invitations:
                 invitation.status = InvitationStatus.EXPIRED.value  # type: ignore[assignment]
                 invitation.responded_at = now  # type: ignore[assignment]
-
-                # Audit log
-                audit_service.create_audit(
-                    AuditRequest(
-                        resource_type=ResourceType.WORKSPACE_INVITATION,
-                        audit_type=AuditEventType.INVITATION_EXPIRED,
-                        audit_resource_id=invitation.id,  # type: ignore[arg-type]
-                        updated_at=now,
-                        audit_information={
-                            "workspace_id": invitation.workspace_id,
-                            "invitee_username": invitation.invitee_username,
-                        },
-                        audit_extra_information="Invitation expired automatically",
-                    )
-                )
 
             if expired_invitations:
                 session.commit()

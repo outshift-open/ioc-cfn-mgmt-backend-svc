@@ -2,39 +2,39 @@
 #
 # SPDX-License-Identifier: Apache-2.0
 
-"""Cognitive Engine service - Business logic for Cognitive Engine operations"""
+"""Cognition Engine service - Business logic for Cognition Engine operations"""
 
 from datetime import datetime, timezone
 
 from fastapi import HTTPException, status
 
 from server.database.relational_db.db import RelationalDB
-from server.database.relational_db.models.cognitive_engine import CognitiveEngine as CognitiveEngineModel
-from server.schemas.cognitive_engine import (
-    CognitiveEngineCreate,
-    CognitiveEngineDetail,
-    CognitiveEngineList,
-    CognitiveEngineListItem,
-    CognitiveEngineUpdate,
+from server.database.relational_db.models.cognition_engine import CognitionEngine as CognitionEngineModel
+from server.schemas.cognition_engine import (
+    CognitionEngineCreate,
+    CognitionEngineDetail,
+    CognitionEngineList,
+    CognitionEngineListItem,
+    CognitionEngineUpdate,
 )
 from server.services.workspace import workspace_service
 from server.utils import generate_uuid
 
 
-class CognitiveEngineService:
-    """Service layer for Cognitive Engine business logic"""
+class CognitionEngineService:
+    """Service layer for Cognition Engine business logic"""
 
-    def create(self, workspace_id: str, engine_data: CognitiveEngineCreate, user_id: str) -> CognitiveEngineDetail:
+    def create(self, workspace_id: str, engine_data: CognitionEngineCreate, user_id: str) -> CognitionEngineDetail:
         """
-        Create a new Cognitive Engine
+        Create a new Cognition Engine
 
         Args:
             workspace_id: Workspace identifier
-            engine_data: Cognitive engine creation data
+            engine_data: Cognition engine creation data
             user_id: ID of the user creating the engine
 
         Returns:
-            CognitiveEngineDetail with the created engine
+            CognitionEngineDetail with the created engine
 
         Raises:
             HTTPException: If engine with same name already exists in workspace or creation fails
@@ -53,11 +53,11 @@ class CognitiveEngineService:
             try:
                 # Check if engine with same name already exists in this workspace
                 existing_engine = (
-                    session.query(CognitiveEngineModel)
+                    session.query(CognitionEngineModel)
                     .filter(
-                        CognitiveEngineModel.workspace_id == workspace_id,
-                        CognitiveEngineModel.cognitive_engine_name == engine_data.cognitive_engine_name,
-                        CognitiveEngineModel.deleted_at.is_(None),
+                        CognitionEngineModel.workspace_id == workspace_id,
+                        CognitionEngineModel.cognition_engine_name == engine_data.cognition_engine_name,
+                        CognitionEngineModel.deleted_at.is_(None),
                     )
                     .first()
                 )
@@ -66,19 +66,19 @@ class CognitiveEngineService:
                     raise HTTPException(
                         status_code=status.HTTP_409_CONFLICT,
                         detail=(
-                            f"Cognitive engine with name '{engine_data.cognitive_engine_name}' "
+                            f"Cognition engine with name '{engine_data.cognition_engine_name}' "
                             f"already exists in this workspace"
                         ),
                     )
 
                 # Generate unique ID for the engine
-                cognitive_engine_id = generate_uuid()
+                cognition_engine_id = generate_uuid()
 
                 # Create new engine
-                new_engine = CognitiveEngineModel(
-                    cognitive_engine_id=cognitive_engine_id,
+                new_engine = CognitionEngineModel(
+                    cognition_engine_id=cognition_engine_id,
                     workspace_id=workspace_id,
-                    cognitive_engine_name=engine_data.cognitive_engine_name,
+                    cognition_engine_name=engine_data.cognition_engine_name,
                     config=engine_data.config,
                     enabled=True,
                     created_by=user_id,
@@ -89,14 +89,14 @@ class CognitiveEngineService:
                 session.refresh(new_engine)
 
                 # Update all CFN configs since engines are workspace-scoped
-                from server.services.cognition_fabric_node import cognitive_fabric_node_service
+                from server.services.cognition_fabric_node import cognition_fabric_node_service
 
-                cognitive_fabric_node_service.update_config_for_all_cfns()
+                cognition_fabric_node_service.update_config_for_all_cfns()
 
-                return CognitiveEngineDetail(
-                    cognitive_engine_id=new_engine.cognitive_engine_id,
+                return CognitionEngineDetail(
+                    cognition_engine_id=new_engine.cognition_engine_id,
                     workspace_id=new_engine.workspace_id,
-                    cognitive_engine_name=new_engine.cognitive_engine_name,
+                    cognition_engine_name=new_engine.cognition_engine_name,
                     config=new_engine.config,
                     enabled=new_engine.enabled,
                     created_at=new_engine.created_at,
@@ -113,19 +113,19 @@ class CognitiveEngineService:
         except Exception as e:
             raise HTTPException(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                detail=f"Failed to create cognitive engine: {str(e)}",
+                detail=f"Failed to create cognition engine: {str(e)}",
             )
 
-    def get(self, workspace_id: str, cognitive_engine_id: str) -> CognitiveEngineDetail:
+    def get(self, workspace_id: str, cognition_engine_id: str) -> CognitionEngineDetail:
         """
-        Get a specific Cognitive Engine by ID
+        Get a specific Cognition Engine by ID
 
         Args:
             workspace_id: Workspace identifier
-            cognitive_engine_id: ID of the cognitive engine
+            cognition_engine_id: ID of the cognition engine
 
         Returns:
-            CognitiveEngineDetail with the engine details
+            CognitionEngineDetail with the engine details
 
         Raises:
             HTTPException: If engine not found
@@ -143,11 +143,11 @@ class CognitiveEngineService:
 
             try:
                 engine = (
-                    session.query(CognitiveEngineModel)
+                    session.query(CognitionEngineModel)
                     .filter(
-                        CognitiveEngineModel.workspace_id == workspace_id,
-                        CognitiveEngineModel.cognitive_engine_id == cognitive_engine_id,
-                        CognitiveEngineModel.deleted_at.is_(None),
+                        CognitionEngineModel.workspace_id == workspace_id,
+                        CognitionEngineModel.cognition_engine_id == cognition_engine_id,
+                        CognitionEngineModel.deleted_at.is_(None),
                     )
                     .first()
                 )
@@ -155,13 +155,13 @@ class CognitiveEngineService:
                 if not engine:
                     raise HTTPException(
                         status_code=status.HTTP_404_NOT_FOUND,
-                        detail=f"Cognitive engine with ID '{cognitive_engine_id}' not found in this workspace",
+                        detail=f"Cognition engine with ID '{cognition_engine_id}' not found in this workspace",
                     )
 
-                return CognitiveEngineDetail(
-                    cognitive_engine_id=engine.cognitive_engine_id,
+                return CognitionEngineDetail(
+                    cognition_engine_id=engine.cognition_engine_id,
                     workspace_id=engine.workspace_id,
-                    cognitive_engine_name=engine.cognitive_engine_name,
+                    cognition_engine_name=engine.cognition_engine_name,
                     config=engine.config,
                     enabled=engine.enabled,
                     created_at=engine.created_at,
@@ -178,18 +178,18 @@ class CognitiveEngineService:
         except Exception as e:
             raise HTTPException(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                detail=f"Failed to get cognitive engine: {str(e)}",
+                detail=f"Failed to get cognition engine: {str(e)}",
             )
 
-    def list(self, workspace_id: str) -> CognitiveEngineList:
+    def list(self, workspace_id: str) -> CognitionEngineList:
         """
-        List all Cognitive Engines in workspace
+        List all Cognition Engines in workspace
 
         Args:
             workspace_id: Workspace identifier
 
         Returns:
-            CognitiveEngineList with engines and total count
+            CognitionEngineList with engines and total count
         """
         # Validate workspace exists
         if not workspace_service.exists(workspace_id):
@@ -205,20 +205,20 @@ class CognitiveEngineService:
             try:
                 # Query all enabled engines in workspace
                 engines = (
-                    session.query(CognitiveEngineModel)
+                    session.query(CognitionEngineModel)
                     .filter(
-                        CognitiveEngineModel.workspace_id == workspace_id,
-                        CognitiveEngineModel.deleted_at.is_(None),
-                        CognitiveEngineModel.enabled.is_(True),
+                        CognitionEngineModel.workspace_id == workspace_id,
+                        CognitionEngineModel.deleted_at.is_(None),
+                        CognitionEngineModel.enabled.is_(True),
                     )
                     .all()
                 )
 
                 engine_list = [
-                    CognitiveEngineListItem(
-                        cognitive_engine_id=engine.cognitive_engine_id,
+                    CognitionEngineListItem(
+                        cognition_engine_id=engine.cognition_engine_id,
                         workspace_id=engine.workspace_id,
-                        cognitive_engine_name=engine.cognitive_engine_name,
+                        cognition_engine_name=engine.cognition_engine_name,
                         config=engine.config,
                         enabled=engine.enabled,
                         created_at=engine.created_at.isoformat() if engine.created_at else None,
@@ -226,7 +226,7 @@ class CognitiveEngineService:
                     for engine in engines
                 ]
 
-                return CognitiveEngineList(engines=engine_list, total=len(engine_list))
+                return CognitionEngineList(engines=engine_list, total=len(engine_list))
 
             finally:
                 session.close()
@@ -236,23 +236,23 @@ class CognitiveEngineService:
         except Exception as e:
             raise HTTPException(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                detail=f"Failed to list cognitive engines: {str(e)}",
+                detail=f"Failed to list cognition engines: {str(e)}",
             )
 
     def update(
-        self, workspace_id: str, cognitive_engine_id: str, update_data: CognitiveEngineUpdate, user_id: str
-    ) -> CognitiveEngineDetail:
+        self, workspace_id: str, cognition_engine_id: str, update_data: CognitionEngineUpdate, user_id: str
+    ) -> CognitionEngineDetail:
         """
-        Update a Cognitive Engine
+        Update a Cognition Engine
 
         Args:
             workspace_id: Workspace identifier
-            cognitive_engine_id: ID of the cognitive engine to update
-            update_data: Cognitive engine update data
+            cognition_engine_id: ID of the cognition engine to update
+            update_data: Cognition engine update data
             user_id: ID of the user updating the engine
 
         Returns:
-            CognitiveEngineDetail with the updated engine
+            CognitionEngineDetail with the updated engine
 
         Raises:
             HTTPException: If engine not found or update fails
@@ -270,11 +270,11 @@ class CognitiveEngineService:
 
             try:
                 engine = (
-                    session.query(CognitiveEngineModel)
+                    session.query(CognitionEngineModel)
                     .filter(
-                        CognitiveEngineModel.workspace_id == workspace_id,
-                        CognitiveEngineModel.cognitive_engine_id == cognitive_engine_id,
-                        CognitiveEngineModel.deleted_at.is_(None),
+                        CognitionEngineModel.workspace_id == workspace_id,
+                        CognitionEngineModel.cognition_engine_id == cognition_engine_id,
+                        CognitionEngineModel.deleted_at.is_(None),
                     )
                     .first()
                 )
@@ -282,12 +282,12 @@ class CognitiveEngineService:
                 if not engine:
                     raise HTTPException(
                         status_code=status.HTTP_404_NOT_FOUND,
-                        detail=f"Cognitive engine with ID '{cognitive_engine_id}' not found in this workspace",
+                        detail=f"Cognition engine with ID '{cognition_engine_id}' not found in this workspace",
                     )
 
                 # Update fields if provided
-                if update_data.cognitive_engine_name is not None:
-                    engine.cognitive_engine_name = update_data.cognitive_engine_name
+                if update_data.cognition_engine_name is not None:
+                    engine.cognition_engine_name = update_data.cognition_engine_name
                 if update_data.config is not None:
                     engine.config = update_data.config
                 if update_data.enabled is not None:
@@ -300,14 +300,14 @@ class CognitiveEngineService:
                 session.refresh(engine)
 
                 # Update all CFN configs since engines are workspace-scoped
-                from server.services.cognition_fabric_node import cognitive_fabric_node_service
+                from server.services.cognition_fabric_node import cognition_fabric_node_service
 
-                cognitive_fabric_node_service.update_config_for_all_cfns()
+                cognition_fabric_node_service.update_config_for_all_cfns()
 
-                return CognitiveEngineDetail(
-                    cognitive_engine_id=engine.cognitive_engine_id,
+                return CognitionEngineDetail(
+                    cognition_engine_id=engine.cognition_engine_id,
                     workspace_id=engine.workspace_id,
-                    cognitive_engine_name=engine.cognitive_engine_name,
+                    cognition_engine_name=engine.cognition_engine_name,
                     config=engine.config,
                     enabled=engine.enabled,
                     created_at=engine.created_at,
@@ -324,16 +324,16 @@ class CognitiveEngineService:
         except Exception as e:
             raise HTTPException(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                detail=f"Failed to update cognitive engine: {str(e)}",
+                detail=f"Failed to update cognition engine: {str(e)}",
             )
 
-    def delete(self, workspace_id: str, cognitive_engine_id: str, user_id: str) -> dict:
+    def delete(self, workspace_id: str, cognition_engine_id: str, user_id: str) -> dict:
         """
-        Soft delete a Cognitive Engine
+        Soft delete a Cognition Engine
 
         Args:
             workspace_id: Workspace identifier
-            cognitive_engine_id: ID of the cognitive engine to delete
+            cognition_engine_id: ID of the cognition engine to delete
             user_id: ID of the user deleting the engine
 
         Returns:
@@ -355,11 +355,11 @@ class CognitiveEngineService:
 
             try:
                 engine = (
-                    session.query(CognitiveEngineModel)
+                    session.query(CognitionEngineModel)
                     .filter(
-                        CognitiveEngineModel.workspace_id == workspace_id,
-                        CognitiveEngineModel.cognitive_engine_id == cognitive_engine_id,
-                        CognitiveEngineModel.deleted_at.is_(None),
+                        CognitionEngineModel.workspace_id == workspace_id,
+                        CognitionEngineModel.cognition_engine_id == cognition_engine_id,
+                        CognitionEngineModel.deleted_at.is_(None),
                     )
                     .first()
                 )
@@ -367,7 +367,7 @@ class CognitiveEngineService:
                 if not engine:
                     raise HTTPException(
                         status_code=status.HTTP_404_NOT_FOUND,
-                        detail=f"Cognitive engine with ID '{cognitive_engine_id}' not found in this workspace",
+                        detail=f"Cognition engine with ID '{cognition_engine_id}' not found in this workspace",
                     )
 
                 # Soft delete by setting deleted_at timestamp
@@ -378,13 +378,13 @@ class CognitiveEngineService:
                 session.commit()
 
                 # Update all CFN configs since engines are workspace-scoped
-                from server.services.cognition_fabric_node import cognitive_fabric_node_service
+                from server.services.cognition_fabric_node import cognition_fabric_node_service
 
-                cognitive_fabric_node_service.update_config_for_all_cfns()
+                cognition_fabric_node_service.update_config_for_all_cfns()
 
                 return {
-                    "message": f"Cognitive engine '{cognitive_engine_id}' deleted successfully",
-                    "cognitive_engine_id": cognitive_engine_id,
+                    "message": f"Cognition engine '{cognition_engine_id}' deleted successfully",
+                    "cognition_engine_id": cognition_engine_id,
                 }
 
             finally:
@@ -395,9 +395,9 @@ class CognitiveEngineService:
         except Exception as e:
             raise HTTPException(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                detail=f"Failed to delete cognitive engine: {str(e)}",
+                detail=f"Failed to delete cognition engine: {str(e)}",
             )
 
 
 # Singleton instance
-cognitive_engine_service = CognitiveEngineService()
+cognition_engine_service = CognitionEngineService()

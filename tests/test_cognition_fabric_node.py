@@ -2,7 +2,7 @@
 #
 # SPDX-License-Identifier: Apache-2.0
 
-"""Tests for Cognitive Fabric Node endpoints
+"""Tests for Cognition Fabric Node endpoints
 
 CFN endpoints are global (cross-workspace) resources at /api/cognition-fabric-nodes.
 workspace_id is passed in the request body for create, and as a query param for list.
@@ -15,8 +15,8 @@ import pytest
 from fastapi.testclient import TestClient
 
 
-class TestCognitiveFabricNodeCreate:
-    """Test cases for Cognitive Fabric Node registration"""
+class TestCognitionFabricNodeCreate:
+    """Test cases for Cognition Fabric Node registration"""
 
     def test_create_cfn_success(self, client):
         """Test successful CFN registration"""
@@ -133,8 +133,8 @@ class TestCognitiveFabricNodeCreate:
         assert response.status_code == 404
 
 
-class TestCognitiveFabricNodeHeartbeat:
-    """Test cases for Cognitive Fabric Node heartbeat"""
+class TestCognitionFabricNodeHeartbeat:
+    """Test cases for Cognition Fabric Node heartbeat"""
 
     def test_cfn_heartbeat_success(self, client, created_cfn):
         """Test successful CFN heartbeat"""
@@ -166,8 +166,8 @@ class TestCognitiveFabricNodeHeartbeat:
         assert response.status_code == 404
 
 
-class TestCognitiveFabricNodeList:
-    """Test cases for listing Cognitive Fabric Nodes"""
+class TestCognitionFabricNodeList:
+    """Test cases for listing Cognition Fabric Nodes"""
 
     def test_list_cfn_nodes_empty(self, client):
         """Test listing CFN nodes in empty workspace"""
@@ -340,8 +340,8 @@ class TestCognitiveFabricNodeList:
         assert cfn3_id not in cfn_ids  # Not associated with workspace
 
 
-class TestCognitiveFabricNodeGet:
-    """Test cases for getting Cognitive Fabric Node details"""
+class TestCognitionFabricNodeGet:
+    """Test cases for getting Cognition Fabric Node details"""
 
     def test_get_cfn_details(self, client, created_cfn):
         """Test getting CFN node details"""
@@ -392,8 +392,8 @@ class TestCognitiveFabricNodeGet:
         assert ws2_id not in data["workspace_ids"]
 
 
-class TestCognitiveFabricNodeUpdate:
-    """Test cases for updating Cognitive Fabric Node"""
+class TestCognitionFabricNodeUpdate:
+    """Test cases for updating Cognition Fabric Node"""
 
     def test_update_cfn_name(self, client, created_cfn):
         """Test updating CFN name"""
@@ -452,8 +452,8 @@ class TestCognitiveFabricNodeUpdate:
         assert response.status_code == 404
 
 
-class TestCognitiveFabricNodeDisable:
-    """Test cases for Cognitive Fabric Node disable operation"""
+class TestCognitionFabricNodeDisable:
+    """Test cases for Cognition Fabric Node disable operation"""
 
     def test_disable_cfn(self, client, created_cfn):
         """Test disabling CFN node"""
@@ -492,8 +492,8 @@ class TestCognitiveFabricNodeDisable:
         assert response.status_code == 404
 
 
-class TestCognitiveFabricNodeDelete:
-    """Test cases for Cognitive Fabric Node deregistration (hard delete)"""
+class TestCognitionFabricNodeDelete:
+    """Test cases for Cognition Fabric Node deregistration (hard delete)"""
 
     def test_delete_cfn(self, client, created_cfn):
         """Test deregistering CFN node (must disable first)"""
@@ -561,8 +561,8 @@ class TestCognitiveFabricNodeDelete:
         assert response2.json()["cfn_name"] == "test-node-1"
 
 
-class TestCognitiveFabricNodeEnableDisable:
-    """Test cases for Cognitive Fabric Node enable/disable operations"""
+class TestCognitionFabricNodeEnableDisable:
+    """Test cases for Cognition Fabric Node enable/disable operations"""
 
     def test_disabled_cfn_cannot_auto_reenable(self, client):
         """Test that disabled CFN CANNOT auto re-enable via /register"""
@@ -841,14 +841,14 @@ class TestCognitiveFabricNodeEnableDisable:
         assert response2.json()["status"] == "offline"  # Offline until heartbeat
 
 
-class TestCognitiveFabricNodeBackgroundMonitoring:
+class TestCognitionFabricNodeBackgroundMonitoring:
     """Test cases for CFN background monitoring (marking stale nodes offline)"""
 
     def test_mark_stale_nodes_offline(self, client):
         """Test that stale nodes are marked offline"""
         # This test would require mocking time or waiting
         # For now, we'll test the service method directly
-        from server.services.cognition_fabric_node import cognitive_fabric_node_service
+        from server.services.cognition_fabric_node import cognition_fabric_node_service
 
         # Register CFN
         register_response = client.post(
@@ -870,7 +870,7 @@ class TestCognitiveFabricNodeBackgroundMonitoring:
 
         # Manually call mark_stale_nodes_offline with 0 minute threshold
         # (should mark the online node as offline immediately since last_seen is in the past)
-        count = cognitive_fabric_node_service.mark_stale_nodes_offline(threshold_minutes=0)
+        count = cognition_fabric_node_service.mark_stale_nodes_offline(threshold_minutes=0)
 
         # Should mark at least one node as offline
         assert count >= 1
@@ -881,7 +881,7 @@ class TestCognitiveFabricNodeBackgroundMonitoring:
         assert response.json()["status"] == "offline"
 
 
-class TestCognitiveFabricNodeConfigTimestamp:
+class TestCognitionFabricNodeConfigTimestamp:
     """Test cases for config_timestamp functionality"""
 
     def test_config_timestamp_returned_in_heartbeat(self, client, created_cfn):

@@ -19,12 +19,6 @@ from server.schemas.workspace_member import (
     WorkspaceMemberList,
     WorkspaceRole,
 )
-from server.services.audit import (
-    AuditEventType,
-    AuditRequest,
-    ResourceType,
-    audit_service,
-)
 from server.utils import generate_uuid
 
 logger = logging.getLogger(__name__)
@@ -87,19 +81,6 @@ class WorkspaceMemberService:
                 session.commit()
                 session.refresh(new_member)
 
-                # Audit log
-                audit_service.create_audit(
-                    AuditRequest(
-                        resource_type=ResourceType.WORKSPACE_MEMBER,
-                        audit_type=AuditEventType.MEMBER_ADDED,
-                        audit_resource_id=new_member.id,  # type: ignore[arg-type]
-                        created_by=created_by or "",
-                        created_at=new_member.joined_at,  # type: ignore[arg-type]
-                        audit_information={"workspace_id": workspace_id, "user_id": user_id, "role": role},
-                        audit_extra_information="Member added successfully",
-                    )
-                )
-
                 # Check if user is the workspace creator
                 from server.database.relational_db.models.workspace import Workspace as WorkspaceModel
 
@@ -158,19 +139,6 @@ class WorkspaceMemberService:
 
                 session.commit()
 
-                # Audit log
-                audit_service.create_audit(
-                    AuditRequest(
-                        resource_type=ResourceType.WORKSPACE_MEMBER,
-                        audit_type=AuditEventType.MEMBER_REMOVED,
-                        audit_resource_id=member.id,  # type: ignore[arg-type]
-                        deleted_by=removed_by or "",
-                        deleted_at=member.deleted_at,  # type: ignore[arg-type]
-                        audit_information={"workspace_id": workspace_id, "user_id": user_id},
-                        audit_extra_information="Member removed successfully",
-                    )
-                )
-
                 return {"message": "Member removed successfully"}
 
             finally:
@@ -212,7 +180,6 @@ class WorkspaceMemberService:
                         detail="Member not found in workspace",
                     )
 
-                old_role = member.role
                 member.role = new_role  # type: ignore[assignment]
 
                 session.commit()
@@ -220,24 +187,6 @@ class WorkspaceMemberService:
 
                 # Get username
                 user = session.query(UserModel).filter(UserModel.id == user_id).first()
-
-                # Audit log
-                audit_service.create_audit(
-                    AuditRequest(
-                        resource_type=ResourceType.WORKSPACE_MEMBER,
-                        audit_type=AuditEventType.MEMBER_ROLE_UPDATED,
-                        audit_resource_id=member.id,  # type: ignore[arg-type]
-                        updated_by=updated_by or "",
-                        updated_at=datetime.now(timezone.utc),
-                        audit_information={
-                            "workspace_id": workspace_id,
-                            "user_id": user_id,
-                            "old_role": old_role,
-                            "new_role": new_role,
-                        },
-                        audit_extra_information="Member role updated successfully",
-                    )
-                )
 
                 # Check if user is the workspace creator
                 from server.database.relational_db.models.workspace import Workspace as WorkspaceModel

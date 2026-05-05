@@ -76,9 +76,7 @@ def list_audit_events(
     except CfnUpstreamError as exc:
         return JSONResponse(status_code=exc.status_code, content=exc.detail)
     except Exception as e:
-        return JSONResponse(
-            status_code=500, content={"error": f"failed to list audit events: {str(e)}"}
-        )
+        return JSONResponse(status_code=500, content={"error": f"failed to list audit events: {str(e)}"})
 
 
 @router.get(
@@ -103,9 +101,7 @@ def get_audit_event(eventId: str):
     try:
         audit_event = audit_cfn_event_service.get_audit_event(eventId)
         if not audit_event:
-            return JSONResponse(
-                status_code=404, content={"error": "audit event not found"}
-            )
+            return JSONResponse(status_code=404, content={"error": "audit event not found"})
         return JSONResponse(content=audit_event)
     except CfnUpstreamError as exc:
         return JSONResponse(status_code=exc.status_code, content=exc.detail)

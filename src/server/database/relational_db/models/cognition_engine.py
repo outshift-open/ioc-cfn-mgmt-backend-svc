@@ -2,7 +2,7 @@
 #
 # SPDX-License-Identifier: Apache-2.0
 
-"""Cognitive Agent database model"""
+"""Cognition Engine database model"""
 
 from datetime import datetime, timezone
 
@@ -12,16 +12,15 @@ from sqlalchemy.dialects.postgresql import JSONB
 from server.database.relational_db.models import Base
 
 
-class CognitiveAgent(Base):
-    """Cognitive Agent model - represents a cognitive agent in a workspace"""
+class CognitionEngine(Base):
+    """Cognition Engine model - represents a cognition processing engine"""
 
-    __tablename__ = "cognitive_agent"
+    __tablename__ = "cognition_engine"
 
-    cognitive_agent_id = Column(String(255), primary_key=True, nullable=False)
+    cognition_engine_id = Column(String(255), primary_key=True, nullable=False)
     workspace_id = Column(String(36), nullable=False, index=True)
-    cognitive_agent_name = Column(String(255), nullable=False)
-    description = Column(String(1000), nullable=True)
-    config = Column(JSONB, nullable=True)  # Agent-specific configuration
+    cognition_engine_name = Column(String(255), nullable=False)
+    config = Column(JSONB, nullable=True)  # Engine-specific configuration (host, port, etc.)
     enabled = Column(Boolean, nullable=False, default=True)
     created_at = Column(TIMESTAMP, nullable=False, default=lambda: datetime.now(timezone.utc))
     updated_at = Column(TIMESTAMP, nullable=True, onupdate=func.now())
@@ -31,6 +30,6 @@ class CognitiveAgent(Base):
 
     def __repr__(self):
         return (
-            f"<CognitiveAgent(cognitive_agent_id={self.cognitive_agent_id}, "
-            f"workspace_id={self.workspace_id}, name={self.cognitive_agent_name})>"
+            f"<CognitionEngine(cognition_engine_id={self.cognition_engine_id}, "
+            f"workspace_id={self.workspace_id}, name={self.cognition_engine_name})>"
         )
