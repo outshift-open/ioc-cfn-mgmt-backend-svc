@@ -56,7 +56,7 @@ class CognitionEngineService:
                     session.query(CognitionEngineModel)
                     .filter(
                         CognitionEngineModel.workspace_id == workspace_id,
-                        CognitionEngineModel.cognition_engine_name == engine_data.cognition_engine_name,
+                        CognitionEngineModel.name == engine_data.name,
                         CognitionEngineModel.deleted_at.is_(None),
                     )
                     .first()
@@ -66,7 +66,7 @@ class CognitionEngineService:
                     raise HTTPException(
                         status_code=status.HTTP_409_CONFLICT,
                         detail=(
-                            f"Cognition engine with name '{engine_data.cognition_engine_name}' "
+                            f"Cognition engine with name '{engine_data.name}' "
                             f"already exists in this workspace"
                         ),
                     )
@@ -76,9 +76,9 @@ class CognitionEngineService:
 
                 # Create new engine
                 new_engine = CognitionEngineModel(
-                    cognition_engine_id=cognition_engine_id,
+                    id=cognition_engine_id,
                     workspace_id=workspace_id,
-                    cognition_engine_name=engine_data.cognition_engine_name,
+                    name=engine_data.name,
                     config=engine_data.config,
                     enabled=True,
                     created_by=user_id,
@@ -94,9 +94,9 @@ class CognitionEngineService:
                 cognition_fabric_node_service.update_config_for_all_cfns()
 
                 return CognitionEngineDetail(
-                    cognition_engine_id=new_engine.cognition_engine_id,
+                    id=new_engine.id,
                     workspace_id=new_engine.workspace_id,
-                    cognition_engine_name=new_engine.cognition_engine_name,
+                    name=new_engine.name,
                     config=new_engine.config,
                     enabled=new_engine.enabled,
                     created_at=new_engine.created_at,
@@ -146,7 +146,7 @@ class CognitionEngineService:
                     session.query(CognitionEngineModel)
                     .filter(
                         CognitionEngineModel.workspace_id == workspace_id,
-                        CognitionEngineModel.cognition_engine_id == cognition_engine_id,
+                        CognitionEngineModel.id == cognition_engine_id,
                         CognitionEngineModel.deleted_at.is_(None),
                     )
                     .first()
@@ -159,9 +159,9 @@ class CognitionEngineService:
                     )
 
                 return CognitionEngineDetail(
-                    cognition_engine_id=engine.cognition_engine_id,
+                    id=engine.id,
                     workspace_id=engine.workspace_id,
-                    cognition_engine_name=engine.cognition_engine_name,
+                    name=engine.name,
                     config=engine.config,
                     enabled=engine.enabled,
                     created_at=engine.created_at,
@@ -216,9 +216,9 @@ class CognitionEngineService:
 
                 engine_list = [
                     CognitionEngineListItem(
-                        cognition_engine_id=engine.cognition_engine_id,
+                        id=engine.id,
                         workspace_id=engine.workspace_id,
-                        cognition_engine_name=engine.cognition_engine_name,
+                        name=engine.name,
                         config=engine.config,
                         enabled=engine.enabled,
                         created_at=engine.created_at.isoformat() if engine.created_at else None,
@@ -273,7 +273,7 @@ class CognitionEngineService:
                     session.query(CognitionEngineModel)
                     .filter(
                         CognitionEngineModel.workspace_id == workspace_id,
-                        CognitionEngineModel.cognition_engine_id == cognition_engine_id,
+                        CognitionEngineModel.id == cognition_engine_id,
                         CognitionEngineModel.deleted_at.is_(None),
                     )
                     .first()
@@ -286,8 +286,8 @@ class CognitionEngineService:
                     )
 
                 # Update fields if provided
-                if update_data.cognition_engine_name is not None:
-                    engine.cognition_engine_name = update_data.cognition_engine_name
+                if update_data.name is not None:
+                    engine.name = update_data.name
                 if update_data.config is not None:
                     engine.config = update_data.config
                 if update_data.enabled is not None:
@@ -305,9 +305,9 @@ class CognitionEngineService:
                 cognition_fabric_node_service.update_config_for_all_cfns()
 
                 return CognitionEngineDetail(
-                    cognition_engine_id=engine.cognition_engine_id,
+                    id=engine.id,
                     workspace_id=engine.workspace_id,
-                    cognition_engine_name=engine.cognition_engine_name,
+                    name=engine.name,
                     config=engine.config,
                     enabled=engine.enabled,
                     created_at=engine.created_at,
@@ -358,7 +358,7 @@ class CognitionEngineService:
                     session.query(CognitionEngineModel)
                     .filter(
                         CognitionEngineModel.workspace_id == workspace_id,
-                        CognitionEngineModel.cognition_engine_id == cognition_engine_id,
+                        CognitionEngineModel.id == cognition_engine_id,
                         CognitionEngineModel.deleted_at.is_(None),
                     )
                     .first()
@@ -384,7 +384,7 @@ class CognitionEngineService:
 
                 return {
                     "message": f"Cognition engine '{cognition_engine_id}' deleted successfully",
-                    "cognition_engine_id": cognition_engine_id,
+                    "id": cognition_engine_id,
                 }
 
             finally:

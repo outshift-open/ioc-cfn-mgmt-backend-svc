@@ -22,7 +22,7 @@ class CognitionFabricNodeRegisterRequest(BaseModel):
     model_config = ConfigDict(
         json_schema_extra={
             "example": {
-                "cfn_name": "cfn-node-prod-1",
+                "name": "cfn-node-prod-1",
                 "cfn_config": {"log_level": "info"},
                 "ip_address": "192.168.1.100",
                 "port": 8080,
@@ -30,7 +30,7 @@ class CognitionFabricNodeRegisterRequest(BaseModel):
         }
     )
 
-    cfn_name: str = Field(
+    name: str = Field(
         ...,
         description="Human-readable CFN name (unique identifier)",
         min_length=1,
@@ -59,7 +59,7 @@ class CognitionFabricNodeUpdateRequest(BaseModel):
     model_config = ConfigDict(
         json_schema_extra={
             "example": {
-                "cfn_name": "cfn-node-prod-1-updated",
+                "name": "cfn-node-prod-1-updated",
                 "cfn_config": {"log_level": "debug"},
                 "ip_address": "192.168.1.101",
                 "port": 8081,
@@ -67,7 +67,7 @@ class CognitionFabricNodeUpdateRequest(BaseModel):
         }
     )
 
-    cfn_name: Optional[str] = Field(
+    name: Optional[str] = Field(
         None,
         description="Updated CFN name",
         min_length=1,
@@ -96,9 +96,9 @@ class CognitionFabricNodeResponse(BaseModel):
     model_config = ConfigDict(
         json_schema_extra={
             "example": {
-                "cfn_id": "cfn-persistent-id-123",
+                "id": "cfn-persistent-id-123",
                 "workspace_ids": [],
-                "cfn_name": "cfn-node-prod-1",
+                "name": "cfn-node-prod-1",
                 "config": {
                     "workspaces": [],
                     "memory_providers": [],
@@ -114,9 +114,9 @@ class CognitionFabricNodeResponse(BaseModel):
         }
     )
 
-    cfn_id: str = Field(..., description="Cognition Fabric Node identifier")
+    id: str = Field(..., description="Cognition Fabric Node identifier")
     workspace_ids: List[str] = Field(default_factory=list, description="Associated workspace identifiers")
-    cfn_name: str = Field(..., description="Cognition Fabric Node name")
+    name: str = Field(..., description="Cognition Fabric Node name")
     config: Optional[Dict[str, Any]] = Field(None, description="Aggregated configuration including cfn_config")
     status: CognitionFabricNodeStatus = Field(..., description="Current node status")
     last_seen: datetime = Field(..., description="Last heartbeat timestamp")
@@ -135,9 +135,9 @@ class CognitionFabricNodeListItem(BaseModel):
     model_config = ConfigDict(
         json_schema_extra={
             "example": {
-                "cfn_id": "cfn-persistent-id-123",
+                "id": "cfn-persistent-id-123",
                 "workspace_ids": ["workspace-uuid-1"],
-                "cfn_name": "cfn-node-prod-1",
+                "name": "cfn-node-prod-1",
                 "status": "online",
                 "last_seen": "2026-01-30T12:34:56Z",
                 "enabled": True,
@@ -146,9 +146,9 @@ class CognitionFabricNodeListItem(BaseModel):
         }
     )
 
-    cfn_id: str = Field(..., description="Cognition Fabric Node identifier")
+    id: str = Field(..., description="Cognition Fabric Node identifier")
     workspace_ids: List[str] = Field(default_factory=list, description="Associated workspace identifiers")
-    cfn_name: str = Field(..., description="Cognition Fabric Node name")
+    name: str = Field(..., description="Cognition Fabric Node name")
     status: CognitionFabricNodeStatus = Field(..., description="Current node status")
     last_seen: datetime = Field(..., description="Last heartbeat timestamp")
     enabled: bool = Field(..., description="Whether node is enabled")
@@ -163,9 +163,9 @@ class CognitionFabricNodeList(BaseModel):
             "example": {
                 "nodes": [
                     {
-                        "cfn_id": "cfn-persistent-id-123",
+                        "id": "cfn-persistent-id-123",
                         "workspace_ids": ["workspace-uuid-1"],
-                        "cfn_name": "cfn-node-prod-1",
+                        "name": "cfn-node-prod-1",
                         "status": "online",
                         "last_seen": "2026-01-30T12:34:56Z",
                         "enabled": True,

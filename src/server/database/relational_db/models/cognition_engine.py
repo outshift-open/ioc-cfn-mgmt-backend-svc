@@ -17,9 +17,9 @@ class CognitionEngine(Base):
 
     __tablename__ = "cognition_engine"
 
-    cognition_engine_id = Column(String(255), primary_key=True, nullable=False)
+    id = Column(String(255), primary_key=True, nullable=False)
     workspace_id = Column(String(36), nullable=False, index=True)
-    cognition_engine_name = Column(String(255), nullable=False)
+    name = Column(String(255), nullable=False)
     config = Column(JSONB, nullable=True)  # Engine-specific configuration (host, port, etc.)
     enabled = Column(Boolean, nullable=False, default=True)
     created_at = Column(TIMESTAMP, nullable=False, default=lambda: datetime.now(timezone.utc))
@@ -29,7 +29,4 @@ class CognitionEngine(Base):
     deleted_at = Column(TIMESTAMP, nullable=True)
 
     def __repr__(self):
-        return (
-            f"<CognitionEngine(cognition_engine_id={self.cognition_engine_id}, "
-            f"workspace_id={self.workspace_id}, name={self.cognition_engine_name})>"
-        )
+        return f"<CognitionEngine(id={self.id}, workspace_id={self.workspace_id}, name={self.name})>"

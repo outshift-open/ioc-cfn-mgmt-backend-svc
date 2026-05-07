@@ -40,17 +40,17 @@ def create_cfn_node(
     """
     Register a new CFN node
 
-    - **cfn_id**: Persistent CFN identifier (provided by CFN, immutable)
-    - **cfn_name**: Human-readable CFN name (globally unique, can be updated later)
+    - **id**: Persistent CFN identifier (provided by CFN, immutable)
+    - **name**: Human-readable CFN name (globally unique, can be updated later)
     - **cfn_config**: Optional current CFN configuration
 
-    CFN is identifies to the management plane.
+    CFN identifies to the management plane.
     Registration creates the CFN record without workspace association.
     Workspace association happens during workspace creation.
 
     **Response includes:**
-    - **cfn_id**: The CFN identifier
-    - **cfn_name**: The CFN name
+    - **id**: The CFN identifier
+    - **name**: The CFN name
     - **status**: Current status (offline)
     - **config**: Configuration for the CFN to apply locally
       - cognition_fabric_node: CFN-specific operational settings (non-workspace scoped)
@@ -64,23 +64,23 @@ def create_cfn_node(
 
 
 @router.put(
-    "/cognition-fabric-nodes/{cfn_id}",
+    "/cognition-fabric-nodes/{id}",
     response_model=CognitionFabricNodeResponse,
 )
 def update_cfn_node(
-    cfn_id: str,
+    id: str,
     cfn_data: CognitionFabricNodeUpdateRequest,
     auth_user: dict = Depends(get_auth_user),
 ):
     """
     Update CFN node information
 
-    - **cfn_id**: CFN identifier (immutable)
-    - **cfn_name**: Optional updated CFN name (globally unique)
+    - **id**: CFN identifier (immutable)
+    - **name**: Optional updated CFN name (globally unique)
     - **cfn_config**: Optional updated CFN configuration
 
     **Response includes:**
-    - Full CFN details (cfn_id, workspace_ids, cfn_name, cfn_config, status, last_seen, enabled, timestamps)
+    - Full CFN details (id, workspace_ids, name, cfn_config, status, last_seen, enabled, timestamps)
     - **config**: Regenerated configuration for the CFN to apply
       - cognition_fabric_node: CFN-specific operational settings
       - memory_providers: Global memory providers
@@ -89,21 +89,21 @@ def update_cfn_node(
     The config is automatically regenerated with each update to ensure CFN has the latest configuration.
     """
     authz_service.require_permission(auth_user, "update", "cognition_fabric_node")
-    return cognition_fabric_node_service.update(cfn_id, cfn_data, auth_user["id"])
+    return cognition_fabric_node_service.update(id, cfn_data, auth_user["id"])
 
 
 @router.patch(
-    "/cognition-fabric-nodes/{cfn_id}/enable",
+    "/cognition-fabric-nodes/{id}/enable",
     response_model=CognitionFabricNodeResponse,
 )
 def enable_cfn_node(
-    cfn_id: str,
+    id: str,
     auth_user: dict = Depends(get_auth_user),
 ):
     """
     Enable a disabled CFN node
 
-    - **cfn_id**: CFN identifier
+    - **id**: CFN identifier
 
     This is an admin operation to re-enable a disabled CFN.
     After enabling, the CFN can call /register to reconnect and resume operations.
@@ -116,21 +116,21 @@ def enable_cfn_node(
       - workspaces: List of workspace details with MAS, cognitive agents, engines
     """
     authz_service.require_permission(auth_user, "enable", "cognition_fabric_node")
-    return cognition_fabric_node_service.enable(cfn_id, auth_user["id"])
+    return cognition_fabric_node_service.enable(id, auth_user["id"])
 
 
 @router.patch(
-    "/cognition-fabric-nodes/{cfn_id}/disable",
+    "/cognition-fabric-nodes/{id}/disable",
     response_model=CognitionFabricNodeResponse,
 )
 def disable_cfn_node(
-    cfn_id: str,
+    id: str,
     auth_user: dict = Depends(get_auth_user),
 ):
     """
     Disable CFN node (soft disable, prepares for deletion)
 
-    - **cfn_id**: CFN identifier
+    - **id**: CFN identifier
 
     Disabling a CFN stops heartbeats and prepares it for deletion.
     The CFN will no longer be able to send heartbeats.
@@ -145,21 +145,21 @@ def disable_cfn_node(
     - **config**: Configuration (preserved from last state)
     """
     authz_service.require_permission(auth_user, "disable", "cognition_fabric_node")
-    return cognition_fabric_node_service.disable(cfn_id, auth_user["id"])
+    return cognition_fabric_node_service.disable(id, auth_user["id"])
 
 
 @router.delete(
-    "/cognition-fabric-nodes/{cfn_id}",
+    "/cognition-fabric-nodes/{id}",
     status_code=status.HTTP_204_NO_CONTENT,
 )
 def delete_cfn_node(
-    cfn_id: str,
+    id: str,
     auth_user: dict = Depends(get_auth_user),
 ):
     """
     Delete CFN node (hard delete)
 
-    - **cfn_id**: CFN identifier
+    - **id**: CFN identifier
 
     **IMPORTANT:** A CFN must be disabled first before it can be deleted.
 
@@ -176,34 +176,34 @@ def delete_cfn_node(
     No response body (204 No Content).
     """
     authz_service.require_permission(auth_user, "delete", "cognition_fabric_node")
-    cognition_fabric_node_service.delete(cfn_id, auth_user["id"])
+    cognition_fabric_node_service.delete(id, auth_user["id"])
     return None
 
 
 @router.put(
-    "/cognition-fabric-nodes/{cfn_id}/heartbeat",
+    "/cognition-fabric-nodes/{id}/heartbeat",
     response_model=CognitionFabricNodeHeartbeatResponse,
 )
 def cfn_heartbeat(
-    cfn_id: str,
+    id: str,
     auth_user: dict = Depends(get_auth_user),
 ):
     """
     CFN heartbeat endpoint - updates last_seen timestamp and returns config_timestamp
 
-    - **cfn_id**: CFN identifier
+    - **id**: CFN identifier
 
     CFN nodes call this periodically (e.g., every 30 seconds) to indicate they are online.
     Returns the current status, last_seen timestamp, and config_timestamp.
 
     CFN compares the returned config_timestamp with its stored value.
-    If timestamps differ, CFN should call GET /cognition-fabric-nodes/{cfn_id} to fetch updated config.
+    If timestamps differ, CFN should call GET /cognition-fabric-nodes/{id} to fetch updated config.
 
     Note: This endpoint requires authentication but not write access.
     Disabled or deleted nodes will receive 403 Forbidden.
     """
     authz_service.require_permission(auth_user, "heartbeat", "cognition_fabric_node")
-    return cognition_fabric_node_service.heartbeat(cfn_id)
+    return cognition_fabric_node_service.heartbeat(id)
 
 
 @router.get(
@@ -228,20 +228,20 @@ def list_cfn_nodes(
 
 
 @router.get(
-    "/cognition-fabric-nodes/{cfn_id}",
+    "/cognition-fabric-nodes/{id}",
     response_model=CognitionFabricNodeResponse,
 )
 def get_cfn_node(
-    cfn_id: str,
+    id: str,
     auth_user: dict = Depends(get_auth_user),
 ):
     """
     Get detailed CFN node information
 
-    - **cfn_id**: CFN identifier
+    - **id**: CFN identifier
 
     Returns full CFN details including:
-    - cfn_id, cfn_name
+    - id, name
     - workspace_ids (all associated workspaces)
     - cfn_config (node-reported configuration)
     - config (aggregated configuration to be applied)
@@ -253,21 +253,21 @@ def get_cfn_node(
     Deleted CFNs will return 404 Not Found.
     """
     authz_service.require_permission(auth_user, "get", "cognition_fabric_node")
-    return cognition_fabric_node_service.get(cfn_id)
+    return cognition_fabric_node_service.get(id)
 
 
 @router.get(
-    "/cognition-fabric-nodes/{cfn_id}/summary",
+    "/cognition-fabric-nodes/{id}/summary",
     response_model=CognitionFabricNodeSummaryResponse,
 )
 def get_cfn_node_summary(
-    cfn_id: str,
+    id: str,
     auth_user: dict = Depends(get_auth_user),
 ):
     """
     Get CFN node summary with detailed workspace configuration
 
-    - **cfn_id**: CFN identifier
+    - **id**: CFN identifier
 
     Returns CFN summary including:
     - id, name
@@ -287,15 +287,15 @@ def get_cfn_node_summary(
     Deleted CFNs will return 404 Not Found.
     """
     authz_service.require_permission(auth_user, "get", "cognition_fabric_node")
-    return cognition_fabric_node_service.get_summary(cfn_id)
+    return cognition_fabric_node_service.get_summary(id)
 
 
 @router.get(
-    "/cognitive-fabric-node/{cfn_id}/workspaces",
+    "/cognitive-fabric-node/{id}/workspaces",
     response_model=dict,
 )
 def get_cfn_workspaces_config(
-    cfn_id: str,
+    id: str,
     auth_user: dict = Depends(get_auth_user),
 ):
     """
@@ -304,7 +304,7 @@ def get_cfn_workspaces_config(
     This endpoint returns the consolidated configuration document that aggregates
     workspace-scoped and global resources for the CFN service to apply.
 
-    - **cfn_id**: CFN identifier
+    - **id**: CFN identifier
 
     Returns configuration with:
     - **version**: Configuration schema version (0.1.0)
@@ -318,7 +318,7 @@ def get_cfn_workspaces_config(
       - policies: Policies in this workspace (not included for March 2026)
     """
     authz_service.require_permission(auth_user, "get", "cognition_fabric_node")
-    cfn = cognition_fabric_node_service.get(cfn_id)
+    cfn = cognition_fabric_node_service.get(id)
     if not cfn:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,

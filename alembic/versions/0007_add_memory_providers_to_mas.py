@@ -15,7 +15,7 @@ depends_on: Union[str, Sequence[str], None] = None
 
 def upgrade() -> None:
     op.execute("ALTER TABLE multi_agentic_system ADD COLUMN shared_memory_provider_id VARCHAR(255)")
-    op.execute("""ALTER TABLE multi_agentic_system ADD CONSTRAINT fk_mas_shared_memory_provider FOREIGN KEY (shared_memory_provider_id) REFERENCES memory_provider(memory_provider_id) ON DELETE SET NULL""")
+    op.execute("""ALTER TABLE multi_agentic_system ADD CONSTRAINT fk_mas_shared_memory_provider FOREIGN KEY (shared_memory_provider_id) REFERENCES memory_provider(id) ON DELETE SET NULL""")
     op.execute("CREATE INDEX idx_mas_shared_memory_provider_id ON multi_agentic_system(shared_memory_provider_id)")
     op.execute("COMMENT ON COLUMN multi_agentic_system.shared_memory_provider_id IS 'Shared memory provider ID for all agents in this MAS'")
 

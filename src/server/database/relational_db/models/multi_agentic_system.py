@@ -25,7 +25,7 @@ class MultiAgenticSystem(Base):
 
     # Memory provider for shared memory across all agents in MAS
     shared_memory_provider_id = Column(
-        String(255), ForeignKey("memory_provider.memory_provider_id", ondelete="SET NULL"), nullable=True
+        String(255), ForeignKey("memory_provider.id", ondelete="SET NULL"), nullable=True
     )
 
     # Timestamp fields - auto-generated in database

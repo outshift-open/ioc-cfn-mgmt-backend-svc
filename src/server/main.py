@@ -75,7 +75,7 @@ async def lifespan(app: FastAPI):
             + "curl -X POST http://localhost:8000/api/cognition-fabric-nodes/register \\\n"
             + f'  -H "X-API-Key: {admin_api_key}" \\\n'
             + '  -H "Content-Type: application/json" \\\n'
-            + '  -d \'{"cfn_id": "cfn-001", "cfn_name": "test-node", '
+            + '  -d \'{"id": "cfn-001", "name": "test-node", '
             + f'"workspace_id": "{ADMIN_WORKSPACE_ID_DEFAULT}"}}\'\n'
             + "\n"
             + "WARNING: This is for DEVELOPMENT/TESTING ONLY! Never use in production!\n"

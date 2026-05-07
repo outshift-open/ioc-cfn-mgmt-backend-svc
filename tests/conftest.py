@@ -152,11 +152,11 @@ def setup_test_environment():
         try:
             session.query(WorkspaceInvitation).delete()
             session.query(WorkspaceMember).delete()
-            session.query(ApiKey).delete()
-            session.query(User).delete()
-            session.query(CognitionFabricNode).delete()
             session.query(MultiAgenticSystem).delete()
             session.query(Workspace).delete()
+            session.query(CognitionFabricNode).delete()
+            session.query(ApiKey).delete()
+            session.query(User).delete()
             session.commit()
         except Exception:
             session.rollback()
@@ -179,28 +179,28 @@ def registered_cfn(client):
 
     cfn_name = f"Test CFN {uuid.uuid4().hex[:8]}"
     cfn_data = {
-        "cfn_name": cfn_name,
+        "name": cfn_name,
         "cfn_config": {"memory": "4GB", "max_connections": 100},
         "ip_address": "192.168.1.100",
         "port": 8080,
     }
     cfn_response = client.post("/api/cognition-fabric-nodes/register", json=cfn_data)
     assert cfn_response.status_code == 201
-    return cfn_response.json()["cfn_id"]
+    return cfn_response.json()["id"]
 
 
 @pytest.fixture
 def created_cfn(client, sample_cfn):
     """Create a CFN node and a workspace that uses it, return tuple (workspace_id, cfn_id)."""
     cfn_data = {
-        "cfn_name": "Test CFN Node",
+        "name": "Test CFN Node",
         "cfn_config": {"memory": "4GB", "max_connections": 100},
         "ip_address": "192.168.1.100",
         "port": 8080,
     }
     cfn_response = client.post("/api/cognition-fabric-nodes/register", json=cfn_data)
     assert cfn_response.status_code == 201
-    cfn_id = cfn_response.json()["cfn_id"]
+    cfn_id = cfn_response.json()["id"]
 
     ws_response = client.post("/api/workspaces/create", json={"name": "Test Workspace", "cfn_id": cfn_id})
     assert ws_response.status_code == 201

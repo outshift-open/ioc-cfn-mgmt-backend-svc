@@ -108,16 +108,16 @@ class MultiAgenticSystem(BaseModel):
                 "name": "unique-name-within-a-workspace",
                 "description": "A system for collaborative AI agents",
                 "shared_memory": {
-                    "memory_provider_id": "mem-provider-1",
-                    "memory_provider_name": "ioc-knowledge-memory-svc",
+                    "id": "mem-provider-1",
+                    "name": "ioc-knowledge-memory-svc",
                     "config": {"host": "ioc-knowledge-memory-svc", "port": 9003},
                 },
                 "agents": [
                     {
                         "agent_id": "agent-1",
                         "agentic_memory": {
-                            "memory_provider_id": "mem-provider-2",
-                            "memory_provider_name": "ioc-mem0",
+                            "id": "mem-provider-2",
+                            "name": "ioc-mem0",
                             "config": {"host": "ioc-mem0", "port": 8765},
                         },
                         "config": {"type": "planner"},

@@ -17,8 +17,8 @@ class MemoryProvider(Base):
 
     __tablename__ = "memory_provider"
 
-    memory_provider_id = Column(String(255), primary_key=True, nullable=False)
-    memory_provider_name = Column(String(255), nullable=False)
+    id = Column(String(255), primary_key=True, nullable=False)
+    name = Column(String(255), nullable=False)
     description = Column(String(1000), nullable=True)
     config = Column(JSONB, nullable=True)  # Provider-specific configuration
     enabled = Column(Boolean, nullable=False, default=True)
@@ -29,4 +29,4 @@ class MemoryProvider(Base):
     deleted_at = Column(TIMESTAMP, nullable=True)
 
     def __repr__(self):
-        return f"<MemoryProvider(memory_provider_id={self.memory_provider_id}, " f"name={self.memory_provider_name})>"
+        return f"<MemoryProvider(id={self.id}, name={self.name})>"

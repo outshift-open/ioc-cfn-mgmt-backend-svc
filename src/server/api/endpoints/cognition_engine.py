@@ -74,14 +74,14 @@ def list_cognition_engines(
 
 
 @router.get(
-    "/{workspace_id}/cognition-engines/{cognition_engine_id}",
+    "/{workspace_id}/cognition-engines/{id}",
     response_model=CognitionEngineDetail,
     summary="Get Cognition Engine",
     description="Get details of a specific cognition engine",
 )
 def get_cognition_engine(
     workspace_id: str,
-    cognition_engine_id: str,
+    id: str,
     auth_user: dict = Depends(get_auth_user),
 ):
     """
@@ -89,25 +89,25 @@ def get_cognition_engine(
 
     Args:
         workspace_id: Workspace identifier
-        cognition_engine_id: ID of the cognition engine
+        id: ID of the cognition engine
         auth_user: Authenticated user
 
     Returns:
         CognitionEngineDetail with the engine details
     """
     authz_service.require_permission(auth_user, "get", "cognition_engine")
-    return cognition_engine_service.get(workspace_id, cognition_engine_id)
+    return cognition_engine_service.get(workspace_id, id)
 
 
 @router.patch(
-    "/{workspace_id}/cognition-engines/{cognition_engine_id}",
+    "/{workspace_id}/cognition-engines/{id}",
     response_model=CognitionEngineDetail,
     summary="Update Cognition Engine",
     description="Update an existing cognition engine",
 )
 def update_cognition_engine(
     workspace_id: str,
-    cognition_engine_id: str,
+    id: str,
     update_data: CognitionEngineUpdate,
     auth_user: dict = Depends(get_auth_user),
 ):
@@ -116,7 +116,7 @@ def update_cognition_engine(
 
     Args:
         workspace_id: Workspace identifier
-        cognition_engine_id: ID of the cognition engine to update
+        id: ID of the cognition engine to update
         update_data: Cognitive engine update data
         auth_user: Authenticated user
 
@@ -125,18 +125,18 @@ def update_cognition_engine(
     """
     authz_service.require_permission(auth_user, "update", "cognition_engine")
     user_id = auth_user.get("id", "unknown")
-    return cognition_engine_service.update(workspace_id, cognition_engine_id, update_data, user_id)
+    return cognition_engine_service.update(workspace_id, id, update_data, user_id)
 
 
 @router.delete(
-    "/{workspace_id}/cognition-engines/{cognition_engine_id}",
+    "/{workspace_id}/cognition-engines/{id}",
     response_model=Dict[str, str],
     summary="Delete Cognition Engine",
     description="Delete a cognition engine (soft delete)",
 )
 def delete_cognition_engine(
     workspace_id: str,
-    cognition_engine_id: str,
+    id: str,
     auth_user: dict = Depends(get_auth_user),
 ):
     """
@@ -144,7 +144,7 @@ def delete_cognition_engine(
 
     Args:
         workspace_id: Workspace identifier
-        cognition_engine_id: ID of the cognition engine to delete
+        id: ID of the cognition engine to delete
         auth_user: Authenticated user
 
     Returns:
@@ -152,4 +152,4 @@ def delete_cognition_engine(
     """
     authz_service.require_permission(auth_user, "delete", "cognition_engine")
     user_id = auth_user.get("id", "unknown")
-    return cognition_engine_service.delete(workspace_id, cognition_engine_id, user_id)
+    return cognition_engine_service.delete(workspace_id, id, user_id)

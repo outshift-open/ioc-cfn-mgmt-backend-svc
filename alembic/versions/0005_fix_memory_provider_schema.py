@@ -16,7 +16,7 @@ depends_on: Union[str, Sequence[str], None] = None
 def upgrade() -> None:
     op.execute('ALTER TABLE "memory_provider" DROP COLUMN IF EXISTS "provider_type"')
     op.execute('ALTER TABLE "memory_provider" DROP COLUMN IF EXISTS "provider"')
-    op.execute("""CREATE UNIQUE INDEX IF NOT EXISTS "idx_mp_name_unique" ON "memory_provider" ("memory_provider_name") WHERE "deleted_at" IS NULL""")
+    op.execute("""CREATE UNIQUE INDEX IF NOT EXISTS "idx_mp_name_unique" ON "memory_provider" ("name") WHERE "deleted_at" IS NULL""")
 
 
 def downgrade() -> None:

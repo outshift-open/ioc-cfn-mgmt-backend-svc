@@ -14,7 +14,7 @@ class TestCognitionEngineCreate:
     def test_create_cognition_engine_invalid_workspace(self, client):
         """Test creating cognition engine with non-existent workspace"""
         payload = {
-            "cognition_engine_name": "test-engine",
+            "name": "test-engine",
             "config": {"type": "reasoning"},
         }
 
@@ -29,7 +29,7 @@ class TestCognitionEngineCreate:
     def test_create_cognition_engine_basic(self, client, created_workspace):
         """Test creating cognition engine with basic configuration"""
         payload = {
-            "cognition_engine_name": "reasoning-engine",
+            "name": "reasoning-engine",
             "config": {
                 "type": "reasoning",
                 "model": "gpt-4",
@@ -44,19 +44,19 @@ class TestCognitionEngineCreate:
 
         assert response.status_code == status.HTTP_201_CREATED
         data = response.json()
-        assert data["cognition_engine_name"] == "reasoning-engine"
+        assert data["name"] == "reasoning-engine"
         assert data["workspace_id"] == created_workspace
         assert data["config"]["type"] == "reasoning"
         assert data["config"]["model"] == "gpt-4"
         assert data["enabled"] is True
-        assert "cognition_engine_id" in data
+        assert "id" in data
         assert "created_at" in data
         assert "created_by" in data
 
     def test_create_cognition_engine_planning(self, client, created_workspace):
         """Test creating planning engine"""
         payload = {
-            "cognition_engine_name": "planning-engine",
+            "name": "planning-engine",
             "config": {
                 "type": "planning",
                 "horizon": "short-term",
@@ -71,14 +71,14 @@ class TestCognitionEngineCreate:
 
         assert response.status_code == status.HTTP_201_CREATED
         data = response.json()
-        assert data["cognition_engine_name"] == "planning-engine"
+        assert data["name"] == "planning-engine"
         assert data["config"]["type"] == "planning"
         assert data["config"]["horizon"] == "short-term"
 
     def test_create_cognition_engine_no_config(self, client, created_workspace):
         """Test creating cognition engine without config"""
         payload = {
-            "cognition_engine_name": "simple-engine",
+            "name": "simple-engine",
         }
 
         response = client.post(
@@ -88,14 +88,14 @@ class TestCognitionEngineCreate:
 
         assert response.status_code == status.HTTP_201_CREATED
         data = response.json()
-        assert data["cognition_engine_name"] == "simple-engine"
+        assert data["name"] == "simple-engine"
         assert data["config"] is None
         assert data["enabled"] is True
 
     def test_create_cognition_engine_duplicate_name(self, client, created_workspace):
         """Test that duplicate engine names within same workspace are rejected"""
         payload = {
-            "cognition_engine_name": "duplicate-test",
+            "name": "duplicate-test",
             "config": {"type": "test"},
         }
 
@@ -132,7 +132,7 @@ class TestCognitionEngineCreate:
         ws2_id = ws2_response.json()["id"]
 
         payload = {
-            "cognition_engine_name": "shared-name-engine",
+            "name": "shared-name-engine",
             "config": {"type": "test"},
         }
 
@@ -180,15 +180,15 @@ class TestCognitionEngineList:
         # Create multiple engines
         engines = [
             {
-                "cognition_engine_name": "reasoning-engine",
+                "name": "reasoning-engine",
                 "config": {"type": "reasoning"},
             },
             {
-                "cognition_engine_name": "planning-engine",
+                "name": "planning-engine",
                 "config": {"type": "planning"},
             },
             {
-                "cognition_engine_name": "learning-engine",
+                "name": "learning-engine",
                 "config": {"type": "learning"},
             },
         ]
@@ -211,7 +211,7 @@ class TestCognitionEngineList:
         assert len(data["engines"]) == 3
 
         # Verify all engines are present
-        engine_names = [e["cognition_engine_name"] for e in data["engines"]]
+        engine_names = [e["name"] for e in data["engines"]]
         assert "reasoning-engine" in engine_names
         assert "planning-engine" in engine_names
         assert "learning-engine" in engine_names
@@ -221,14 +221,14 @@ class TestCognitionEngineList:
         # Create two engines
         client.post(
             f"/api/workspaces/{created_workspace}/cognition-engines",
-            json={"cognition_engine_name": "enabled-engine"},
+            json={"name": "enabled-engine"},
         )
 
         disabled_response = client.post(
             f"/api/workspaces/{created_workspace}/cognition-engines",
-            json={"cognition_engine_name": "disabled-engine"},
+            json={"name": "disabled-engine"},
         )
-        disabled_id = disabled_response.json()["cognition_engine_id"]
+        disabled_id = disabled_response.json()["id"]
 
         # Disable one engine
         client.patch(
@@ -244,7 +244,7 @@ class TestCognitionEngineList:
         assert response.status_code == status.HTTP_200_OK
         data = response.json()
         assert data["total"] == 1
-        assert data["engines"][0]["cognition_engine_name"] == "enabled-engine"
+        assert data["engines"][0]["name"] == "enabled-engine"
 
     def test_list_engines_workspace_isolation(self, client, registered_cfn):
         """Test that listing only shows engines from specific workspace"""
@@ -264,26 +264,26 @@ class TestCognitionEngineList:
         # Create engine in workspace 1
         client.post(
             f"/api/workspaces/{ws1_id}/cognition-engines",
-            json={"cognition_engine_name": "ws1-engine"},
+            json={"name": "ws1-engine"},
         )
 
         # Create engine in workspace 2
         client.post(
             f"/api/workspaces/{ws2_id}/cognition-engines",
-            json={"cognition_engine_name": "ws2-engine"},
+            json={"name": "ws2-engine"},
         )
 
         # List engines in workspace 1
         response1 = client.get(f"/api/workspaces/{ws1_id}/cognition-engines")
         data1 = response1.json()
         assert data1["total"] == 1
-        assert data1["engines"][0]["cognition_engine_name"] == "ws1-engine"
+        assert data1["engines"][0]["name"] == "ws1-engine"
 
         # List engines in workspace 2
         response2 = client.get(f"/api/workspaces/{ws2_id}/cognition-engines")
         data2 = response2.json()
         assert data2["total"] == 1
-        assert data2["engines"][0]["cognition_engine_name"] == "ws2-engine"
+        assert data2["engines"][0]["name"] == "ws2-engine"
 
 
 class TestCognitionEngineGet:
@@ -304,11 +304,11 @@ class TestCognitionEngineGet:
         create_response = client.post(
             f"/api/workspaces/{created_workspace}/cognition-engines",
             json={
-                "cognition_engine_name": "test-engine",
+                "name": "test-engine",
                 "config": {"type": "reasoning", "model": "gpt-4"},
             },
         )
-        engine_id = create_response.json()["cognition_engine_id"]
+        engine_id = create_response.json()["id"]
 
         # Get engine
         response = client.get(
@@ -317,8 +317,8 @@ class TestCognitionEngineGet:
 
         assert response.status_code == status.HTTP_200_OK
         data = response.json()
-        assert data["cognition_engine_id"] == engine_id
-        assert data["cognition_engine_name"] == "test-engine"
+        assert data["id"] == engine_id
+        assert data["name"] == "test-engine"
         assert data["workspace_id"] == created_workspace
         assert data["config"]["type"] == "reasoning"
         assert data["enabled"] is True
@@ -348,9 +348,9 @@ class TestCognitionEngineGet:
         # Create engine in workspace 1
         create_response = client.post(
             f"/api/workspaces/{ws1_id}/cognition-engines",
-            json={"cognition_engine_name": "ws1-engine"},
+            json={"name": "ws1-engine"},
         )
-        engine_id = create_response.json()["cognition_engine_id"]
+        engine_id = create_response.json()["id"]
 
         # Try to get it from workspace 2
         response = client.get(
@@ -366,7 +366,7 @@ class TestCognitionEngineUpdate:
         """Test updating cognition engine with non-existent workspace"""
         response = client.patch(
             "/api/workspaces/non-existent-workspace-id/cognition-engines/some-engine-id",
-            json={"cognition_engine_name": "new-name"},
+            json={"name": "new-name"},
         )
 
         assert response.status_code == status.HTTP_404_NOT_FOUND
@@ -377,12 +377,12 @@ class TestCognitionEngineUpdate:
         # Create engine
         create_response = client.post(
             f"/api/workspaces/{created_workspace}/cognition-engines",
-            json={"cognition_engine_name": "old-name"},
+            json={"name": "old-name"},
         )
-        engine_id = create_response.json()["cognition_engine_id"]
+        engine_id = create_response.json()["id"]
 
         # Update name
-        update_payload = {"cognition_engine_name": "new-name"}
+        update_payload = {"name": "new-name"}
         response = client.patch(
             f"/api/workspaces/{created_workspace}/cognition-engines/{engine_id}",
             json=update_payload,
@@ -390,7 +390,7 @@ class TestCognitionEngineUpdate:
 
         assert response.status_code == status.HTTP_200_OK
         data = response.json()
-        assert data["cognition_engine_name"] == "new-name"
+        assert data["name"] == "new-name"
         assert "updated_at" in data
         assert "updated_by" in data
 
@@ -400,11 +400,11 @@ class TestCognitionEngineUpdate:
         create_response = client.post(
             f"/api/workspaces/{created_workspace}/cognition-engines",
             json={
-                "cognition_engine_name": "update-config-test",
+                "name": "update-config-test",
                 "config": {"type": "reasoning", "model": "gpt-3.5"},
             },
         )
-        engine_id = create_response.json()["cognition_engine_id"]
+        engine_id = create_response.json()["id"]
 
         # Update config
         update_payload = {
@@ -431,9 +431,9 @@ class TestCognitionEngineUpdate:
         # Create engine
         create_response = client.post(
             f"/api/workspaces/{created_workspace}/cognition-engines",
-            json={"cognition_engine_name": "disable-test"},
+            json={"name": "disable-test"},
         )
-        engine_id = create_response.json()["cognition_engine_id"]
+        engine_id = create_response.json()["id"]
 
         # Disable engine
         response = client.patch(
@@ -459,15 +459,15 @@ class TestCognitionEngineUpdate:
         create_response = client.post(
             f"/api/workspaces/{created_workspace}/cognition-engines",
             json={
-                "cognition_engine_name": "multi-update-test",
+                "name": "multi-update-test",
                 "config": {"type": "old"},
             },
         )
-        engine_id = create_response.json()["cognition_engine_id"]
+        engine_id = create_response.json()["id"]
 
         # Update multiple fields
         update_payload = {
-            "cognition_engine_name": "multi-updated",
+            "name": "multi-updated",
             "config": {"type": "new", "version": "2.0"},
             "enabled": False,
         }
@@ -478,7 +478,7 @@ class TestCognitionEngineUpdate:
 
         assert response.status_code == status.HTTP_200_OK
         data = response.json()
-        assert data["cognition_engine_name"] == "multi-updated"
+        assert data["name"] == "multi-updated"
         assert data["config"]["type"] == "new"
         assert data["config"]["version"] == "2.0"
         assert data["enabled"] is False
@@ -487,7 +487,7 @@ class TestCognitionEngineUpdate:
         """Test updating an engine that doesn't exist"""
         response = client.patch(
             f"/api/workspaces/{created_workspace}/cognition-engines/nonexistent-id",
-            json={"cognition_engine_name": "new-name"},
+            json={"name": "new-name"},
         )
         assert response.status_code == status.HTTP_404_NOT_FOUND
 
@@ -509,9 +509,9 @@ class TestCognitionEngineDelete:
         # Create engine
         create_response = client.post(
             f"/api/workspaces/{created_workspace}/cognition-engines",
-            json={"cognition_engine_name": "delete-test"},
+            json={"name": "delete-test"},
         )
-        engine_id = create_response.json()["cognition_engine_id"]
+        engine_id = create_response.json()["id"]
 
         # Delete engine
         response = client.delete(
@@ -520,7 +520,7 @@ class TestCognitionEngineDelete:
 
         assert response.status_code == status.HTTP_200_OK
         assert "deleted successfully" in response.json()["message"].lower()
-        assert response.json()["cognition_engine_id"] == engine_id
+        assert response.json()["id"] == engine_id
 
         # Verify it's deleted (soft delete)
         get_response = client.get(
@@ -540,14 +540,14 @@ class TestCognitionEngineDelete:
         # Create two engines
         client.post(
             f"/api/workspaces/{created_workspace}/cognition-engines",
-            json={"cognition_engine_name": "keep-engine"},
+            json={"name": "keep-engine"},
         )
 
         delete_response = client.post(
             f"/api/workspaces/{created_workspace}/cognition-engines",
-            json={"cognition_engine_name": "delete-engine"},
+            json={"name": "delete-engine"},
         )
-        delete_id = delete_response.json()["cognition_engine_id"]
+        delete_id = delete_response.json()["id"]
 
         # Delete one
         client.delete(
@@ -560,7 +560,7 @@ class TestCognitionEngineDelete:
         )
         data = list_response.json()
         assert data["total"] == 1
-        assert data["engines"][0]["cognition_engine_name"] == "keep-engine"
+        assert data["engines"][0]["name"] == "keep-engine"
 
 
 class TestCognitionEngineCFNIntegration:
@@ -576,20 +576,20 @@ class TestCognitionEngineCFNIntegration:
         engine1_response = client.post(
             f"/api/workspaces/{created_workspace}/cognition-engines",
             json={
-                "cognition_engine_name": "reasoning-engine",
+                "name": "reasoning-engine",
                 "config": {"type": "reasoning", "model": "gpt-4"},
             },
         )
-        engine1_id = engine1_response.json()["cognition_engine_id"]
+        engine1_id = engine1_response.json()["id"]
 
         engine2_response = client.post(
             f"/api/workspaces/{created_workspace}/cognition-engines",
             json={
-                "cognition_engine_name": "planning-engine",
+                "name": "planning-engine",
                 "config": {"type": "planning", "horizon": "long-term"},
             },
         )
-        engine2_id = engine2_response.json()["cognition_engine_id"]
+        engine2_id = engine2_response.json()["id"]
 
         # Get CFN config
         cfn_config_response = client.get(f"/api/cognition-fabric-nodes/{cfn_id}")
@@ -612,13 +612,13 @@ class TestCognitionEngineCFNIntegration:
         assert len(engines) == 2
 
         # Verify engine details
-        engine_ids = [e["cognition_engine_id"] for e in engines]
+        engine_ids = [e["id"] for e in engines]
         assert engine1_id in engine_ids
         assert engine2_id in engine_ids
 
         # Verify engine configs are present
         reasoning_engine = next(
-            (e for e in engines if e["cognition_engine_name"] == "reasoning-engine"),
+            (e for e in engines if e["name"] == "reasoning-engine"),
             None,
         )
         assert reasoning_engine is not None
@@ -635,9 +635,9 @@ class TestCognitionEngineCFNIntegration:
         # Create and disable an engine
         engine_response = client.post(
             f"/api/workspaces/{created_workspace}/cognition-engines",
-            json={"cognition_engine_name": "disabled-engine"},
+            json={"name": "disabled-engine"},
         )
-        engine_id = engine_response.json()["cognition_engine_id"]
+        engine_id = engine_response.json()["id"]
 
         client.patch(
             f"/api/workspaces/{created_workspace}/cognition-engines/{engine_id}",
@@ -668,11 +668,11 @@ class TestCognitionEngineCFNIntegration:
         engine_response = client.post(
             f"/api/workspaces/{created_workspace}/cognition-engines",
             json={
-                "cognition_engine_name": "test-engine",
+                "name": "test-engine",
                 "config": {"version": "1.0"},
             },
         )
-        engine_id = engine_response.json()["cognition_engine_id"]
+        engine_id = engine_response.json()["id"]
 
         # Update engine
         client.patch(
@@ -690,7 +690,7 @@ class TestCognitionEngineCFNIntegration:
         )
         engines = test_workspace["cognition_engines"]
         test_engine = next(
-            (e for e in engines if e["cognition_engine_id"] == engine_id), None
+            (e for e in engines if e["id"] == engine_id), None
         )
         assert test_engine is not None
         assert test_engine["config"]["version"] == "2.0"
@@ -704,9 +704,9 @@ class TestCognitionEngineCFNIntegration:
         # Create engine
         engine_response = client.post(
             f"/api/workspaces/{created_workspace}/cognition-engines",
-            json={"cognition_engine_name": "delete-me"},
+            json={"name": "delete-me"},
         )
-        engine_id = engine_response.json()["cognition_engine_id"]
+        engine_id = engine_response.json()["id"]
 
         # Verify engine is in CFN config
         cfn_config_before = client.get(f"/api/cognition-fabric-nodes/{cfn_id}").json()
@@ -716,7 +716,7 @@ class TestCognitionEngineCFNIntegration:
             None,
         )
         engines_before = test_workspace_before.get("cognition_engines", [])
-        engine_ids_before = [e["cognition_engine_id"] for e in engines_before]
+        engine_ids_before = [e["id"] for e in engines_before]
         assert engine_id in engine_ids_before
 
         # Delete engine
@@ -734,5 +734,5 @@ class TestCognitionEngineCFNIntegration:
             None,
         )
         engines_after = test_workspace_after.get("cognition_engines", [])
-        engine_ids_after = [e["cognition_engine_id"] for e in engines_after]
+        engine_ids_after = [e["id"] for e in engines_after]
         assert engine_id not in engine_ids_after

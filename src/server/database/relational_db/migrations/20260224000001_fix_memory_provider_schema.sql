@@ -11,5 +11,5 @@ ALTER TABLE "memory_provider" DROP COLUMN IF EXISTS "provider";
 
 -- Add unique constraint on memory_provider_name (where not deleted)
 CREATE UNIQUE INDEX IF NOT EXISTS "idx_mp_name_unique" 
-ON "memory_provider" ("memory_provider_name") 
+ON "memory_provider" ("name")
 WHERE "deleted_at" IS NULL;

@@ -48,27 +48,27 @@ def create_memory_provider(
 
 
 @router.get(
-    "/memory-providers/{memory_provider_id}",
+    "/memory-providers/{id}",
     response_model=MemoryProviderDetail,
     summary="Get Memory Provider",
     description="Get details of a specific memory provider",
 )
 def get_memory_provider(
-    memory_provider_id: str,
+    id: str,
     auth_user: dict = Depends(get_auth_user),
 ):
     """
     Get a specific memory provider by ID
 
     Args:
-        memory_provider_id: ID of the memory provider
+        id: ID of the memory provider
         auth_user: Authenticated user
 
     Returns:
         MemoryProviderDetail with the provider details
     """
     authz_service.require_permission(auth_user, "read", "memory_provider")
-    return memory_provider_service.get(memory_provider_id)
+    return memory_provider_service.get(id)
 
 
 @router.get(
@@ -94,13 +94,13 @@ def list_memory_providers(
 
 
 @router.patch(
-    "/memory-providers/{memory_provider_id}",
+    "/memory-providers/{id}",
     response_model=MemoryProviderDetail,
     summary="Update Memory Provider",
     description="Update an existing memory provider",
 )
 def update_memory_provider(
-    memory_provider_id: str,
+    id: str,
     update_data: MemoryProviderUpdate,
     auth_user: dict = Depends(get_auth_user),
 ):
@@ -108,7 +108,7 @@ def update_memory_provider(
     Update a memory provider
 
     Args:
-        memory_provider_id: ID of the memory provider to update
+        id: ID of the memory provider to update
         update_data: Memory provider update data
         auth_user: Authenticated user
 
@@ -117,24 +117,24 @@ def update_memory_provider(
     """
     authz_service.require_permission(auth_user, "update", "memory_provider")
     user_id = auth_user.get("sub", "unknown")
-    return memory_provider_service.update(memory_provider_id, update_data, user_id)
+    return memory_provider_service.update(id, update_data, user_id)
 
 
 @router.delete(
-    "/memory-providers/{memory_provider_id}",
+    "/memory-providers/{id}",
     response_model=Dict[str, str],
     summary="Delete Memory Provider",
     description="Delete a memory provider (soft delete)",
 )
 def delete_memory_provider(
-    memory_provider_id: str,
+    id: str,
     auth_user: dict = Depends(get_auth_user),
 ):
     """
     Delete a memory provider (soft delete)
 
     Args:
-        memory_provider_id: ID of the memory provider to delete
+        id: ID of the memory provider to delete
         auth_user: Authenticated user
 
     Returns:
@@ -142,4 +142,4 @@ def delete_memory_provider(
     """
     authz_service.require_permission(auth_user, "delete", "memory_provider")
     user_id = auth_user.get("sub", "unknown")
-    return memory_provider_service.delete(memory_provider_id, user_id)
+    return memory_provider_service.delete(id, user_id)

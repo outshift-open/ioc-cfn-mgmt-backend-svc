@@ -150,7 +150,7 @@ class WorkspaceService:
                     cfn = (
                         session.query(CognitionFabricNodeModel)
                         .filter(
-                            CognitionFabricNodeModel.cfn_id == workspace_data.cfn_id,
+                            CognitionFabricNodeModel.id == workspace_data.cfn_id,
                             CognitionFabricNodeModel.deleted_at.is_(None),
                         )
                         .first()
@@ -211,7 +211,7 @@ class WorkspaceService:
 
                     cfn = (
                         session.query(CognitionFabricNodeModel)
-                        .filter(CognitionFabricNodeModel.cfn_id == workspace_data.cfn_id)
+                        .filter(CognitionFabricNodeModel.id == workspace_data.cfn_id)
                         .first()
                     )
                     if cfn:
@@ -224,7 +224,7 @@ class WorkspaceService:
                         )
                         ws_ids = [ws.id for ws in workspace_ids]
                         cfn.config = cognition_fabric_node_service.generate_config(
-                            cfn.cfn_id, ws_ids, cfn.cfn_config, now
+                            cfn.id, ws_ids, cfn.cfn_config, now
                         )
                         session.commit()
 
@@ -507,7 +507,7 @@ class WorkspaceService:
                     cfn = (
                         session.query(CognitionFabricNodeModel)
                         .filter(
-                            CognitionFabricNodeModel.cfn_id == workspace_data.cfn_id,
+                            CognitionFabricNodeModel.id == workspace_data.cfn_id,
                             CognitionFabricNodeModel.deleted_at.is_(None),
                         )
                         .first()
@@ -545,7 +545,7 @@ class WorkspaceService:
                     if old_cfn_id:
                         old_cfn = (
                             session.query(CognitionFabricNodeModel)
-                            .filter(CognitionFabricNodeModel.cfn_id == old_cfn_id)
+                            .filter(CognitionFabricNodeModel.id == old_cfn_id)
                             .first()
                         )
                         if old_cfn:
@@ -558,14 +558,14 @@ class WorkspaceService:
                             )
                             old_ws_ids = [ws.id for ws in old_workspace_ids]
                             old_cfn.config = cognition_fabric_node_service.generate_config(
-                                old_cfn.cfn_id, old_ws_ids, old_cfn.cfn_config, now
+                                old_cfn.id, old_ws_ids, old_cfn.cfn_config, now
                             )
 
                     # Update new CFN (workspace added to it)
                     if workspace_data.cfn_id:
                         new_cfn = (
                             session.query(CognitionFabricNodeModel)
-                            .filter(CognitionFabricNodeModel.cfn_id == workspace_data.cfn_id)
+                            .filter(CognitionFabricNodeModel.id == workspace_data.cfn_id)
                             .first()
                         )
                         if new_cfn:
@@ -580,7 +580,7 @@ class WorkspaceService:
                             )
                             new_ws_ids = [ws.id for ws in new_workspace_ids]
                             new_cfn.config = cognition_fabric_node_service.generate_config(
-                                new_cfn.cfn_id, new_ws_ids, new_cfn.cfn_config, now
+                                new_cfn.id, new_ws_ids, new_cfn.cfn_config, now
                             )
 
                     session.commit()
@@ -722,7 +722,7 @@ class WorkspaceService:
 
                     cfn = (
                         session.query(CognitionFabricNodeModel)
-                        .filter(CognitionFabricNodeModel.cfn_id == deleted_workspace_cfn_id)
+                        .filter(CognitionFabricNodeModel.id == deleted_workspace_cfn_id)
                         .first()
                     )
                     if cfn:
@@ -738,7 +738,7 @@ class WorkspaceService:
                         )
                         ws_ids = [ws.id for ws in workspace_ids]
                         cfn.config = cognition_fabric_node_service.generate_config(
-                            cfn.cfn_id, ws_ids, cfn.cfn_config, now
+                            cfn.id, ws_ids, cfn.cfn_config, now
                         )
                         session.commit()
 

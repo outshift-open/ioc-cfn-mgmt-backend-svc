@@ -11,7 +11,7 @@ ALTER TABLE multi_agentic_system
 ALTER TABLE multi_agentic_system
     ADD CONSTRAINT fk_mas_shared_memory_provider
     FOREIGN KEY (shared_memory_provider_id)
-    REFERENCES memory_provider(memory_provider_id)
+    REFERENCES memory_provider(id)
     ON DELETE SET NULL;
 
 -- Add index for performance

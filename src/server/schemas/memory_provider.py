@@ -75,7 +75,7 @@ class MemoryProviderConfig(BaseModel):
 class MemoryProviderCreate(BaseModel):
     """Schema for creating a memory provider"""
 
-    memory_provider_name: str = Field(..., description="Memory provider name")
+    name: str = Field(..., description="Memory provider name")
     description: Optional[str] = Field(None, description="Description of the memory provider")
     config: MemoryProviderConfig = Field(..., description="Provider configuration")
 
@@ -83,7 +83,7 @@ class MemoryProviderCreate(BaseModel):
 class MemoryProviderUpdate(BaseModel):
     """Schema for updating a memory provider"""
 
-    memory_provider_name: Optional[str] = Field(None, description="Memory provider name")
+    name: Optional[str] = Field(None, description="Memory provider name")
     description: Optional[str] = Field(None, description="Description of the memory provider")
     config: Optional[MemoryProviderConfig] = Field(None, description="Provider configuration")
     enabled: Optional[bool] = Field(None, description="Whether provider is enabled")
@@ -92,8 +92,8 @@ class MemoryProviderUpdate(BaseModel):
 class MemoryProviderDetail(BaseModel):
     """Schema for detailed memory provider information"""
 
-    memory_provider_id: str
-    memory_provider_name: str
+    id: str
+    name: str
     description: Optional[str]
     config: Optional[dict]  # Use dict for response to allow flexible structure
     enabled: bool
@@ -106,8 +106,8 @@ class MemoryProviderDetail(BaseModel):
 class MemoryProviderListItem(BaseModel):
     """Schema for memory provider list item"""
 
-    memory_provider_id: str
-    memory_provider_name: str
+    id: str
+    name: str
     description: Optional[str]
     config: Optional[dict]
     enabled: bool

@@ -48,7 +48,7 @@ class MemoryProviderService:
                 existing_provider = (
                     session.query(MemoryProviderModel)
                     .filter(
-                        MemoryProviderModel.memory_provider_name == provider_data.memory_provider_name,
+                        MemoryProviderModel.name == provider_data.name,
                         MemoryProviderModel.deleted_at.is_(None),
                     )
                     .first()
@@ -57,7 +57,7 @@ class MemoryProviderService:
                 if existing_provider:
                     raise HTTPException(
                         status_code=status.HTTP_409_CONFLICT,
-                        detail=f"Memory provider with name '{provider_data.memory_provider_name}' already exists",
+                        detail=f"Memory provider with name '{provider_data.name}' already exists",
                     )
 
                 # Generate unique ID for the provider
@@ -69,8 +69,8 @@ class MemoryProviderService:
 
                 # Create new provider
                 new_provider = MemoryProviderModel(
-                    memory_provider_id=memory_provider_id,
-                    memory_provider_name=provider_data.memory_provider_name,
+                    id=memory_provider_id,
+                    name=provider_data.name,
                     description=provider_data.description,
                     config=config_dict,
                     enabled=True,
@@ -87,8 +87,8 @@ class MemoryProviderService:
                 cognition_fabric_node_service.update_config_for_all_cfns()
 
                 return MemoryProviderDetail(
-                    memory_provider_id=new_provider.memory_provider_id,
-                    memory_provider_name=new_provider.memory_provider_name,
+                    id=new_provider.id,
+                    name=new_provider.name,
                     description=new_provider.description,
                     config=process_config_for_display(new_provider.config),
                     enabled=new_provider.enabled,
@@ -130,7 +130,7 @@ class MemoryProviderService:
                 provider = (
                     session.query(MemoryProviderModel)
                     .filter(
-                        MemoryProviderModel.memory_provider_id == memory_provider_id,
+                        MemoryProviderModel.id == memory_provider_id,
                         MemoryProviderModel.deleted_at.is_(None),
                     )
                     .first()
@@ -143,8 +143,8 @@ class MemoryProviderService:
                     )
 
                 return MemoryProviderDetail(
-                    memory_provider_id=provider.memory_provider_id,
-                    memory_provider_name=provider.memory_provider_name,
+                    id=provider.id,
+                    name=provider.name,
                     description=provider.description,
                     config=process_config_for_display(provider.config),
                     enabled=provider.enabled,
@@ -188,8 +188,8 @@ class MemoryProviderService:
 
                 provider_list = [
                     MemoryProviderDetail(
-                        memory_provider_id=provider.memory_provider_id,
-                        memory_provider_name=provider.memory_provider_name,
+                        id=provider.id,
+                        name=provider.name,
                         description=provider.description,
                         config=process_config_for_display(provider.config),
                         enabled=provider.enabled,
@@ -237,7 +237,7 @@ class MemoryProviderService:
                 provider = (
                     session.query(MemoryProviderModel)
                     .filter(
-                        MemoryProviderModel.memory_provider_id == memory_provider_id,
+                        MemoryProviderModel.id == memory_provider_id,
                         MemoryProviderModel.deleted_at.is_(None),
                     )
                     .first()
@@ -250,8 +250,8 @@ class MemoryProviderService:
                     )
 
                 # Update fields if provided
-                if update_data.memory_provider_name is not None:
-                    provider.memory_provider_name = update_data.memory_provider_name
+                if update_data.name is not None:
+                    provider.name = update_data.name
                 if update_data.description is not None:
                     provider.description = update_data.description
                 if update_data.config is not None:
@@ -274,8 +274,8 @@ class MemoryProviderService:
                 cognition_fabric_node_service.update_config_for_all_cfns()
 
                 return MemoryProviderDetail(
-                    memory_provider_id=provider.memory_provider_id,
-                    memory_provider_name=provider.memory_provider_name,
+                    id=provider.id,
+                    name=provider.name,
                     description=provider.description,
                     config=process_config_for_display(provider.config),
                     enabled=provider.enabled,
@@ -318,7 +318,7 @@ class MemoryProviderService:
                 provider = (
                     session.query(MemoryProviderModel)
                     .filter(
-                        MemoryProviderModel.memory_provider_id == memory_provider_id,
+                        MemoryProviderModel.id == memory_provider_id,
                         MemoryProviderModel.deleted_at.is_(None),
                     )
                     .first()
@@ -344,7 +344,7 @@ class MemoryProviderService:
 
                 return {
                     "message": f"Memory provider '{memory_provider_id}' deleted successfully",
-                    "memory_provider_id": memory_provider_id,
+                    "id": memory_provider_id,
                 }
 
             finally:
@@ -385,8 +385,8 @@ class MemoryProviderService:
                 # Return raw provider data without masking
                 return [
                     {
-                        "memory_provider_id": provider.memory_provider_id,
-                        "memory_provider_name": provider.memory_provider_name,
+                        "id": provider.id,
+                        "name": provider.name,
                         "description": provider.description,
                         "config": provider.config,  # Raw config with credentials_encrypted
                         "enabled": provider.enabled,

@@ -37,15 +37,15 @@ class MultiAgenticSystemService:
             shared_provider = (
                 session.query(MemoryProviderModel)
                 .filter(
-                    MemoryProviderModel.memory_provider_id == mas.shared_memory_provider_id,
+                    MemoryProviderModel.id == mas.shared_memory_provider_id,
                     MemoryProviderModel.deleted_at.is_(None),
                 )
                 .first()
             )
             if shared_provider:
                 shared_memory = MemoryProviderDetail(
-                    memory_provider_id=shared_provider.memory_provider_id,
-                    memory_provider_name=shared_provider.memory_provider_name,
+                    id=shared_provider.id,
+                    name=shared_provider.name,
                     description=shared_provider.description,
                     config=shared_provider.config,
                     enabled=shared_provider.enabled,
@@ -67,15 +67,15 @@ class MultiAgenticSystemService:
                     agent_provider = (
                         session.query(MemoryProviderModel)
                         .filter(
-                            MemoryProviderModel.memory_provider_id == agent_memory_id,
+                            MemoryProviderModel.id == agent_memory_id,
                             MemoryProviderModel.deleted_at.is_(None),
                         )
                         .first()
                     )
                     if agent_provider:
                         agentic_memory = MemoryProviderDetail(
-                            memory_provider_id=agent_provider.memory_provider_id,
-                            memory_provider_name=agent_provider.memory_provider_name,
+                            id=agent_provider.id,
+                            name=agent_provider.name,
                             description=agent_provider.description,
                             config=agent_provider.config,
                             enabled=agent_provider.enabled,

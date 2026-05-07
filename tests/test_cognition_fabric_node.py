@@ -22,7 +22,7 @@ class TestCognitionFabricNodeCreate:
         """Test successful CFN registration"""
         # First register CFN (without workspace)
         cfn_data = {
-            "cfn_name": "test-cfn-node",
+            "name": "test-cfn-node",
             "cfn_config": {"memory": "4GB", "max_connections": 100},
             "ip_address": "192.168.1.100",
             "port": 8080,
@@ -32,9 +32,9 @@ class TestCognitionFabricNodeCreate:
 
         assert response.status_code == 201
         data = response.json()
-        cfn_id = data["cfn_id"] 
-        assert "cfn_id" in data
-        assert data["cfn_name"] == "test-cfn-node"
+        cfn_id = data["id"] 
+        assert "id" in data
+        assert data["name"] == "test-cfn-node"
         assert data["status"] == "offline"  # Starts offline, heartbeat makes it online
         assert "config" in data
 
@@ -62,12 +62,12 @@ class TestCognitionFabricNodeCreate:
 
     def test_create_cfn_duplicate_id(self, client):
         """Test re-registering CFN with same name refreshes config (reconnect scenario)"""
-        cfn_data = {"cfn_name": "test-cfn-reconnect", "ip_address": "192.168.1.100", "port": 8080}
+        cfn_data = {"name": "test-cfn-reconnect", "ip_address": "192.168.1.100", "port": 8080}
 
         # First registration
         response1 = client.post("/api/cognition-fabric-nodes", json=cfn_data)
         assert response1.status_code == 201
-        cfn_id = response1.json()["cfn_id"]
+        cfn_id = response1.json()["id"]
 
         # Send heartbeat to make it online
         heartbeat = client.put(f"/api/cognition-fabric-nodes/{cfn_id}/heartbeat")
@@ -77,7 +77,7 @@ class TestCognitionFabricNodeCreate:
         # Second registration with same name (reconnect scenario - refreshes state)
         response2 = client.post("/api/cognition-fabric-nodes", json=cfn_data)
         assert response2.status_code == 201  # Refresh succeeds
-        assert response2.json()["cfn_id"] == cfn_id  # Same ID returned
+        assert response2.json()["id"] == cfn_id  # Same ID returned
         assert response2.json()["status"] == "online"  # Still online after refresh
 
     def test_create_cfn_duplicate_name_same_workspace(self, client):
@@ -85,28 +85,28 @@ class TestCognitionFabricNodeCreate:
         # First CFN
         response1 = client.post(
             "/api/cognition-fabric-nodes",
-            json={"cfn_name": "duplicate-name", "ip_address": "192.168.1.100", "port": 8080},
+            json={"name": "duplicate-name", "ip_address": "192.168.1.100", "port": 8080},
         )
         assert response1.status_code == 201
-        cfn_id = response1.json()["cfn_id"]
+        cfn_id = response1.json()["id"]
 
         # Second registration with same name (reconnect scenario)
         response2 = client.post(
             "/api/cognition-fabric-nodes",
-            json={"cfn_name": "duplicate-name", "ip_address": "192.168.1.100", "port": 8080},
+            json={"name": "duplicate-name", "ip_address": "192.168.1.100", "port": 8080},
         )
         assert response2.status_code == 201  # Refresh also returns 201
-        assert response2.json()["cfn_id"] == cfn_id  # Same ID
+        assert response2.json()["id"] == cfn_id  # Same ID
 
     def test_create_cfn_same_name_different_workspaces(self, client):
         """Test re-registering disabled CFN with same name fails with 403"""
         # Register first CFN
         response1 = client.post(
             "/api/cognition-fabric-nodes",
-            json={"cfn_name": "shared-name"},
+            json={"name": "shared-name"},
         )
         assert response1.status_code == 201
-        cfn_id = response1.json()["cfn_id"]
+        cfn_id = response1.json()["id"]
 
         # Create first workspace with CFN
         ws1_response = client.post("/api/workspaces/create", json={"name": "Workspace 1", "cfn_id": cfn_id})
@@ -119,7 +119,7 @@ class TestCognitionFabricNodeCreate:
         # Try to re-register with same name (should fail - disabled)
         response2 = client.post(
             "/api/cognition-fabric-nodes",
-            json={"cfn_name": "shared-name"},
+            json={"name": "shared-name"},
         )
         assert response2.status_code == 403  # Forbidden - disabled
 
@@ -172,9 +172,9 @@ class TestCognitionFabricNodeList:
     def test_list_cfn_nodes_empty(self, client):
         """Test listing CFN nodes in empty workspace"""
         # Register CFN first
-        cfn_response = client.post("/api/cognition-fabric-nodes", json={"cfn_name": "test-node"})
+        cfn_response = client.post("/api/cognition-fabric-nodes", json={"name": "test-node"})
         assert cfn_response.status_code == 201
-        cfn_id = cfn_response.json()["cfn_id"]
+        cfn_id = cfn_response.json()["id"]
 
         # Create workspace with CFN
         ws_response = client.post("/api/workspaces/create", json={"name": "Test Workspace", "cfn_id": cfn_id})
@@ -189,7 +189,7 @@ class TestCognitionFabricNodeList:
         # Workspace has 1 CFN associated with it now
         assert len(data["nodes"]) == 1
         assert data["total"] == 1
-        assert data["nodes"][0]["cfn_name"] == "test-node"
+        assert data["nodes"][0]["name"] == "test-node"
 
     def test_list_cfn_nodes(self, client, multiple_cfn_nodes):
         """Test listing all CFN nodes (global list)"""
@@ -204,9 +204,9 @@ class TestCognitionFabricNodeList:
 
         # Verify each node has required fields
         for node in data["nodes"]:
-            assert "cfn_id" in node
+            assert "id" in node
             assert "workspace_ids" in node
-            assert "cfn_name" in node
+            assert "name" in node
             assert "status" in node
             assert "last_seen" in node
             assert "enabled" in node
@@ -218,7 +218,7 @@ class TestCognitionFabricNodeList:
         filtered_data = response_filtered.json()
         assert len(filtered_data["nodes"]) == 1
         # Check that the first CFN is returned (can't hardcode ID anymore)
-        assert filtered_data["nodes"][0]["cfn_name"] == "cfn-node-0"
+        assert filtered_data["nodes"][0]["name"] == "cfn-node-0"
 
     def test_list_cfn_nodes_with_status_filter(self, client, created_cfn):
         """Test listing CFN nodes with status filter"""
@@ -236,10 +236,10 @@ class TestCognitionFabricNodeList:
     def test_list_cfn_workspace_isolation(self, client):
         """Test CFN nodes are isolated by workspace"""
         # Register CFNs first
-        cfn1_response = client.post("/api/cognition-fabric-nodes", json={"cfn_name": "cfn-1"})
-        cfn2_response = client.post("/api/cognition-fabric-nodes", json={"cfn_name": "cfn-2"})
-        cfn1_id = cfn1_response.json()["cfn_id"]
-        cfn2_id = cfn2_response.json()["cfn_id"]
+        cfn1_response = client.post("/api/cognition-fabric-nodes", json={"name": "cfn-1"})
+        cfn2_response = client.post("/api/cognition-fabric-nodes", json={"name": "cfn-2"})
+        cfn1_id = cfn1_response.json()["id"]
+        cfn2_id = cfn2_response.json()["id"]
 
         # Create two workspaces with different CFNs
         ws1_response = client.post("/api/workspaces/create", json={"name": "Workspace 1", "cfn_id": cfn1_id})
@@ -252,28 +252,28 @@ class TestCognitionFabricNodeList:
         assert response.status_code == 200
         data = response.json()
         assert data["total"] == 1
-        assert data["nodes"][0]["cfn_id"] == cfn1_id
+        assert data["nodes"][0]["id"] == cfn1_id
 
         # List CFN in ws2 should only show cfn-2 (not cfn-1)
         response = client.get(f"/api/cognition-fabric-nodes?workspace_id={ws2_id}")
         assert response.status_code == 200
         data = response.json()
         assert data["total"] == 1
-        assert data["nodes"][0]["cfn_id"] == cfn2_id
+        assert data["nodes"][0]["id"] == cfn2_id
 
     def test_list_cfn_includes_both_enabled_and_disabled(self, client):
         """Test that list returns both enabled and disabled CFNs"""
         # Create two CFNs first
         cfn1_response = client.post(
             "/api/cognition-fabric-nodes",
-            json={"cfn_name": "enabled-node"},
+            json={"name": "enabled-node"},
         )
         cfn2_response = client.post(
             "/api/cognition-fabric-nodes",
-            json={"cfn_name": "disabled-node"},
+            json={"name": "disabled-node"},
         )
-        cfn1_id = cfn1_response.json()["cfn_id"]
-        cfn2_id = cfn2_response.json()["cfn_id"]
+        cfn1_id = cfn1_response.json()["id"]
+        cfn2_id = cfn2_response.json()["id"]
 
         # Create workspace with first CFN only
         ws_response = client.post("/api/workspaces/create", json={"name": "Test Workspace", "cfn_id": cfn1_id})
@@ -292,7 +292,7 @@ class TestCognitionFabricNodeList:
         assert len(data["nodes"]) == 1
 
         # Verify only enabled node is present (cfn-to-disable is not associated with this workspace)
-        cfn_ids = {node["cfn_id"] for node in data["nodes"]}
+        cfn_ids = {node["id"] for node in data["nodes"]}
         assert cfn1_id in cfn_ids
         assert cfn2_id not in cfn_ids
 
@@ -301,19 +301,19 @@ class TestCognitionFabricNodeList:
         # Create three CFNs first
         cfn1_response = client.post(
             "/api/cognition-fabric-nodes",
-            json={"cfn_name": "enabled-node"},
+            json={"name": "enabled-node"},
         )
         cfn2_response = client.post(
             "/api/cognition-fabric-nodes",
-            json={"cfn_name": "disabled-node"},
+            json={"name": "disabled-node"},
         )
         cfn3_response = client.post(
             "/api/cognition-fabric-nodes",
-            json={"cfn_name": "deleted-node"},
+            json={"name": "deleted-node"},
         )
-        cfn1_id = cfn1_response.json()["cfn_id"]
-        cfn2_id = cfn2_response.json()["cfn_id"]
-        cfn3_id = cfn3_response.json()["cfn_id"]
+        cfn1_id = cfn1_response.json()["id"]
+        cfn2_id = cfn2_response.json()["id"]
+        cfn3_id = cfn3_response.json()["id"]
 
         # Create workspace with first CFN only
         ws_response = client.post("/api/workspaces/create", json={"name": "Test Workspace", "cfn_id": cfn1_id})
@@ -334,7 +334,7 @@ class TestCognitionFabricNodeList:
         data = response.json()
         assert data["total"] == 1
 
-        cfn_ids = {node["cfn_id"] for node in data["nodes"]}
+        cfn_ids = {node["id"] for node in data["nodes"]}
         assert cfn1_id in cfn_ids
         assert cfn2_id not in cfn_ids  # Not associated with workspace
         assert cfn3_id not in cfn_ids  # Not associated with workspace
@@ -351,9 +351,9 @@ class TestCognitionFabricNodeGet:
 
         assert response.status_code == 200
         data = response.json()
-        assert data["cfn_id"] == cfn_id
+        assert data["id"] == cfn_id
         assert workspace_id in data["workspace_ids"]
-        assert "cfn_name" in data
+        assert "name" in data
         assert "config" in data
         assert "workspaces" in data["config"]
         assert "memory_providers" in data["config"]
@@ -375,10 +375,10 @@ class TestCognitionFabricNodeGet:
         # First register CFN for workspace 2
         cfn2_response = client.post(
             "/api/cognition-fabric-nodes",
-            json={"cfn_name": "ws2-cfn-node"},
+            json={"name": "ws2-cfn-node"},
         )
         assert cfn2_response.status_code == 201
-        cfn2_id = cfn2_response.json()["cfn_id"]
+        cfn2_id = cfn2_response.json()["id"]
 
         ws2_response = client.post("/api/workspaces/create", json={"name": "Workspace 2", "cfn_id": cfn2_id})
         assert ws2_response.status_code == 201
@@ -399,7 +399,7 @@ class TestCognitionFabricNodeUpdate:
         """Test updating CFN name"""
         workspace_id, cfn_id = created_cfn
 
-        update_data = {"cfn_name": "updated-cfn-name"}
+        update_data = {"name": "updated-cfn-name"}
 
         response = client.put(
             f"/api/cognition-fabric-nodes/{cfn_id}",
@@ -408,7 +408,7 @@ class TestCognitionFabricNodeUpdate:
 
         assert response.status_code == 200
         data = response.json()
-        assert data["cfn_name"] == "updated-cfn-name"
+        assert data["name"] == "updated-cfn-name"
 
     def test_update_cfn_config(self, client, created_cfn):
         """Test updating CFN config"""
@@ -434,12 +434,12 @@ class TestCognitionFabricNodeUpdate:
 
         # First get the name of cfn_ids[1]
         get_response = client.get(f"/api/cognition-fabric-nodes/{cfn_ids[1]}")
-        existing_name = get_response.json()["cfn_name"]
+        existing_name = get_response.json()["name"]
 
         # Try to update cfn_ids[0] with that name
         response = client.put(
             f"/api/cognition-fabric-nodes/{cfn_ids[0]}",
-            json={"cfn_name": existing_name},
+            json={"name": existing_name},
         )
         assert response.status_code == 409
 
@@ -447,7 +447,7 @@ class TestCognitionFabricNodeUpdate:
         """Test updating non-existent CFN"""
         response = client.put(
             "/api/cognition-fabric-nodes/nonexistent-cfn",
-            json={"cfn_name": "new-name"},
+            json={"name": "new-name"},
         )
         assert response.status_code == 404
 
@@ -464,13 +464,13 @@ class TestCognitionFabricNodeDisable:
         assert response.status_code == 200
         data = response.json()
         assert data["enabled"] is False
-        assert data["cfn_id"] == cfn_id
+        assert data["id"] == cfn_id
 
         # Verify disabled CFN still appears in list (but with enabled=False)
         list_response = client.get(f"/api/cognition-fabric-nodes?workspace_id={workspace_id}")
         list_data = list_response.json()
         assert list_data["total"] == 1
-        assert list_data["nodes"][0]["cfn_id"] == cfn_id
+        assert list_data["nodes"][0]["id"] == cfn_id
         assert list_data["nodes"][0]["enabled"] is False
 
     def test_disable_cfn_twice(self, client, created_cfn):
@@ -537,12 +537,12 @@ class TestCognitionFabricNodeDelete:
 
     def test_delete_allows_id_reuse(self, client):
         """Test that deregistered CFN name can be reused after deletion"""
-        cfn_data = {"cfn_name": "test-node-1", "ip_address": "192.168.1.100", "port": 8080}
+        cfn_data = {"name": "test-node-1", "ip_address": "192.168.1.100", "port": 8080}
 
         # Register CFN
         response1 = client.post("/api/cognition-fabric-nodes", json=cfn_data)
         assert response1.status_code == 201
-        cfn_id = response1.json()["cfn_id"]
+        cfn_id = response1.json()["id"]
 
         # Create workspace with CFN
         ws_response = client.post("/api/workspaces/create", json={"name": "Test Workspace", "cfn_id": cfn_id})
@@ -555,10 +555,10 @@ class TestCognitionFabricNodeDelete:
         client.delete(f"/api/cognition-fabric-nodes/{cfn_id}")
 
         # Register new CFN with same name (should succeed - name can be reused after deletion)
-        new_cfn_data = {"cfn_name": "test-node-1", "ip_address": "192.168.1.100", "port": 8080}
+        new_cfn_data = {"name": "test-node-1", "ip_address": "192.168.1.100", "port": 8080}
         response2 = client.post("/api/cognition-fabric-nodes", json=new_cfn_data)
         assert response2.status_code == 201
-        assert response2.json()["cfn_name"] == "test-node-1"
+        assert response2.json()["name"] == "test-node-1"
 
 
 class TestCognitionFabricNodeEnableDisable:
@@ -568,13 +568,13 @@ class TestCognitionFabricNodeEnableDisable:
         """Test that disabled CFN CANNOT auto re-enable via /register"""
         # Initial creation
         cfn_data = {
-            "cfn_name": "test-node-disable",
+            "name": "test-node-disable",
             "cfn_config": {"memory": "4GB"},
         }
         response1 = client.post("/api/cognition-fabric-nodes", json=cfn_data)
         assert response1.status_code == 201
         assert response1.json()["status"] == "offline"  # Starts offline
-        cfn_id = response1.json()["cfn_id"]
+        cfn_id = response1.json()["id"]
 
         # Create workspace with CFN
         ws_response = client.post(
@@ -592,12 +592,12 @@ class TestCognitionFabricNodeEnableDisable:
         list_response = client.get(f"/api/cognition-fabric-nodes?workspace_id={workspace_id}")
         list_data = list_response.json()
         assert list_data["total"] == 1
-        assert list_data["nodes"][0]["cfn_id"] == cfn_id
+        assert list_data["nodes"][0]["id"] == cfn_id
         assert list_data["nodes"][0]["enabled"] is False
 
         # Attempt to re-register with same name (should fail - disabled CFN cannot auto re-enable)
         updated_cfn_data = {
-            "cfn_name": "test-node-disable",
+            "name": "test-node-disable",
             "cfn_config": {"memory": "8GB"},
         }
         response3 = client.post("/api/cognition-fabric-nodes", json=updated_cfn_data)
@@ -608,19 +608,19 @@ class TestCognitionFabricNodeEnableDisable:
         list_response = client.get(f"/api/cognition-fabric-nodes?workspace_id={workspace_id}")
         list_data = list_response.json()
         assert list_data["total"] == 1
-        assert list_data["nodes"][0]["cfn_id"] == cfn_id
+        assert list_data["nodes"][0]["id"] == cfn_id
         assert list_data["nodes"][0]["enabled"] is False
 
     def test_enable_disabled_cfn(self, client):
         """Test manually re-enabling a disabled CFN via /enable endpoint"""
         # Initial creation
         cfn_data = {
-            "cfn_name": "test-node-enable",
+            "name": "test-node-enable",
             "cfn_config": {"memory": "4GB"},
         }
         response1 = client.post("/api/cognition-fabric-nodes", json=cfn_data)
         assert response1.status_code == 201
-        cfn_id = response1.json()["cfn_id"]
+        cfn_id = response1.json()["id"]
 
         # Create workspace with CFN
         ws_response = client.post(
@@ -642,12 +642,12 @@ class TestCognitionFabricNodeEnableDisable:
 
         # Register again with same name (reboot scenario - should refresh config and succeed)
         updated_cfn_data = {
-            "cfn_name": "test-node-enable",
+            "name": "test-node-enable",
             "cfn_config": {"memory": "8GB"},
         }
         response4 = client.post("/api/cognition-fabric-nodes", json=updated_cfn_data)
         assert response4.status_code == 201  # Refresh also returns 201
-        assert response4.json()["cfn_id"] == cfn_id  # Same ID
+        assert response4.json()["id"] == cfn_id  # Same ID
 
         # Send heartbeat to go online
         heartbeat_response = client.put(f"/api/cognition-fabric-nodes/{cfn_id}/heartbeat")
@@ -658,13 +658,13 @@ class TestCognitionFabricNodeEnableDisable:
         """Test active CFN reconnecting (reboot scenario) - should refresh config"""
         # Initial creation
         cfn_data = {
-            "cfn_name": "test-node-reboot",
+            "name": "test-node-reboot",
             "cfn_config": {"memory": "4GB"},
         }
         response1 = client.post("/api/cognition-fabric-nodes", json=cfn_data)
         assert response1.status_code == 201
         assert response1.json()["status"] == "offline"
-        cfn_id = response1.json()["cfn_id"]
+        cfn_id = response1.json()["id"]
 
         # Create workspace with CFN
         ws_response = client.post(
@@ -680,13 +680,13 @@ class TestCognitionFabricNodeEnableDisable:
 
         # Simulate reboot - CFN calls /register again with same name (while still enabled=true, status=online)
         updated_cfn_data = {
-            "cfn_name": "test-node-reboot",
+            "name": "test-node-reboot",
             "cfn_config": {"memory": "8GB"},
         }
         response2 = client.post("/api/cognition-fabric-nodes", json=updated_cfn_data)
         # Should succeed with 201 (refresh)
         assert response2.status_code == 201
-        assert response2.json()["cfn_id"] == cfn_id  # Same ID
+        assert response2.json()["id"] == cfn_id  # Same ID
         assert response2.json()["status"] == "online"  # Still online after refresh
 
         # Send heartbeat again
@@ -698,7 +698,7 @@ class TestCognitionFabricNodeEnableDisable:
         detail_response = client.get(f"/api/cognition-fabric-nodes/{cfn_id}")
         assert detail_response.status_code == 200
         detail = detail_response.json()
-        assert detail["cfn_name"] == "test-node-reboot"
+        assert detail["name"] == "test-node-reboot"
         # Config structure has been updated - verify workspaces and memory_providers exist
         assert "workspaces" in detail["config"]
         assert "memory_providers" in detail["config"]
@@ -708,14 +708,14 @@ class TestCognitionFabricNodeEnableDisable:
         # Register first CFN
         response1 = client.post(
             "/api/cognition-fabric-nodes",
-            json={"cfn_name": "first-node"},
+            json={"name": "first-node"},
         )
-        cfn1_id = response1.json()["cfn_id"]
+        cfn1_id = response1.json()["id"]
 
         # Register second CFN (online and active)
         response2 = client.post(
             "/api/cognition-fabric-nodes",
-            json={"cfn_name": "second-node"},
+            json={"name": "second-node"},
         )
 
         # Create workspace with first CFN
@@ -725,18 +725,18 @@ class TestCognitionFabricNodeEnableDisable:
         # Second CFN tries to reconnect with first CFN's name (should refresh the first one)
         response = client.post(
             "/api/cognition-fabric-nodes",
-            json={"cfn_name": "first-node"},
+            json={"name": "first-node"},
         )
         assert response.status_code == 201  # Refresh the existing first-node
-        assert response.json()["cfn_id"] == cfn1_id
+        assert response.json()["id"] == cfn1_id
 
     def test_disabled_cfn_different_workspace(self, client):
         """Test that disabled CFN cannot re-register with same name"""
         # Register CFN
-        cfn_data = {"cfn_name": "test-node-ws", "ip_address": "192.168.1.100", "port": 8080}
+        cfn_data = {"name": "test-node-ws", "ip_address": "192.168.1.100", "port": 8080}
         response1 = client.post("/api/cognition-fabric-nodes", json=cfn_data)
         assert response1.status_code == 201
-        cfn_id = response1.json()["cfn_id"]
+        cfn_id = response1.json()["id"]
 
         # Create workspace with CFN
         ws1_response = client.post(
@@ -751,18 +751,18 @@ class TestCognitionFabricNodeEnableDisable:
         # Try to re-register with same name (should fail - CFN is disabled)
         response2 = client.post(
             "/api/cognition-fabric-nodes",
-            json={"cfn_name": "test-node-ws"},
+            json={"name": "test-node-ws"},
         )
         assert response2.status_code == 403
         assert "disabled" in response2.json()["detail"].lower()
 
     def test_full_enable_disable_cycle(self, client):
         """Test full cycle: register → disable → enable → re-register → heartbeat"""
-        cfn_data = {"cfn_name": "cycle-node", "ip_address": "192.168.1.100", "port": 8080}
+        cfn_data = {"name": "cycle-node", "ip_address": "192.168.1.100", "port": 8080}
 
         # Create
         response = client.post("/api/cognition-fabric-nodes", json=cfn_data)
-        cfn_id = response.json()["cfn_id"]
+        cfn_id = response.json()["id"]
 
         # Create workspace with CFN
         ws_response = client.post("/api/workspaces/create", json={"name": "Test Workspace", "cfn_id": cfn_id})
@@ -784,11 +784,11 @@ class TestCognitionFabricNodeEnableDisable:
 
     def test_disabled_cfn_cannot_heartbeat(self, client):
         """Test that a disabled CFN cannot send heartbeats"""
-        cfn_data = {"cfn_name": "disabled-node", "ip_address": "192.168.1.100", "port": 8080}
+        cfn_data = {"name": "disabled-node", "ip_address": "192.168.1.100", "port": 8080}
 
         # Create
         response = client.post("/api/cognition-fabric-nodes", json=cfn_data)
-        cfn_id = response.json()["cfn_id"]
+        cfn_id = response.json()["id"]
 
         # Create workspace with CFN
         ws_response = client.post(
@@ -816,12 +816,12 @@ class TestCognitionFabricNodeEnableDisable:
 
     def test_create_already_active_cfn_refreshes(self, client):
         """Test that registering an already active CFN refreshes config (reboot scenario)"""
-        cfn_data = {"cfn_name": "active-node", "ip_address": "192.168.1.100", "port": 8080}
+        cfn_data = {"name": "active-node", "ip_address": "192.168.1.100", "port": 8080}
 
         # Initial creation
         response1 = client.post("/api/cognition-fabric-nodes", json=cfn_data)
         assert response1.status_code == 201
-        cfn_id = response1.json()["cfn_id"]
+        cfn_id = response1.json()["id"]
 
         # Create workspace with CFN
         ws_response = client.post(
@@ -832,12 +832,12 @@ class TestCognitionFabricNodeEnableDisable:
 
         # Register again with same name (reboot scenario - should refresh config and succeed)
         updated_cfn_data = {
-            "cfn_name": "active-node",
+            "name": "active-node",
             "cfn_config": {"memory": "16GB"},
         }
         response2 = client.post("/api/cognition-fabric-nodes", json=updated_cfn_data)
         assert response2.status_code == 201  # Refresh succeeds
-        assert response2.json()["cfn_id"] == cfn_id  # Same ID
+        assert response2.json()["id"] == cfn_id  # Same ID
         assert response2.json()["status"] == "offline"  # Offline until heartbeat
 
 
@@ -853,11 +853,11 @@ class TestCognitionFabricNodeBackgroundMonitoring:
         # Register CFN
         register_response = client.post(
             "/api/cognition-fabric-nodes",
-            json={"cfn_name": "stale-node"},
+            json={"name": "stale-node"},
         )
         assert register_response.status_code == 201
         assert register_response.json()["status"] == "offline"  # Starts offline
-        cfn_id = register_response.json()["cfn_id"]
+        cfn_id = register_response.json()["id"]
 
         # Create workspace and register CFN
         ws_response = client.post("/api/workspaces/create", json={"name": "Test Workspace", "cfn_id": cfn_id})
@@ -965,10 +965,10 @@ class TestCognitionFabricNodeConfigTimestamp:
     def test_config_timestamp_updated_on_cfn_refresh(self, client):
         """Test that config_timestamp is updated when CFN reconnects (refresh scenario)"""
         # Create initial CFN
-        cfn_data = {"cfn_name": "refresh-test-node", "cfn_config": {"version": "1.0"}}
+        cfn_data = {"name": "refresh-test-node", "cfn_config": {"version": "1.0"}}
         response1 = client.post("/api/cognition-fabric-nodes", json=cfn_data)
         assert response1.status_code == 201
-        cfn_id = response1.json()["cfn_id"]
+        cfn_id = response1.json()["id"]
 
         # Create workspace
         ws_response = client.post("/api/workspaces/create", json={"name": "Test Workspace", "cfn_id": cfn_id})
@@ -983,10 +983,10 @@ class TestCognitionFabricNodeConfigTimestamp:
         time.sleep(0.1)
 
         # Reconnect with same name (refresh scenario)
-        refreshed_cfn_data = {"cfn_name": "refresh-test-node", "cfn_config": {"version": "2.0"}}
+        refreshed_cfn_data = {"name": "refresh-test-node", "cfn_config": {"version": "2.0"}}
         response2 = client.post("/api/cognition-fabric-nodes", json=refreshed_cfn_data)
         assert response2.status_code == 201
-        assert response2.json()["cfn_id"] == cfn_id  # Same ID
+        assert response2.json()["id"] == cfn_id  # Same ID
 
         # Send heartbeat and get new config_timestamp
         heartbeat2 = client.put(f"/api/cognition-fabric-nodes/{cfn_id}/heartbeat")
@@ -1005,10 +1005,10 @@ class TestCognitionFabricNodeConfigTimestamp:
     def test_config_timestamp_format_consistency(self, client):
         """Test that config_timestamp format is the same during registration and heartbeat"""
         # Register CFN
-        cfn_data = {"cfn_name": "format-test-node", "cfn_config": {"version": "1.0"}}
+        cfn_data = {"name": "format-test-node", "cfn_config": {"version": "1.0"}}
         register_response = client.post("/api/cognition-fabric-nodes", json=cfn_data)
         assert register_response.status_code == 201
-        cfn_id = register_response.json()["cfn_id"]
+        cfn_id = register_response.json()["id"]
 
         # Get config_timestamp from registration response (embedded in config)
         registration_config = register_response.json()["config"]
@@ -1041,12 +1041,12 @@ class TestCognitionFabricNodeConfigTimestamp:
 @pytest.fixture
 def created_cfn(client):
     """Fixture: Register a CFN, send heartbeat to make it online, and return workspace_id, cfn_id"""
-    cfn_data = {"cfn_name": "fixture-cfn-node", "ip_address": "192.168.1.100", "port": 8080}
+    cfn_data = {"name": "fixture-cfn-node", "ip_address": "192.168.1.100", "port": 8080}
 
     response = client.post("/api/cognition-fabric-nodes", json=cfn_data)
     assert response.status_code == 201
     assert response.json()["status"] == "offline"  # Initially offline
-    cfn_id = response.json()["cfn_id"]
+    cfn_id = response.json()["id"]
 
     # Create workspace with CFN
     ws_response = client.post("/api/workspaces/create", json={"name": "Test Workspace", "cfn_id": cfn_id})
@@ -1065,10 +1065,10 @@ def created_cfn(client):
 def multiple_cfn_nodes(client):
     """Fixture: Register multiple CFN nodes, send heartbeats to make them online, and return workspace_id, [cfn_ids]"""
     # Register first CFN
-    cfn_data_0 = {"cfn_name": "cfn-node-0", "ip_address": "192.168.1.100", "port": 8080}
+    cfn_data_0 = {"name": "cfn-node-0", "ip_address": "192.168.1.100", "port": 8080}
     response = client.post("/api/cognition-fabric-nodes", json=cfn_data_0)
     assert response.status_code == 201
-    cfn_id_0 = response.json()["cfn_id"]
+    cfn_id_0 = response.json()["id"]
 
     # Create workspace with first CFN
     ws_response = client.post("/api/workspaces/create", json={"name": "Test Workspace", "cfn_id": cfn_id_0})
@@ -1083,10 +1083,10 @@ def multiple_cfn_nodes(client):
 
     # Register remaining CFNs and create additional workspaces for them
     for i in range(1, 3):
-        cfn_data = {"cfn_name": f"cfn-node-{i}", "ip_address": "192.168.1.100", "port": 8080 + i}
+        cfn_data = {"name": f"cfn-node-{i}", "ip_address": "192.168.1.100", "port": 8080 + i}
         response = client.post("/api/cognition-fabric-nodes", json=cfn_data)
         assert response.status_code == 201
-        cfn_id = response.json()["cfn_id"]
+        cfn_id = response.json()["id"]
 
         # Create additional workspace with this CFN (each workspace associated with a different CFN)
         ws_resp = client.post(

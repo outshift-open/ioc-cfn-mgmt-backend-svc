@@ -14,7 +14,7 @@ class TestMemoryProviderCreate:
     def test_create_memory_provider_no_auth(self, client):
         """Test creating memory provider with no authentication"""
         payload = {
-            "memory_provider_name": "default-memory-service",
+            "name": "default-memory-service",
             "description": "Default memory service for general-purpose storage. Supports embeddings, vector search, and conversation history queries.",
             "config": {
                 "url": "http://localhost:8765",
@@ -27,16 +27,16 @@ class TestMemoryProviderCreate:
 
         assert response.status_code == status.HTTP_201_CREATED
         data = response.json()
-        assert data["memory_provider_name"] == "default-memory-service"
+        assert data["name"] == "default-memory-service"
         assert data["config"]["url"] == "http://localhost:8765"
         assert data["config"]["auth"]["type"] == "none"
         assert data["enabled"] is True
-        assert "memory_provider_id" in data
+        assert "id" in data
 
     def test_create_memory_provider_token_auth_mem0(self, client):
         """Test creating memory provider with token auth (Mem0 style)"""
         payload = {
-            "memory_provider_name": "mem0-memory-service",
+            "name": "mem0-memory-service",
             "description": "Mem0 memory service for personalized agent memory. Supports user preference queries, contextual retrieval, and long-term memory storage.",
             "config": {
                 "url": "https://api.mem0.ai",
@@ -52,7 +52,7 @@ class TestMemoryProviderCreate:
 
         assert response.status_code == status.HTTP_201_CREATED
         data = response.json()
-        assert data["memory_provider_name"] == "mem0-memory-service"
+        assert data["name"] == "mem0-memory-service"
         assert data["config"]["auth"]["type"] == "token"
         # Credentials should be encrypted
         assert data["config"]["auth"]["credentials"]["api_key"] == "***ENCRYPTED***"
@@ -60,7 +60,7 @@ class TestMemoryProviderCreate:
     def test_create_memory_provider_bearer_auth(self, client):
         """Test creating memory provider with bearer token auth"""
         payload = {
-            "memory_provider_name": "oauth-memory-service",
+            "name": "oauth-memory-service",
             "description": "OAuth-protected memory service",
             "config": {
                 "url": "https://memory.example.com:9003",
@@ -84,7 +84,7 @@ class TestMemoryProviderCreate:
     def test_create_memory_provider_basic_auth(self, client):
         """Test creating memory provider with basic authentication"""
         payload = {
-            "memory_provider_name": "grafiti-selfhosted",
+            "name": "grafiti-selfhosted",
             "description": "Self-hosted Grafiti instance for internal knowledge graphs. Supports complex entity queries and relationship mapping.",
             "config": {
                 "url": "https://grafiti.internal.company.com:8443",
@@ -106,7 +106,7 @@ class TestMemoryProviderCreate:
     def test_create_memory_provider_custom_header_auth(self, client):
         """Test creating memory provider with custom header authentication"""
         payload = {
-            "memory_provider_name": "custom-memory-provider",
+            "name": "custom-memory-provider",
             "description": "Custom memory service with proprietary auth",
             "config": {
                 "url": "https://memory.custom.io",
@@ -131,7 +131,7 @@ class TestMemoryProviderCreate:
     def test_create_memory_provider_duplicate_name(self, client):
         """Test that duplicate provider names are rejected"""
         payload = {
-            "memory_provider_name": "duplicate-test",
+            "name": "duplicate-test",
             "config": {
                 "url": "http://localhost:8765",
                 "auth": {"type": "none"},
@@ -149,7 +149,7 @@ class TestMemoryProviderCreate:
     def test_create_memory_provider_token_missing_api_key(self, client):
         """Test validation: token auth requires api_key"""
         payload = {
-            "memory_provider_name": "invalid-token-auth",
+            "name": "invalid-token-auth",
             "config": {
                 "url": "http://localhost:8765",
                 "auth": {
@@ -180,11 +180,11 @@ class TestMemoryProviderList:
         # Create multiple providers
         providers = [
             {
-                "memory_provider_name": "provider-1",
+                "name": "provider-1",
                 "config": {"url": "http://localhost:8765", "auth": {"type": "none"}},
             },
             {
-                "memory_provider_name": "provider-2",
+                "name": "provider-2",
                 "config": {"url": "http://localhost:8766", "auth": {"type": "none"}},
             },
         ]
@@ -210,20 +210,20 @@ class TestMemoryProviderGet:
         create_response = client.post(
             "/api/memory-providers",
             json={
-                "memory_provider_name": "test-provider",
+                "name": "test-provider",
                 "description": "Test description",
                 "config": {"url": "http://localhost:8765", "auth": {"type": "none"}},
             },
         )
-        provider_id = create_response.json()["memory_provider_id"]
+        provider_id = create_response.json()["id"]
 
         # Get provider
         response = client.get(f"/api/memory-providers/{provider_id}")
 
         assert response.status_code == status.HTTP_200_OK
         data = response.json()
-        assert data["memory_provider_id"] == provider_id
-        assert data["memory_provider_name"] == "test-provider"
+        assert data["id"] == provider_id
+        assert data["name"] == "test-provider"
         assert data["description"] == "Test description"
 
     def test_get_nonexistent_memory_provider(self, client):
@@ -241,11 +241,11 @@ class TestMemoryProviderUpdate:
         create_response = client.post(
             "/api/memory-providers",
             json={
-                "memory_provider_name": "update-test",
+                "name": "update-test",
                 "config": {"url": "http://localhost:8765", "auth": {"type": "none"}},
             },
         )
-        provider_id = create_response.json()["memory_provider_id"]
+        provider_id = create_response.json()["id"]
 
         # Update provider
         update_payload = {
@@ -272,11 +272,11 @@ class TestMemoryProviderUpdate:
         create_response = client.post(
             "/api/memory-providers",
             json={
-                "memory_provider_name": "disable-test",
+                "name": "disable-test",
                 "config": {"url": "http://localhost:8765", "auth": {"type": "none"}},
             },
         )
-        provider_id = create_response.json()["memory_provider_id"]
+        provider_id = create_response.json()["id"]
 
         # Disable provider
         response = client.patch(
@@ -296,11 +296,11 @@ class TestMemoryProviderDelete:
         create_response = client.post(
             "/api/memory-providers",
             json={
-                "memory_provider_name": "delete-test",
+                "name": "delete-test",
                 "config": {"url": "http://localhost:8765", "auth": {"type": "none"}},
             },
         )
-        provider_id = create_response.json()["memory_provider_id"]
+        provider_id = create_response.json()["id"]
 
         # Delete provider
         response = client.delete(f"/api/memory-providers/{provider_id}")
@@ -321,7 +321,7 @@ class TestMemoryProviderEncryptionFlow:
         provider_response = client.post(
             "/api/memory-providers",
             json={
-                "memory_provider_name": "encrypted-token-provider",
+                "name": "encrypted-token-provider",
                 "description": "Test provider with token auth",
                 "config": {
                     "url": "https://memory.example.com:9003",
@@ -336,7 +336,7 @@ class TestMemoryProviderEncryptionFlow:
         
         assert provider_response.status_code == status.HTTP_201_CREATED
         provider_data = provider_response.json()
-        provider_id = provider_data["memory_provider_id"]
+        provider_id = provider_data["id"]
         
         # 2. Verify API response masks credentials (for API consumers)
         assert provider_data["config"]["auth"]["type"] == "token"
@@ -364,11 +364,11 @@ class TestMemoryProviderEncryptionFlow:
         # 4. Register CFN for this workspace  
         cfn_response = client.post(
             "/api/cognition-fabric-nodes",
-            json={"cfn_name": "encryption-test-cfn"},
+            json={"name": "encryption-test-cfn"},
         )
         
         assert cfn_response.status_code == status.HTTP_201_CREATED
-        cfn_id = cfn_response.json()["cfn_id"]
+        cfn_id = cfn_response.json()["id"]
         
         # 5. Associate workspace with CFN
         workspace_update_response = client.put(
@@ -394,7 +394,7 @@ class TestMemoryProviderEncryptionFlow:
         # Find our provider in the list
         test_provider = None
         for mp in memory_providers:
-            if mp["memory_provider_id"] == provider_id:
+            if mp["id"] == provider_id:
                 test_provider = mp
                 break
         
@@ -414,7 +414,7 @@ class TestMemoryProviderEncryptionFlow:
         provider_response = client.post(
             "/api/memory-providers",
             json={
-                "memory_provider_name": "encrypted-bearer-provider",
+                "name": "encrypted-bearer-provider",
                 "config": {
                     "url": "https://oauth.memory.com",
                     "auth": {
@@ -428,7 +428,7 @@ class TestMemoryProviderEncryptionFlow:
             },
         )
         
-        provider_id = provider_response.json()["memory_provider_id"]
+        provider_id = provider_response.json()["id"]
         
         # Verify masked in API response
         credentials = provider_response.json()["config"]["auth"]["credentials"]
@@ -451,9 +451,9 @@ class TestMemoryProviderEncryptionFlow:
         
         cfn_response = client.post(
             "/api/cognition-fabric-nodes",
-            json={"cfn_name": "bearer-test-cfn"},
+            json={"name": "bearer-test-cfn"},
         )
-        cfn_id = cfn_response.json()["cfn_id"]
+        cfn_id = cfn_response.json()["id"]
         
         client.put(
             f"/api/workspaces/{created_workspace}",
@@ -465,7 +465,7 @@ class TestMemoryProviderEncryptionFlow:
         
         # Verify decrypted for CFN
         memory_providers = cfn_config["config"]["memory_providers"]
-        test_provider = next((mp for mp in memory_providers if mp["memory_provider_id"] == provider_id), None)
+        test_provider = next((mp for mp in memory_providers if mp["id"] == provider_id), None)
         
         assert test_provider is not None
         credentials = test_provider["config"]["auth"]["credentials"]
@@ -479,7 +479,7 @@ class TestMemoryProviderEncryptionFlow:
         provider_response = client.post(
             "/api/memory-providers",
             json={
-                "memory_provider_name": "encrypted-basic-provider",
+                "name": "encrypted-basic-provider",
                 "config": {
                     "url": "https://basic-auth.memory.com",
                     "auth": {
@@ -493,7 +493,7 @@ class TestMemoryProviderEncryptionFlow:
             },
         )
         
-        provider_id = provider_response.json()["memory_provider_id"]
+        provider_id = provider_response.json()["id"]
         
         # Password should be masked
         credentials = provider_response.json()["config"]["auth"]["credentials"]
@@ -513,9 +513,9 @@ class TestMemoryProviderEncryptionFlow:
         
         cfn_response = client.post(
             "/api/cognition-fabric-nodes",
-            json={"cfn_name": "basic-test-cfn"},
+            json={"name": "basic-test-cfn"},
         )
-        cfn_id = cfn_response.json()["cfn_id"]
+        cfn_id = cfn_response.json()["id"]
         
         client.put(
             f"/api/workspaces/{created_workspace}",
@@ -525,7 +525,7 @@ class TestMemoryProviderEncryptionFlow:
         # Fetch CFN config and verify decryption
         cfn_config = client.get(f"/api/cognition-fabric-nodes/{cfn_id}").json()
         memory_providers = cfn_config["config"]["memory_providers"]
-        test_provider = next((mp for mp in memory_providers if mp["memory_provider_id"] == provider_id), None)
+        test_provider = next((mp for mp in memory_providers if mp["id"] == provider_id), None)
         
         assert test_provider is not None
         credentials = test_provider["config"]["auth"]["credentials"]
@@ -537,7 +537,7 @@ class TestMemoryProviderEncryptionFlow:
         provider_response = client.post(
             "/api/memory-providers",
             json={
-                "memory_provider_name": "no-auth-provider",
+                "name": "no-auth-provider",
                 "config": {
                     "url": "http://localhost:8765",
                     "auth": {"type": "none"},
@@ -545,7 +545,7 @@ class TestMemoryProviderEncryptionFlow:
             },
         )
         
-        provider_id = provider_response.json()["memory_provider_id"]
+        provider_id = provider_response.json()["id"]
         
         # No credentials to encrypt
         assert provider_response.json()["config"]["auth"]["type"] == "none"
@@ -565,9 +565,9 @@ class TestMemoryProviderEncryptionFlow:
         
         cfn_response = client.post(
             "/api/cognition-fabric-nodes",
-            json={"cfn_name": "no-auth-cfn"},
+            json={"name": "no-auth-cfn"},
         )
-        cfn_id = cfn_response.json()["cfn_id"]
+        cfn_id = cfn_response.json()["id"]
         
         client.put(
             f"/api/workspaces/{created_workspace}",
@@ -577,7 +577,7 @@ class TestMemoryProviderEncryptionFlow:
         # Verify no auth in CFN config either
         cfn_config = client.get(f"/api/cognition-fabric-nodes/{cfn_id}").json()
         memory_providers = cfn_config["config"]["memory_providers"]
-        test_provider = next((mp for mp in memory_providers if mp["memory_provider_id"] == provider_id), None)
+        test_provider = next((mp for mp in memory_providers if mp["id"] == provider_id), None)
         
         assert test_provider is not None
         assert test_provider["config"]["auth"]["type"] == "none"

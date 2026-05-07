@@ -12,10 +12,10 @@ class CognitionFabricNode(Base):
     __tablename__ = "cognition_fabric_node"
 
     # Primary key - CFN's persistent ID (not auto-generated)
-    cfn_id = Column(String(255), primary_key=True, nullable=False)
+    id = Column(String(255), primary_key=True, nullable=False)
 
     # Required fields
-    cfn_name = Column(String(255), nullable=False)
+    name = Column(String(255), nullable=False)
 
     # Optional fields
     cfn_config = Column(JSONB, nullable=True)
@@ -52,14 +52,14 @@ class CognitionFabricNode(Base):
         # Enforce unique CFN names (excluding soft-deleted)
         Index(
             "idx_cfn_name_unique",
-            "cfn_name",
+            "name",
             unique=True,
             postgresql_where=text("deleted_at IS NULL"),
         ),
     )
 
     def __repr__(self):
-        return f"<CognitionFabricNode(cfn_id='{self.cfn_id}', cfn_name='{self.cfn_name}', " f"status='{self.status}')>"
+        return f"<CognitionFabricNode(id='{self.id}', name='{self.name}', status='{self.status}')>"
 
 
 class CfnWorkspace(Base):
@@ -69,7 +69,7 @@ class CfnWorkspace(Base):
 
     cfn_id = Column(
         String(255),
-        ForeignKey("cognition_fabric_node.cfn_id", ondelete="CASCADE"),
+        ForeignKey("cognition_fabric_node.id", ondelete="CASCADE"),
         primary_key=True,
         nullable=False,
     )

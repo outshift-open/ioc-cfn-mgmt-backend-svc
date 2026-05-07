@@ -120,8 +120,8 @@ def upgrade() -> None:
     CREATE UNIQUE INDEX "idx_mas_workspace_name_unique" ON "multi_agentic_system" ("workspace_id", "name") WHERE "deleted_at" IS NULL;
 
     CREATE TABLE "cognition_fabric_node" (
-      "cfn_id" character varying(255) NOT NULL,
-      "cfn_name" character varying(255) NOT NULL,
+      "id" character varying(255) NOT NULL,
+      "name" character varying(255) NOT NULL,
       "cfn_config" jsonb NULL,
       "config" jsonb NULL,
       "status" character varying(50) NOT NULL DEFAULT 'online',
@@ -132,20 +132,20 @@ def upgrade() -> None:
       "created_by" character varying(255) NULL,
       "updated_by" character varying(255) NULL,
       "deleted_at" timestamp NULL,
-      PRIMARY KEY ("cfn_id")
+      PRIMARY KEY ("id")
     );
     CREATE INDEX "idx_cfn_enabled" ON "cognition_fabric_node" ("enabled");
     CREATE INDEX "idx_cfn_deleted_at" ON "cognition_fabric_node" ("deleted_at");
     CREATE INDEX "idx_cfn_last_seen" ON "cognition_fabric_node" ("last_seen");
     CREATE INDEX "idx_cfn_status" ON "cognition_fabric_node" ("status");
-    CREATE UNIQUE INDEX "idx_cfn_name_unique" ON "cognition_fabric_node" ("cfn_name") WHERE (deleted_at IS NULL);
+    CREATE UNIQUE INDEX "idx_cfn_name_unique" ON "cognition_fabric_node" ("name") WHERE (deleted_at IS NULL);
 
     ALTER TABLE "workspace" ADD CONSTRAINT "fk_workspace_cfn"
-      FOREIGN KEY ("cfn_id") REFERENCES "cognition_fabric_node" ("cfn_id") ON DELETE RESTRICT;
+      FOREIGN KEY ("cfn_id") REFERENCES "cognition_fabric_node" ("id") ON DELETE RESTRICT;
 
     CREATE TABLE "memory_provider" (
-      "memory_provider_id" character varying(255) NOT NULL,
-      "memory_provider_name" character varying(255) NOT NULL,
+      "id" character varying(255) NOT NULL,
+      "name" character varying(255) NOT NULL,
       "description" character varying(1000) NULL,
       "config" jsonb NULL,
       "enabled" boolean NOT NULL DEFAULT true,
@@ -154,14 +154,14 @@ def upgrade() -> None:
       "created_by" character varying(36) NOT NULL,
       "updated_by" character varying(36) NULL,
       "deleted_at" timestamp NULL,
-      PRIMARY KEY ("memory_provider_id")
+      PRIMARY KEY ("id")
     );
-    CREATE UNIQUE INDEX "idx_mp_name_unique" ON "memory_provider" ("memory_provider_name") WHERE "deleted_at" IS NULL;
+    CREATE UNIQUE INDEX "idx_mp_name_unique" ON "memory_provider" ("name") WHERE "deleted_at" IS NULL;
 
 CREATE TABLE "cognition_engine" (
-      "cognition_engine_id" character varying(255) NOT NULL,
+      "id" character varying(255) NOT NULL,
       "workspace_id" character varying(36) NOT NULL,
-      "cognition_engine_name" character varying(255) NOT NULL,
+      "name" character varying(255) NOT NULL,
       "config" jsonb NULL,
       "enabled" boolean NOT NULL DEFAULT true,
       "created_at" timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -169,7 +169,7 @@ CREATE TABLE "cognition_engine" (
       "created_by" character varying(36) NOT NULL,
       "updated_by" character varying(36) NULL,
       "deleted_at" timestamp NULL,
-      PRIMARY KEY ("cognition_engine_id")
+      PRIMARY KEY ("id")
     );
     CREATE INDEX "idx_ce_workspace_id" ON "cognition_engine" ("workspace_id");
 

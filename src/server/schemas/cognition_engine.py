@@ -13,16 +13,16 @@ from pydantic import BaseModel, Field
 class CognitionEngineCreate(BaseModel):
     """Schema for creating a cognition engine"""
 
-    cognition_engine_name: str = Field(..., description="Engine name")
+    name: str = Field(..., description="Engine name")
     config: Optional[dict] = Field(None, description="Engine-specific configuration")
 
 
 class CognitionEngineListItem(BaseModel):
     """Schema for cognition engine list item"""
 
-    cognition_engine_id: str
+    id: str
     workspace_id: str
-    cognition_engine_name: str
+    name: str
     config: Optional[dict]
     enabled: bool
     created_at: datetime
@@ -38,7 +38,7 @@ class CognitionEngineList(BaseModel):
 class CognitionEngineUpdate(BaseModel):
     """Schema for updating a cognition engine"""
 
-    cognition_engine_name: Optional[str] = Field(None, description="Engine name")
+    name: Optional[str] = Field(None, description="Engine name")
     config: Optional[dict] = Field(None, description="Engine-specific configuration")
     enabled: Optional[bool] = Field(None, description="Whether engine is enabled")
 
@@ -46,9 +46,9 @@ class CognitionEngineUpdate(BaseModel):
 class CognitionEngineDetail(BaseModel):
     """Schema for detailed cognition engine information"""
 
-    cognition_engine_id: str
+    id: str
     workspace_id: str
-    cognition_engine_name: str
+    name: str
     config: Optional[dict]
     enabled: bool
     created_at: datetime
