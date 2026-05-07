@@ -66,7 +66,7 @@ services:
       context: .
       dockerfile: Dockerfile
     # Image Link: https://github.com/orgs/cisco-eti/packages/container/package/ioc-cfn-mgmt-plane-svc
-    image: ghcr.io/cisco-eti/ioc-cfn-mgmt-plane-svc:2026-05-05-0677f16
+    image: ghcr.io/cisco-eti/ioc-cfn-mgmt-plane-svc:2026-05-07-cc4582a
     platform: ${DOCKER_DEFAULT_PLATFORM}
     profiles:
       - full-stack
@@ -108,7 +108,7 @@ services:
   # Port Mapping: 9001:9001 (same port inside and outside container)
   ioc-cfn-mgmt-plane-ui:
     # Image Link: https://github.com/cisco-eti/ioc-cfn-mgmt-ui-svc/pkgs/container/ioc-cfn-mgmt-plane-ui
-    image: ghcr.io/cisco-eti/ioc-cfn-mgmt-plane-ui:2026-05-05-d98fe6d
+    image: ghcr.io/cisco-eti/ioc-cfn-mgmt-plane-ui:2026-05-07-e0f944e
     platform: ${DOCKER_DEFAULT_PLATFORM}
     profiles:
       - full-stack
@@ -130,7 +130,7 @@ services:
   # Port Mapping: 9003:9003 (same port inside and outside container)
   ioc-knowledge-memory-svc:
     # Image Link: https://github.com/orgs/cisco-eti/packages/container/package/ioc-knowledge-memory-svc
-    image: ghcr.io/cisco-eti/ioc-knowledge-memory-svc:2026-04-27-c2741db
+    image: ghcr.io/cisco-eti/ioc-knowledge-memory-svc:2026-05-07-64b2e73
     platform: linux/amd64
     profiles:
       - full-stack
@@ -172,7 +172,7 @@ services:
   # Port Mapping(MCP): 9009:9001 (different port inside and outside container)
   ioc-cfn-svc:
     # Image Link: https://github.com/orgs/cisco-eti/packages/container/package/ioc-cfn-svc
-    image: ghcr.io/cisco-eti/ioc-cfn-svc:2026-04-28-b3790f3
+    image: ghcr.io/cisco-eti/ioc-cfn-svc:2026-05-07-a47d2c7
     container_name: ioc-cfn-svc
     platform: ${DOCKER_DEFAULT_PLATFORM}
     profiles:
@@ -205,7 +205,7 @@ services:
 
   ioc-cfn-cognition-engine:
     # Image Link: https://github.com/orgs/cisco-eti/packages/container/package/ioc-cfn-cognition-engine
-    image: ghcr.io/cisco-eti/ioc-cfn-cognition-engine:2026-05-05-468c9b0
+    image: ghcr.io/cisco-eti/ioc-cfn-cognition-engine:2026-05-07-973f13f
     ports:
       - "9004:9004"
     platform: ${DOCKER_DEFAULT_PLATFORM}
