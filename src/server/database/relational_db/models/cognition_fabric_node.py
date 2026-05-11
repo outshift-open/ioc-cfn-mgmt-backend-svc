@@ -2,7 +2,7 @@
 #
 # SPDX-License-Identifier: Apache-2.0
 
-from sqlalchemy import Boolean, Column, DateTime, ForeignKey, Index, String, text
+from sqlalchemy import Boolean, Column, DateTime, ForeignKey, Index, Integer, String, text
 from sqlalchemy.dialects.postgresql import JSONB
 
 from server.database.relational_db.models import Base
@@ -28,8 +28,8 @@ class CognitionFabricNode(Base):
     last_seen = Column(DateTime, nullable=False, server_default=text("CURRENT_TIMESTAMP"))
     enabled = Column(Boolean, nullable=False, server_default="true")
 
-    # Config change tracking
-    config_timestamp = Column(DateTime, nullable=False, server_default=text("CURRENT_TIMESTAMP"))
+    # Config change tracking — monotonic counter incremented on every config regeneration
+    config_version = Column(Integer, nullable=False, server_default=text("0"))
 
     # Timestamp fields
     created_at = Column(DateTime, nullable=False, server_default=text("CURRENT_TIMESTAMP"))

@@ -8,7 +8,6 @@ CFN endpoints are global (cross-workspace) resources at /api/cognition-fabric-no
 workspace_id is passed in the request body for create, and as a query param for list.
 """
 
-import time
 from datetime import datetime, timedelta, timezone
 
 import pytest
@@ -881,11 +880,11 @@ class TestCognitionFabricNodeBackgroundMonitoring:
         assert response.json()["status"] == "offline"
 
 
-class TestCognitionFabricNodeConfigTimestamp:
-    """Test cases for config_timestamp functionality"""
+class TestCognitionFabricNodeConfigVersion:
+    """Test cases for config_version functionality"""
 
-    def test_config_timestamp_returned_in_heartbeat(self, client, created_cfn):
-        """Test that config_timestamp is returned in heartbeat response"""
+    def test_config_version_returned_in_heartbeat(self, client, created_cfn):
+        """Test that config_version is returned in heartbeat response"""
         workspace_id, cfn_id = created_cfn
 
         # Send heartbeat
@@ -893,55 +892,37 @@ class TestCognitionFabricNodeConfigTimestamp:
 
         assert response.status_code == 200
         data = response.json()
-        assert "config_timestamp" in data
-        assert data["config_timestamp"] is not None
-        # Verify it's a valid datetime string
-        assert isinstance(data["config_timestamp"], str)
-        # Parse the datetime to ensure it's valid
-        from datetime import datetime
-        config_ts = datetime.fromisoformat(data["config_timestamp"].replace("Z", "+00:00"))
-        assert config_ts is not None
+        assert "config_version" in data
+        assert isinstance(data["config_version"], int)
+        assert data["config_version"] >= 0
 
-    def test_config_timestamp_unchanged_on_heartbeat(self, client, created_cfn):
-        """Test that config_timestamp remains unchanged across heartbeats when config doesn't change"""
+    def test_config_version_unchanged_on_heartbeat(self, client, created_cfn):
+        """Test that config_version remains unchanged across heartbeats when config doesn't change"""
         workspace_id, cfn_id = created_cfn
 
-        # Send first heartbeat and get config_timestamp
+        # Send first heartbeat and get config_version
         response1 = client.put(f"/api/cognition-fabric-nodes/{cfn_id}/heartbeat")
         assert response1.status_code == 200
-        config_timestamp_1 = response1.json()["config_timestamp"]
-
-        # Wait a moment to ensure last_seen would change
-        time.sleep(0.1)
+        config_version_1 = response1.json()["config_version"]
 
         # Send second heartbeat
         response2 = client.put(f"/api/cognition-fabric-nodes/{cfn_id}/heartbeat")
         assert response2.status_code == 200
-        config_timestamp_2 = response2.json()["config_timestamp"]
+        config_version_2 = response2.json()["config_version"]
 
-        # config_timestamp should remain the same (config hasn't changed)
-        assert config_timestamp_1 == config_timestamp_2
+        # config_version should remain the same (config hasn't changed)
+        assert config_version_1 == config_version_2
 
-        # last_seen should be different (or at least not cause an error)
-        last_seen_1 = response1.json()["last_seen"]
-        last_seen_2 = response2.json()["last_seen"]
-        # Both should be valid timestamps
-        assert last_seen_1 is not None
-        assert last_seen_2 is not None
-
-    def test_config_timestamp_updated_on_config_change(self, client, created_cfn):
-        """Test that config_timestamp is updated when CFN config changes"""
+    def test_config_version_incremented_on_config_change(self, client, created_cfn):
+        """Test that config_version increments when CFN config changes"""
         workspace_id, cfn_id = created_cfn
 
-        # Get initial config_timestamp via heartbeat
+        # Get initial config_version via heartbeat
         response1 = client.put(f"/api/cognition-fabric-nodes/{cfn_id}/heartbeat")
         assert response1.status_code == 200
-        initial_config_timestamp = response1.json()["config_timestamp"]
+        initial_version = response1.json()["config_version"]
 
-        # Wait a moment to ensure timestamp would be different
-        time.sleep(0.1)
-
-        # Update CFN config (triggers config regeneration and config_timestamp update)
+        # Update CFN config (triggers config regeneration and version increment)
         update_response = client.put(
             f"/api/cognition-fabric-nodes/{cfn_id}",
             json={"cfn_config": {"memory": "16GB", "new_setting": "value"}},
@@ -951,19 +932,13 @@ class TestCognitionFabricNodeConfigTimestamp:
         # Send heartbeat again
         response2 = client.put(f"/api/cognition-fabric-nodes/{cfn_id}/heartbeat")
         assert response2.status_code == 200
-        updated_config_timestamp = response2.json()["config_timestamp"]
+        updated_version = response2.json()["config_version"]
 
-        # config_timestamp should have changed (config was updated)
-        assert updated_config_timestamp != initial_config_timestamp
+        # config_version should have incremented
+        assert updated_version > initial_version
 
-        # Parse timestamps to verify the updated one is more recent
-        from datetime import datetime
-        initial_ts = datetime.fromisoformat(initial_config_timestamp.replace("Z", "+00:00"))
-        updated_ts = datetime.fromisoformat(updated_config_timestamp.replace("Z", "+00:00"))
-        assert updated_ts > initial_ts
-
-    def test_config_timestamp_updated_on_cfn_refresh(self, client):
-        """Test that config_timestamp is updated when CFN reconnects (refresh scenario)"""
+    def test_config_version_incremented_on_cfn_refresh(self, client):
+        """Test that config_version increments when CFN reconnects (refresh scenario)"""
         # Create initial CFN
         cfn_data = {"name": "refresh-test-node", "cfn_config": {"version": "1.0"}}
         response1 = client.post("/api/cognition-fabric-nodes", json=cfn_data)
@@ -974,13 +949,10 @@ class TestCognitionFabricNodeConfigTimestamp:
         ws_response = client.post("/api/workspaces/create", json={"name": "Test Workspace", "cfn_id": cfn_id})
         assert ws_response.status_code == 201
 
-        # Send heartbeat and get initial config_timestamp
+        # Send heartbeat and get initial config_version
         heartbeat1 = client.put(f"/api/cognition-fabric-nodes/{cfn_id}/heartbeat")
         assert heartbeat1.status_code == 200
-        initial_config_timestamp = heartbeat1.json()["config_timestamp"]
-
-        # Wait to ensure timestamp difference
-        time.sleep(0.1)
+        initial_version = heartbeat1.json()["config_version"]
 
         # Reconnect with same name (refresh scenario)
         refreshed_cfn_data = {"name": "refresh-test-node", "cfn_config": {"version": "2.0"}}
@@ -988,51 +960,34 @@ class TestCognitionFabricNodeConfigTimestamp:
         assert response2.status_code == 201
         assert response2.json()["id"] == cfn_id  # Same ID
 
-        # Send heartbeat and get new config_timestamp
+        # Send heartbeat and get new config_version
         heartbeat2 = client.put(f"/api/cognition-fabric-nodes/{cfn_id}/heartbeat")
         assert heartbeat2.status_code == 200
-        refreshed_config_timestamp = heartbeat2.json()["config_timestamp"]
+        refreshed_version = heartbeat2.json()["config_version"]
 
-        # config_timestamp should have changed (config was refreshed)
-        assert refreshed_config_timestamp != initial_config_timestamp
+        # config_version should have incremented
+        assert refreshed_version > initial_version
 
-        # Parse timestamps to verify the refreshed one is more recent
-        from datetime import datetime
-        initial_ts = datetime.fromisoformat(initial_config_timestamp.replace("Z", "+00:00"))
-        refreshed_ts = datetime.fromisoformat(refreshed_config_timestamp.replace("Z", "+00:00"))
-        assert refreshed_ts > initial_ts
-
-    def test_config_timestamp_format_consistency(self, client):
-        """Test that config_timestamp format is the same during registration and heartbeat"""
+    def test_config_version_in_registration_response(self, client):
+        """Test that config_version is present in registration config response"""
         # Register CFN
-        cfn_data = {"name": "format-test-node", "cfn_config": {"version": "1.0"}}
+        cfn_data = {"name": "version-test-node", "cfn_config": {"version": "1.0"}}
         register_response = client.post("/api/cognition-fabric-nodes", json=cfn_data)
         assert register_response.status_code == 201
         cfn_id = register_response.json()["id"]
 
-        # Get config_timestamp from registration response (embedded in config)
+        # Get config_version from registration response (embedded in config)
         registration_config = register_response.json()["config"]
-        assert "config_timestamp" in registration_config
-        registration_config_timestamp = registration_config["config_timestamp"]
+        assert "config_version" in registration_config
+        assert isinstance(registration_config["config_version"], int)
 
-        # Send heartbeat to get config_timestamp as top-level field
+        # Send heartbeat to get config_version as top-level field
         heartbeat_response = client.put(f"/api/cognition-fabric-nodes/{cfn_id}/heartbeat")
         assert heartbeat_response.status_code == 200
-        heartbeat_config_timestamp = heartbeat_response.json()["config_timestamp"]
+        heartbeat_version = heartbeat_response.json()["config_version"]
 
-        # Both timestamps should use the same format
-        # Check if both end with 'Z' (UTC indicator) or both end with '+00:00'
-        assert (
-            registration_config_timestamp.endswith("Z") == heartbeat_config_timestamp.endswith("Z")
-        ), f"Format mismatch: registration={registration_config_timestamp}, heartbeat={heartbeat_config_timestamp}"
-
-        # Verify both are parseable as ISO format
-        registration_ts = datetime.fromisoformat(registration_config_timestamp.replace("Z", "+00:00"))
-        heartbeat_ts = datetime.fromisoformat(heartbeat_config_timestamp.replace("Z", "+00:00"))
-
-        # They should be the same timestamp (or very close)
-        time_diff = abs((heartbeat_ts - registration_ts).total_seconds())
-        assert time_diff < 1.0, f"Timestamps differ by {time_diff} seconds"
+        # Both should be the same version (no config changes between registration and heartbeat)
+        assert registration_config["config_version"] == heartbeat_version
 
 
 # Pytest fixtures

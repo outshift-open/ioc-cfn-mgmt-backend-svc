@@ -16,9 +16,9 @@ depends_on: Union[str, Sequence[str], None] = None
 def upgrade() -> None:
     op.execute("""
     CREATE TABLE IF NOT EXISTS "policy" (
-      "policy_id" character varying(255) NOT NULL,
+      "id" character varying(36) NOT NULL,
       "workspace_id" character varying(36) NOT NULL,
-      "policy_name" character varying(255) NOT NULL,
+      "name" character varying(255) NOT NULL,
       "config" jsonb NULL,
       "enabled" boolean NOT NULL DEFAULT true,
       "created_at" timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -26,7 +26,7 @@ def upgrade() -> None:
       "created_by" character varying(36) NOT NULL,
       "updated_by" character varying(36) NULL,
       "deleted_at" timestamp NULL,
-      PRIMARY KEY ("policy_id")
+      PRIMARY KEY ("id")
     )""")
     op.execute('CREATE INDEX IF NOT EXISTS "idx_policy_workspace_id" ON "policy" ("workspace_id")')
     op.execute('CREATE INDEX IF NOT EXISTS "idx_policy_deleted_at" ON "policy" ("deleted_at")')

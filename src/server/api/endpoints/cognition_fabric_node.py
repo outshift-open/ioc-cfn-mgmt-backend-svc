@@ -15,7 +15,6 @@ from server.schemas.cognition_fabric_node import (
     CognitionFabricNodeList,
     CognitionFabricNodeRegisterRequest,
     CognitionFabricNodeResponse,
-    CognitionFabricNodeSummaryResponse,
     CognitionFabricNodeUpdateRequest,
 )
 from server.services import cognition_fabric_node_service
@@ -189,15 +188,15 @@ def cfn_heartbeat(
     auth_user: dict = Depends(get_auth_user),
 ):
     """
-    CFN heartbeat endpoint - updates last_seen timestamp and returns config_timestamp
+    CFN heartbeat endpoint - updates last_seen timestamp and returns config_version
 
     - **id**: CFN identifier
 
     CFN nodes call this periodically (e.g., every 30 seconds) to indicate they are online.
-    Returns the current status, last_seen timestamp, and config_timestamp.
+    Returns the current status, last_seen timestamp, and config_version.
 
-    CFN compares the returned config_timestamp with its stored value.
-    If timestamps differ, CFN should call GET /cognition-fabric-nodes/{id} to fetch updated config.
+    CFN compares the returned config_version with its stored value.
+    If version differs, CFN should call GET /cognition-fabric-nodes/{id} to fetch updated config.
 
     Note: This endpoint requires authentication but not write access.
     Disabled or deleted nodes will receive 403 Forbidden.
@@ -254,40 +253,6 @@ def get_cfn_node(
     """
     authz_service.require_permission(auth_user, "get", "cognition_fabric_node")
     return cognition_fabric_node_service.get(id)
-
-
-@router.get(
-    "/cognition-fabric-nodes/{id}/summary",
-    response_model=CognitionFabricNodeSummaryResponse,
-)
-def get_cfn_node_summary(
-    id: str,
-    auth_user: dict = Depends(get_auth_user),
-):
-    """
-    Get CFN node summary with detailed workspace configuration
-
-    - **id**: CFN identifier
-
-    Returns CFN summary including:
-    - id, name
-    - config (workspaces with cognition_engines, multi_agentic_systems, and config_timestamp)
-    - status (online, offline)
-    - enabled flag
-    - ip_address, port
-    - created_at, updated_at, last_seen timestamps
-
-    The config.workspaces array contains full details of each workspace including:
-    - workspace id and name
-    - cognition_engines (list of CEs in the workspace)
-    - multi_agentic_systems (list of MAS in the workspace with full details)
-    - policies (empty array for now)
-
-    This endpoint retrieves information for both enabled and disabled CFNs.
-    Deleted CFNs will return 404 Not Found.
-    """
-    authz_service.require_permission(auth_user, "get", "cognition_fabric_node")
-    return cognition_fabric_node_service.get_summary(id)
 
 
 @router.get(

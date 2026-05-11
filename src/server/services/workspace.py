@@ -215,8 +215,7 @@ class WorkspaceService:
                         .first()
                     )
                     if cfn:
-                        now = datetime.now(timezone.utc)
-                        cfn.config_timestamp = now
+                        cfn.config_version = (cfn.config_version or 0) + 1
                         workspace_ids = (
                             session.query(WorkspaceModel.id)
                             .filter(WorkspaceModel.cfn_id == workspace_data.cfn_id, WorkspaceModel.deleted_at.is_(None))
@@ -224,7 +223,7 @@ class WorkspaceService:
                         )
                         ws_ids = [ws.id for ws in workspace_ids]
                         cfn.config = cognition_fabric_node_service.generate_config(
-                            cfn.id, ws_ids, cfn.cfn_config, now
+                            cfn.id, ws_ids, cfn.cfn_config, cfn.config_version
                         )
                         session.commit()
 
@@ -532,14 +531,12 @@ class WorkspaceService:
                 session.commit()
                 session.refresh(workspace)
 
-                # Update CFN config_timestamp if workspace's CFN association changed
+                # Update CFN config_version if workspace's CFN association changed
                 if workspace_data.cfn_id is not None and old_cfn_id != workspace_data.cfn_id:
                     from server.database.relational_db.models.cognition_fabric_node import (
                         CognitionFabricNode as CognitionFabricNodeModel,
                     )
                     from server.services.cognition_fabric_node import cognition_fabric_node_service
-
-                    now = datetime.now(timezone.utc)
 
                     # Update old CFN if it existed (workspace removed from it)
                     if old_cfn_id:
@@ -549,7 +546,7 @@ class WorkspaceService:
                             .first()
                         )
                         if old_cfn:
-                            old_cfn.config_timestamp = now
+                            old_cfn.config_version = (old_cfn.config_version or 0) + 1
                             # Regenerate config without removed workspace
                             old_workspace_ids = (
                                 session.query(WorkspaceModel.id)
@@ -558,7 +555,7 @@ class WorkspaceService:
                             )
                             old_ws_ids = [ws.id for ws in old_workspace_ids]
                             old_cfn.config = cognition_fabric_node_service.generate_config(
-                                old_cfn.id, old_ws_ids, old_cfn.cfn_config, now
+                                old_cfn.id, old_ws_ids, old_cfn.cfn_config, old_cfn.config_version
                             )
 
                     # Update new CFN (workspace added to it)
@@ -569,7 +566,7 @@ class WorkspaceService:
                             .first()
                         )
                         if new_cfn:
-                            new_cfn.config_timestamp = now
+                            new_cfn.config_version = (new_cfn.config_version or 0) + 1
                             # Regenerate config with added workspace
                             new_workspace_ids = (
                                 session.query(WorkspaceModel.id)
@@ -580,7 +577,7 @@ class WorkspaceService:
                             )
                             new_ws_ids = [ws.id for ws in new_workspace_ids]
                             new_cfn.config = cognition_fabric_node_service.generate_config(
-                                new_cfn.id, new_ws_ids, new_cfn.cfn_config, now
+                                new_cfn.id, new_ws_ids, new_cfn.cfn_config, new_cfn.config_version
                             )
 
                     session.commit()
@@ -713,7 +710,7 @@ class WorkspaceService:
 
                 session.commit()
 
-                # Update CFN config_timestamp if workspace was associated with a CFN
+                # Update CFN config_version if workspace was associated with a CFN
                 if deleted_workspace_cfn_id:
                     from server.database.relational_db.models.cognition_fabric_node import (
                         CognitionFabricNode as CognitionFabricNodeModel,
@@ -726,8 +723,7 @@ class WorkspaceService:
                         .first()
                     )
                     if cfn:
-                        now = datetime.now(timezone.utc)
-                        cfn.config_timestamp = now
+                        cfn.config_version = (cfn.config_version or 0) + 1
                         # Regenerate config without deleted workspace
                         workspace_ids = (
                             session.query(WorkspaceModel.id)
@@ -738,7 +734,7 @@ class WorkspaceService:
                         )
                         ws_ids = [ws.id for ws in workspace_ids]
                         cfn.config = cognition_fabric_node_service.generate_config(
-                            cfn.id, ws_ids, cfn.cfn_config, now
+                            cfn.id, ws_ids, cfn.cfn_config, cfn.config_version
                         )
                         session.commit()
 

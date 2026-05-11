@@ -28,6 +28,67 @@ from server.utils import generate_uuid
 class MultiAgenticSystemService:
     """Service layer for MAS business logic"""
 
+    def _enrich_from_map(self, mas: MultiAgenticSystemModel, provider_map: dict) -> MultiAgenticSystemSchema:
+        """Enrich MAS data with memory provider details from a pre-fetched map (no DB calls)"""
+
+        shared_memory = None
+        if mas.shared_memory_provider_id and mas.shared_memory_provider_id in provider_map:
+            shared_provider = provider_map[mas.shared_memory_provider_id]
+            shared_memory = MemoryProviderDetail(
+                id=shared_provider.id,
+                name=shared_provider.name,
+                description=shared_provider.description,
+                config=shared_provider.config,
+                enabled=shared_provider.enabled,
+                created_at=shared_provider.created_at,
+                updated_at=shared_provider.updated_at,
+                created_by=shared_provider.created_by,
+                updated_by=shared_provider.updated_by,
+            )
+
+        enriched_agents = None
+        if mas.agents:
+            enriched_agents = []
+            for agent in mas.agents:
+                agentic_memory = None
+                agent_memory_id = agent.get("agentic_memory_provider_id")
+
+                if agent_memory_id and agent_memory_id in provider_map:
+                    agent_provider = provider_map[agent_memory_id]
+                    agentic_memory = MemoryProviderDetail(
+                        id=agent_provider.id,
+                        name=agent_provider.name,
+                        description=agent_provider.description,
+                        config=agent_provider.config,
+                        enabled=agent_provider.enabled,
+                        created_at=agent_provider.created_at,
+                        updated_at=agent_provider.updated_at,
+                        created_by=agent_provider.created_by,
+                        updated_by=agent_provider.updated_by,
+                    )
+
+                enriched_agents.append(
+                    AgentWithMemory(
+                        agent_id=agent.get("agent_id"),
+                        agentic_memory=agentic_memory,
+                        config=agent.get("config"),
+                    )
+                )
+
+        return MultiAgenticSystemSchema(
+            id=mas.id,
+            workspace_id=mas.workspace_id,
+            name=mas.name,
+            description=mas.description,
+            shared_memory=shared_memory,
+            agents=enriched_agents,
+            config=mas.config,
+            created_at=mas.created_at,
+            updated_at=mas.updated_at,
+            created_by=mas.created_by,
+            updated_by=mas.updated_by,
+        )
+
     def _enrich_with_memory_providers(self, session, mas: MultiAgenticSystemModel) -> MultiAgenticSystemSchema:
         """Enrich MAS data with full memory provider details"""
 
@@ -226,7 +287,31 @@ class MultiAgenticSystemService:
                     .all()
                 )
 
-                system_responses = [self._enrich_with_memory_providers(session, system) for system in systems]
+                # Batch fetch: collect all unique memory provider IDs across all MAS and agents
+                provider_ids = set()
+                for mas in systems:
+                    if mas.shared_memory_provider_id:
+                        provider_ids.add(mas.shared_memory_provider_id)
+                    if mas.agents:
+                        for agent in mas.agents:
+                            if agent.get("agentic_memory_provider_id"):
+                                provider_ids.add(agent["agentic_memory_provider_id"])
+
+                # One query to fetch all providers at once
+                provider_map = {}
+                if provider_ids:
+                    providers = (
+                        session.query(MemoryProviderModel)
+                        .filter(
+                            MemoryProviderModel.id.in_(provider_ids),
+                            MemoryProviderModel.deleted_at.is_(None),
+                        )
+                        .all()
+                    )
+                    provider_map = {p.id: p for p in providers}
+
+                # Enrich all MAS from the map (pure Python, no DB calls)
+                system_responses = [self._enrich_from_map(mas, provider_map) for mas in systems]
 
                 return MultiAgenticSystems(systems=system_responses)
 

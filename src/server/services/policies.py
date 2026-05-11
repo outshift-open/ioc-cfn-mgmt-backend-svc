@@ -36,44 +36,33 @@ class PolicyService:
             PolicyDetail with the created policy
 
         Raises:
-            HTTPException: If policy with same ID already exists or creation fails
+            HTTPException: If policy with same name already exists or creation fails
         """
         try:
             db = RelationalDB()
             session = db.get_session()
 
             try:
-                # Check if policy with same ID already exists (globally unique)
                 existing_policy = (
                     session.query(PolicyModel)
                     .filter(
-                        PolicyModel.policy_id == policy_data.policy_id,
+                        PolicyModel.workspace_id == workspace_id,
+                        PolicyModel.name == policy_data.name,
                         PolicyModel.deleted_at.is_(None),
                     )
                     .first()
                 )
 
                 if existing_policy:
-                    if existing_policy.workspace_id == workspace_id:
-                        raise HTTPException(
-                            status_code=status.HTTP_409_CONFLICT,
-                            detail=(f"Policy with ID '{policy_data.policy_id}' " f"already exists in this workspace"),
-                        )
-                    else:
-                        raise HTTPException(
-                            status_code=status.HTTP_409_CONFLICT,
-                            detail=(
-                                f"Policy with ID '{policy_data.policy_id}' "
-                                f"already exists in another workspace (globally unique constraint)"
-                            ),
-                        )
+                    raise HTTPException(
+                        status_code=status.HTTP_409_CONFLICT,
+                        detail=f"Policy with name '{policy_data.name}' already exists in this workspace",
+                    )
 
-                # Create new policy
                 new_policy = PolicyModel(
                     id=generate_uuid(),
-                    policy_id=policy_data.policy_id,
                     workspace_id=workspace_id,
-                    policy_name=policy_data.policy_name,
+                    name=policy_data.name,
                     config=policy_data.config,
                     enabled=True,
                     created_by=user_id,
@@ -84,9 +73,9 @@ class PolicyService:
                 session.refresh(new_policy)
 
                 return PolicyDetail(
-                    policy_id=new_policy.policy_id,
+                    id=new_policy.id,
                     workspace_id=new_policy.workspace_id,
-                    policy_name=new_policy.policy_name,
+                    name=new_policy.name,
                     config=new_policy.config,
                     enabled=new_policy.enabled,
                     created_at=new_policy.created_at,
@@ -129,7 +118,7 @@ class PolicyService:
                     session.query(PolicyModel)
                     .filter(
                         PolicyModel.workspace_id == workspace_id,
-                        PolicyModel.policy_id == policy_id,
+                        PolicyModel.id == policy_id,
                         PolicyModel.deleted_at.is_(None),
                     )
                     .first()
@@ -142,9 +131,9 @@ class PolicyService:
                     )
 
                 return PolicyDetail(
-                    policy_id=policy.policy_id,
+                    id=policy.id,
                     workspace_id=policy.workspace_id,
-                    policy_name=policy.policy_name,
+                    name=policy.name,
                     config=policy.config,
                     enabled=policy.enabled,
                     created_at=policy.created_at,
@@ -179,7 +168,6 @@ class PolicyService:
             session = db.get_session()
 
             try:
-                # Query all enabled policies in workspace
                 policies = (
                     session.query(PolicyModel)
                     .filter(
@@ -192,9 +180,9 @@ class PolicyService:
 
                 policy_list = [
                     PolicyListItem(
-                        policy_id=policy.policy_id,
+                        id=policy.id,
                         workspace_id=policy.workspace_id,
-                        policy_name=policy.policy_name,
+                        name=policy.name,
                         config=policy.config,
                         enabled=policy.enabled,
                         created_at=policy.created_at.isoformat() if policy.created_at else None,
@@ -240,7 +228,7 @@ class PolicyService:
                     session.query(PolicyModel)
                     .filter(
                         PolicyModel.workspace_id == workspace_id,
-                        PolicyModel.policy_id == policy_id,
+                        PolicyModel.id == policy_id,
                         PolicyModel.deleted_at.is_(None),
                     )
                     .first()
@@ -252,9 +240,8 @@ class PolicyService:
                         detail=f"Policy with ID '{policy_id}' not found in this workspace",
                     )
 
-                # Update fields if provided
-                if update_data.policy_name is not None:
-                    policy.policy_name = update_data.policy_name
+                if update_data.name is not None:
+                    policy.name = update_data.name
                 if update_data.config is not None:
                     policy.config = update_data.config
                 if update_data.enabled is not None:
@@ -267,9 +254,9 @@ class PolicyService:
                 session.refresh(policy)
 
                 return PolicyDetail(
-                    policy_id=policy.policy_id,
+                    id=policy.id,
                     workspace_id=policy.workspace_id,
-                    policy_name=policy.policy_name,
+                    name=policy.name,
                     config=policy.config,
                     enabled=policy.enabled,
                     created_at=policy.created_at,
@@ -313,7 +300,7 @@ class PolicyService:
                     session.query(PolicyModel)
                     .filter(
                         PolicyModel.workspace_id == workspace_id,
-                        PolicyModel.policy_id == policy_id,
+                        PolicyModel.id == policy_id,
                         PolicyModel.deleted_at.is_(None),
                     )
                     .first()
@@ -325,7 +312,6 @@ class PolicyService:
                         detail=f"Policy with ID '{policy_id}' not found in this workspace",
                     )
 
-                # Soft delete by setting deleted_at timestamp
                 policy.deleted_at = datetime.now(timezone.utc)
                 policy.updated_by = user_id
                 policy.updated_at = datetime.now(timezone.utc)
@@ -334,7 +320,7 @@ class PolicyService:
 
                 return {
                     "message": f"Policy '{policy_id}' deleted successfully",
-                    "policy_id": policy_id,
+                    "id": policy_id,
                 }
 
             finally:

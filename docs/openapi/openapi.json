@@ -61,7 +61,7 @@
           "cognition-fabric-nodes"
         ],
         "summary": "Create Cfn Node",
-        "description": "Register a new CFN node\n\n- **cfn_id**: Persistent CFN identifier (provided by CFN, immutable)\n- **cfn_name**: Human-readable CFN name (globally unique, can be updated later)\n- **cfn_config**: Optional current CFN configuration\n\nCFN is identifies to the management plane.\nRegistration creates the CFN record without workspace association.\nWorkspace association happens during workspace creation.\n\n**Response includes:**\n- **cfn_id**: The CFN identifier\n- **cfn_name**: The CFN name\n- **status**: Current status (offline)\n- **config**: Configuration for the CFN to apply locally\n  - cognition_fabric_node: CFN-specific operational settings (non-workspace scoped)\n  - memory_providers: Global memory providers (non-workspace scoped)\n  - workspaces: Associated workspaces with MAS, cognitive agents, engines\n\nCFN must send heartbeat to change status from offline to online.",
+        "description": "Register a new CFN node\n\n- **id**: Persistent CFN identifier (provided by CFN, immutable)\n- **name**: Human-readable CFN name (globally unique, can be updated later)\n- **cfn_config**: Optional current CFN configuration\n\nCFN identifies to the management plane.\nRegistration creates the CFN record without workspace association.\nWorkspace association happens during workspace creation.\n\n**Response includes:**\n- **id**: The CFN identifier\n- **name**: The CFN name\n- **status**: Current status (offline)\n- **config**: Configuration for the CFN to apply locally\n  - cognition_fabric_node: CFN-specific operational settings (non-workspace scoped)\n  - memory_providers: Global memory providers (non-workspace scoped)\n  - workspaces: Associated workspaces with MAS, cognitive agents, engines\n\nCFN must send heartbeat to change status from offline to online.",
         "operationId": "create_cfn_node_api_cognition_fabric_nodes_register_post",
         "requestBody": {
           "content": {
@@ -108,7 +108,7 @@
           "cognition-fabric-nodes"
         ],
         "summary": "Create Cfn Node",
-        "description": "Register a new CFN node\n\n- **cfn_id**: Persistent CFN identifier (provided by CFN, immutable)\n- **cfn_name**: Human-readable CFN name (globally unique, can be updated later)\n- **cfn_config**: Optional current CFN configuration\n\nCFN is identifies to the management plane.\nRegistration creates the CFN record without workspace association.\nWorkspace association happens during workspace creation.\n\n**Response includes:**\n- **cfn_id**: The CFN identifier\n- **cfn_name**: The CFN name\n- **status**: Current status (offline)\n- **config**: Configuration for the CFN to apply locally\n  - cognition_fabric_node: CFN-specific operational settings (non-workspace scoped)\n  - memory_providers: Global memory providers (non-workspace scoped)\n  - workspaces: Associated workspaces with MAS, cognitive agents, engines\n\nCFN must send heartbeat to change status from offline to online.",
+        "description": "Register a new CFN node\n\n- **id**: Persistent CFN identifier (provided by CFN, immutable)\n- **name**: Human-readable CFN name (globally unique, can be updated later)\n- **cfn_config**: Optional current CFN configuration\n\nCFN identifies to the management plane.\nRegistration creates the CFN record without workspace association.\nWorkspace association happens during workspace creation.\n\n**Response includes:**\n- **id**: The CFN identifier\n- **name**: The CFN name\n- **status**: Current status (offline)\n- **config**: Configuration for the CFN to apply locally\n  - cognition_fabric_node: CFN-specific operational settings (non-workspace scoped)\n  - memory_providers: Global memory providers (non-workspace scoped)\n  - workspaces: Associated workspaces with MAS, cognitive agents, engines\n\nCFN must send heartbeat to change status from offline to online.",
         "operationId": "create_cfn_node_api_cognition_fabric_nodes_post",
         "security": [
           {
@@ -228,7 +228,7 @@
           "cognition-fabric-nodes"
         ],
         "summary": "Update Cfn Node",
-        "description": "Update CFN node information\n\n- **cfn_id**: CFN identifier (immutable)\n- **cfn_name**: Optional updated CFN name (globally unique)\n- **cfn_config**: Optional updated CFN configuration\n\n**Response includes:**\n- Full CFN details (cfn_id, workspace_ids, cfn_name, cfn_config, status, last_seen, enabled, timestamps)\n- **config**: Regenerated configuration for the CFN to apply\n  - cognition_fabric_node: CFN-specific operational settings\n  - memory_providers: Global memory providers\n  - workspaces: List of workspace details with MAS, cognitive agents, engines\n\nThe config is automatically regenerated with each update to ensure CFN has the latest configuration.",
+        "description": "Update CFN node information\n\n- **id**: CFN identifier (immutable)\n- **name**: Optional updated CFN name (globally unique)\n- **cfn_config**: Optional updated CFN configuration\n\n**Response includes:**\n- Full CFN details (id, workspace_ids, name, cfn_config, status, last_seen, enabled, timestamps)\n- **config**: Regenerated configuration for the CFN to apply\n  - cognition_fabric_node: CFN-specific operational settings\n  - memory_providers: Global memory providers\n  - workspaces: List of workspace details with MAS, cognitive agents, engines\n\nThe config is automatically regenerated with each update to ensure CFN has the latest configuration.",
         "operationId": "update_cfn_node_api_cognition_fabric_nodes__id__put",
         "security": [
           {
@@ -284,7 +284,7 @@
           "cognition-fabric-nodes"
         ],
         "summary": "Delete Cfn Node",
-        "description": "Delete CFN node (hard delete)\n\n- **cfn_id**: CFN identifier\n\n**IMPORTANT:** A CFN must be disabled first before it can be deleted.\n\nDeleting a CFN marks it as deleted in the database and removes all\nworkspace associations. After deletion, the CFN ID can be reused to\ncreate a new CFN node.\n\n**Flow:**\n1. User clicks \"Disable\" in UI \u2192 CFN is disabled (PATCH /disable)\n2. \"Delete\" button appears in UI\n3. User clicks \"Delete\" \u2192 CFN is deleted (DELETE)\n4. CFN ID is now available for reuse\n\nNo response body (204 No Content).",
+        "description": "Delete CFN node (hard delete)\n\n- **id**: CFN identifier\n\n**IMPORTANT:** A CFN must be disabled first before it can be deleted.\n\nDeleting a CFN marks it as deleted in the database and removes all\nworkspace associations. After deletion, the CFN ID can be reused to\ncreate a new CFN node.\n\n**Flow:**\n1. User clicks \"Disable\" in UI \u2192 CFN is disabled (PATCH /disable)\n2. \"Delete\" button appears in UI\n3. User clicks \"Delete\" \u2192 CFN is deleted (DELETE)\n4. CFN ID is now available for reuse\n\nNo response body (204 No Content).",
         "operationId": "delete_cfn_node_api_cognition_fabric_nodes__id__delete",
         "security": [
           {
@@ -323,7 +323,7 @@
           "cognition-fabric-nodes"
         ],
         "summary": "Get Cfn Node",
-        "description": "Get detailed CFN node information\n\n- **cfn_id**: CFN identifier\n\nReturns full CFN details including:\n- cfn_id, cfn_name\n- workspace_ids (all associated workspaces)\n- cfn_config (node-reported configuration)\n- config (aggregated configuration to be applied)\n- status (online, offline)\n- enabled flag (true if CFN can operate, false if disabled)\n- created_at, updated_at, last_seen timestamps\n\nThis endpoint retrieves information for both enabled and disabled CFNs.\nDeleted CFNs will return 404 Not Found.",
+        "description": "Get detailed CFN node information\n\n- **id**: CFN identifier\n\nReturns full CFN details including:\n- id, name\n- workspace_ids (all associated workspaces)\n- cfn_config (node-reported configuration)\n- config (aggregated configuration to be applied)\n- status (online, offline)\n- enabled flag (true if CFN can operate, false if disabled)\n- created_at, updated_at, last_seen timestamps\n\nThis endpoint retrieves information for both enabled and disabled CFNs.\nDeleted CFNs will return 404 Not Found.",
         "operationId": "get_cfn_node_api_cognition_fabric_nodes__id__get",
         "security": [
           {
@@ -371,7 +371,7 @@
           "cognition-fabric-nodes"
         ],
         "summary": "Enable Cfn Node",
-        "description": "Enable a disabled CFN node\n\n- **cfn_id**: CFN identifier\n\nThis is an admin operation to re-enable a disabled CFN.\nAfter enabling, the CFN can call /register to reconnect and resume operations.\n\n**Response includes:**\n- Full CFN details with enabled=True and status=offline (until heartbeat is sent)\n- **config**: Configuration for the CFN to apply when it reconnects\n  - cognition_fabric_node: CFN-specific operational settings\n  - memory_providers: Global memory providers\n  - workspaces: List of workspace details with MAS, cognitive agents, engines",
+        "description": "Enable a disabled CFN node\n\n- **id**: CFN identifier\n\nThis is an admin operation to re-enable a disabled CFN.\nAfter enabling, the CFN can call /register to reconnect and resume operations.\n\n**Response includes:**\n- Full CFN details with enabled=True and status=offline (until heartbeat is sent)\n- **config**: Configuration for the CFN to apply when it reconnects\n  - cognition_fabric_node: CFN-specific operational settings\n  - memory_providers: Global memory providers\n  - workspaces: List of workspace details with MAS, cognitive agents, engines",
         "operationId": "enable_cfn_node_api_cognition_fabric_nodes__id__enable_patch",
         "security": [
           {
@@ -419,7 +419,7 @@
           "cognition-fabric-nodes"
         ],
         "summary": "Disable Cfn Node",
-        "description": "Disable CFN node (soft disable, prepares for deletion)\n\n- **cfn_id**: CFN identifier\n\nDisabling a CFN stops heartbeats and prepares it for deletion.\nThe CFN will no longer be able to send heartbeats.\nThe CFN ID is LOCKED and cannot be reused while in disabled state.\n\nAfter disabling, the \"Delete\" button will appear in the UI.\nThe CFN can be re-enabled using the /enable endpoint, or permanently\ndeleted using the DELETE endpoint.\n\n**Response includes:**\n- Full CFN details with enabled=False\n- **config**: Configuration (preserved from last state)",
+        "description": "Disable CFN node (soft disable, prepares for deletion)\n\n- **id**: CFN identifier\n\nDisabling a CFN stops heartbeats and prepares it for deletion.\nThe CFN will no longer be able to send heartbeats.\nThe CFN ID is LOCKED and cannot be reused while in disabled state.\n\nAfter disabling, the \"Delete\" button will appear in the UI.\nThe CFN can be re-enabled using the /enable endpoint, or permanently\ndeleted using the DELETE endpoint.\n\n**Response includes:**\n- Full CFN details with enabled=False\n- **config**: Configuration (preserved from last state)",
         "operationId": "disable_cfn_node_api_cognition_fabric_nodes__id__disable_patch",
         "security": [
           {
@@ -467,7 +467,7 @@
           "cognition-fabric-nodes"
         ],
         "summary": "Cfn Heartbeat",
-        "description": "CFN heartbeat endpoint - updates last_seen timestamp and returns config_timestamp\n\n- **cfn_id**: CFN identifier\n\nCFN nodes call this periodically (e.g., every 30 seconds) to indicate they are online.\nReturns the current status, last_seen timestamp, and config_timestamp.\n\nCFN compares the returned config_timestamp with its stored value.\nIf timestamps differ, CFN should call GET /cognition-fabric-nodes/{id} to fetch updated config.\n\nNote: This endpoint requires authentication but not write access.\nDisabled or deleted nodes will receive 403 Forbidden.",
+        "description": "CFN heartbeat endpoint - updates last_seen timestamp and returns config_version\n\n- **id**: CFN identifier\n\nCFN nodes call this periodically (e.g., every 30 seconds) to indicate they are online.\nReturns the current status, last_seen timestamp, and config_version.\n\nCFN compares the returned config_version with its stored value.\nIf version differs, CFN should call GET /cognition-fabric-nodes/{id} to fetch updated config.\n\nNote: This endpoint requires authentication but not write access.\nDisabled or deleted nodes will receive 403 Forbidden.",
         "operationId": "cfn_heartbeat_api_cognition_fabric_nodes__id__heartbeat_put",
         "security": [
           {
@@ -509,61 +509,13 @@
         }
       }
     },
-    "/api/cognition-fabric-nodes/{id}/summary": {
-      "get": {
-        "tags": [
-          "cognition-fabric-nodes"
-        ],
-        "summary": "Get Cfn Node Summary",
-        "description": "Get CFN node summary with detailed workspace configuration\n\n- **cfn_id**: CFN identifier\n\nReturns CFN summary including:\n- id, name\n- config (workspaces with cognition_engines, multi_agentic_systems, and config_timestamp)\n- status (online, offline)\n- enabled flag\n- ip_address, port\n- created_at, updated_at, last_seen timestamps\n\nThe config.workspaces array contains full details of each workspace including:\n- workspace id and name\n- cognition_engines (list of CEs in the workspace)\n- multi_agentic_systems (list of MAS in the workspace with full details)\n- policies (empty array for now)\n\nThis endpoint retrieves information for both enabled and disabled CFNs.\nDeleted CFNs will return 404 Not Found.",
-        "operationId": "get_cfn_node_summary_api_cognition_fabric_nodes__id__summary_get",
-        "security": [
-          {
-            "HTTPBearer": []
-          }
-        ],
-        "parameters": [
-          {
-            "name": "id",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "title": "Id"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/CognitionFabricNodeSummaryResponse"
-                }
-              }
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
     "/api/cognitive-fabric-node/{id}/workspaces": {
       "get": {
         "tags": [
           "cognition-fabric-nodes"
         ],
         "summary": "Get Cfn Workspaces Config",
-        "description": "Get aggregated workspace configuration for a CFN node\n\nThis endpoint returns the consolidated configuration document that aggregates\nworkspace-scoped and global resources for the CFN service to apply.\n\n- **cfn_id**: CFN identifier\n\nReturns configuration with:\n- **version**: Configuration schema version (0.1.0)\n- **cognition_fabric_node**: List of CFN-specific operational settings (non-workspace scoped)\n- **memory_providers**: List of global memory providers (non-workspace scoped)\n- **workspaces**: List of workspaces with their resources:\n  - workspace_id: Workspace identifier\n  - workspace_name: Workspace name\n  - multi_agentic_systems: MAS available in this workspace\n  - cognition_engines: Cognition engines in this workspace (not included for March 2026)\n  - policies: Policies in this workspace (not included for March 2026)",
+        "description": "Get aggregated workspace configuration for a CFN node\n\nThis endpoint returns the consolidated configuration document that aggregates\nworkspace-scoped and global resources for the CFN service to apply.\n\n- **id**: CFN identifier\n\nReturns configuration with:\n- **version**: Configuration schema version (0.1.0)\n- **cognition_fabric_node**: List of CFN-specific operational settings (non-workspace scoped)\n- **memory_providers**: List of global memory providers (non-workspace scoped)\n- **workspaces**: List of workspaces with their resources:\n  - workspace_id: Workspace identifier\n  - workspace_name: Workspace name\n  - multi_agentic_systems: MAS available in this workspace\n  - cognition_engines: Cognition engines in this workspace (not included for March 2026)\n  - policies: Policies in this workspace (not included for March 2026)",
         "operationId": "get_cfn_workspaces_config_api_cognitive_fabric_node__id__workspaces_get",
         "security": [
           {
@@ -1750,14 +1702,14 @@
         }
       }
     },
-    "/api/workspaces/{workspace_id}/policies/{policy_id}": {
+    "/api/workspaces/{workspace_id}/policies/{id}": {
       "get": {
         "tags": [
           "policies"
         ],
         "summary": "Get Policy",
         "description": "Get details of a specific policy",
-        "operationId": "get_policy_api_workspaces__workspace_id__policies__policy_id__get",
+        "operationId": "get_policy_api_workspaces__workspace_id__policies__id__get",
         "security": [
           {
             "HTTPBearer": []
@@ -1774,12 +1726,12 @@
             }
           },
           {
-            "name": "policy_id",
+            "name": "id",
             "in": "path",
             "required": true,
             "schema": {
               "type": "string",
-              "title": "Policy Id"
+              "title": "Id"
             }
           }
         ],
@@ -1812,7 +1764,7 @@
         ],
         "summary": "Update Policy",
         "description": "Update an existing policy",
-        "operationId": "update_policy_api_workspaces__workspace_id__policies__policy_id__patch",
+        "operationId": "update_policy_api_workspaces__workspace_id__policies__id__patch",
         "security": [
           {
             "HTTPBearer": []
@@ -1829,12 +1781,12 @@
             }
           },
           {
-            "name": "policy_id",
+            "name": "id",
             "in": "path",
             "required": true,
             "schema": {
               "type": "string",
-              "title": "Policy Id"
+              "title": "Id"
             }
           }
         ],
@@ -1877,7 +1829,7 @@
         ],
         "summary": "Delete Policy",
         "description": "Delete a policy (soft delete)",
-        "operationId": "delete_policy_api_workspaces__workspace_id__policies__policy_id__delete",
+        "operationId": "delete_policy_api_workspaces__workspace_id__policies__id__delete",
         "security": [
           {
             "HTTPBearer": []
@@ -1894,12 +1846,12 @@
             }
           },
           {
-            "name": "policy_id",
+            "name": "id",
             "in": "path",
             "required": true,
             "schema": {
               "type": "string",
-              "title": "Policy Id"
+              "title": "Id"
             }
           }
         ],
@@ -1913,7 +1865,7 @@
                   "additionalProperties": {
                     "type": "string"
                   },
-                  "title": "Response Delete Policy Api Workspaces  Workspace Id  Policies  Policy Id  Delete"
+                  "title": "Response Delete Policy Api Workspaces  Workspace Id  Policies  Id  Delete"
                 }
               }
             }
@@ -2617,23 +2569,22 @@
             "title": "Last Seen",
             "description": "Last heartbeat timestamp"
           },
-          "config_timestamp": {
-            "type": "string",
-            "format": "date-time",
-            "title": "Config Timestamp",
-            "description": "Current config timestamp for change detection"
+          "config_version": {
+            "type": "integer",
+            "title": "Config Version",
+            "description": "Monotonic config version for change detection"
           }
         },
         "type": "object",
         "required": [
           "status",
           "last_seen",
-          "config_timestamp"
+          "config_version"
         ],
         "title": "CognitionFabricNodeHeartbeatResponse",
         "description": "Schema for heartbeat response",
         "example": {
-          "config_timestamp": "2026-01-30T12:34:56Z",
+          "config_version": 5,
           "last_seen": "2026-01-30T12:34:56Z",
           "status": "online"
         }
@@ -2959,136 +2910,6 @@
         ],
         "title": "CognitionFabricNodeStatus",
         "description": "Cognition Fabric Node status enumeration"
-      },
-      "CognitionFabricNodeSummaryResponse": {
-        "properties": {
-          "id": {
-            "type": "string",
-            "title": "Id",
-            "description": "Cognition Fabric Node identifier"
-          },
-          "name": {
-            "type": "string",
-            "title": "Name",
-            "description": "Cognition Fabric Node name"
-          },
-          "config": {
-            "additionalProperties": true,
-            "type": "object",
-            "title": "Config",
-            "description": "Configuration with workspaces and config_timestamp"
-          },
-          "status": {
-            "$ref": "#/components/schemas/CognitionFabricNodeStatus",
-            "description": "Current node status"
-          },
-          "last_seen": {
-            "type": "string",
-            "format": "date-time",
-            "title": "Last Seen",
-            "description": "Last heartbeat timestamp"
-          },
-          "enabled": {
-            "type": "boolean",
-            "title": "Enabled",
-            "description": "Whether node is enabled"
-          },
-          "ip_address": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Ip Address",
-            "description": "IP address of the CFN node"
-          },
-          "port": {
-            "anyOf": [
-              {
-                "type": "integer"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Port",
-            "description": "Port number of the CFN node"
-          },
-          "created_at": {
-            "type": "string",
-            "format": "date-time",
-            "title": "Created At",
-            "description": "Creation timestamp"
-          },
-          "updated_at": {
-            "anyOf": [
-              {
-                "type": "string",
-                "format": "date-time"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Updated At",
-            "description": "Last update timestamp"
-          },
-          "created_by": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Created By",
-            "description": "Creator user ID"
-          },
-          "updated_by": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Updated By",
-            "description": "Last updater user ID"
-          }
-        },
-        "type": "object",
-        "required": [
-          "id",
-          "name",
-          "config",
-          "status",
-          "last_seen",
-          "enabled",
-          "created_at"
-        ],
-        "title": "CognitionFabricNodeSummaryResponse",
-        "description": "Schema for Cognition Fabric Node summary response",
-        "example": {
-          "config": {
-            "config_timestamp": "2026-03-09T21:10:03.939351Z",
-            "workspaces": []
-          },
-          "created_at": "2026-03-09T21:10:03.938397",
-          "created_by": "00000000-0000-0000-0000-000000000000",
-          "enabled": true,
-          "id": "db44357c-e7ef-4db4-a32d-dc12731d87d9",
-          "ip_address": "172.18.0.8",
-          "last_seen": "2026-03-09T22:13:23.994122",
-          "name": "My Cognition Fabric Node",
-          "port": 9002,
-          "status": "online",
-          "updated_at": "2026-03-09T22:13:23.993225"
-        }
       },
       "CognitionFabricNodeUpdateRequest": {
         "properties": {
@@ -3847,14 +3668,9 @@
       },
       "PolicyCreate": {
         "properties": {
-          "policy_id": {
+          "name": {
             "type": "string",
-            "title": "Policy Id",
-            "description": "Policy identifier"
-          },
-          "policy_name": {
-            "type": "string",
-            "title": "Policy Name",
+            "title": "Name",
             "description": "Policy name"
           },
           "config": {
@@ -3873,25 +3689,24 @@
         },
         "type": "object",
         "required": [
-          "policy_id",
-          "policy_name"
+          "name"
         ],
         "title": "PolicyCreate",
         "description": "Schema for creating a policy"
       },
       "PolicyDetail": {
         "properties": {
-          "policy_id": {
+          "id": {
             "type": "string",
-            "title": "Policy Id"
+            "title": "Id"
           },
           "workspace_id": {
             "type": "string",
             "title": "Workspace Id"
           },
-          "policy_name": {
+          "name": {
             "type": "string",
-            "title": "Policy Name"
+            "title": "Name"
           },
           "config": {
             "anyOf": [
@@ -3944,9 +3759,9 @@
         },
         "type": "object",
         "required": [
-          "policy_id",
+          "id",
           "workspace_id",
-          "policy_name",
+          "name",
           "config",
           "enabled",
           "created_at",
@@ -3983,17 +3798,17 @@
       },
       "PolicyListItem": {
         "properties": {
-          "policy_id": {
+          "id": {
             "type": "string",
-            "title": "Policy Id"
+            "title": "Id"
           },
           "workspace_id": {
             "type": "string",
             "title": "Workspace Id"
           },
-          "policy_name": {
+          "name": {
             "type": "string",
-            "title": "Policy Name"
+            "title": "Name"
           },
           "config": {
             "anyOf": [
@@ -4019,9 +3834,9 @@
         },
         "type": "object",
         "required": [
-          "policy_id",
+          "id",
           "workspace_id",
-          "policy_name",
+          "name",
           "config",
           "enabled",
           "created_at"
@@ -4031,7 +3846,7 @@
       },
       "PolicyUpdate": {
         "properties": {
-          "policy_name": {
+          "name": {
             "anyOf": [
               {
                 "type": "string"
@@ -4040,7 +3855,7 @@
                 "type": "null"
               }
             ],
-            "title": "Policy Name",
+            "title": "Name",
             "description": "Policy name"
           },
           "config": {

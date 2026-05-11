@@ -25,7 +25,6 @@ from server.schemas.cognition_fabric_node import (
     CognitionFabricNodeRegisterRequest,
     CognitionFabricNodeResponse,
     CognitionFabricNodeStatus,
-    CognitionFabricNodeSummaryResponse,
     CognitionFabricNodeUpdateRequest,
 )
 from server.services.cognition_engine import cognition_engine_service
@@ -53,7 +52,7 @@ class CognitionFabricNodeService:
 
     def update_config_for_workspace(self, workspace_id: str) -> None:
         """
-        Update config_timestamp and regenerate config for all CFNs serving this workspace.
+        Update config_version and regenerate config for all CFNs serving this workspace.
 
         Called when workspace resources change (MAS, etc.)
 
@@ -83,12 +82,11 @@ class CognitionFabricNodeService:
                 )
 
                 if cfn:
-                    now = datetime.now(timezone.utc)
-                    cfn.config_timestamp = now
+                    cfn.config_version = (cfn.config_version or 0) + 1
 
                     # Regenerate config
                     workspace_ids = self._get_workspace_ids(session, cfn.id)
-                    cfn.config = self.generate_config(cfn.id, workspace_ids, cfn.cfn_config, now)
+                    cfn.config = self.generate_config(cfn.id, workspace_ids, cfn.cfn_config, cfn.config_version)
 
                     session.commit()
 
@@ -101,7 +99,7 @@ class CognitionFabricNodeService:
 
     def update_config_for_all_cfns(self) -> None:
         """
-        Update config_timestamp and regenerate config for all CFNs.
+        Update config_version and regenerate config for all CFNs.
 
         Called when global resources change (cognitive agents, memory providers, etc.)
         """
@@ -115,13 +113,12 @@ class CognitionFabricNodeService:
                     session.query(CognitionFabricNodeModel).filter(CognitionFabricNodeModel.deleted_at.is_(None)).all()
                 )
 
-                now = datetime.now(timezone.utc)
                 for cfn in cfns:
-                    cfn.config_timestamp = now
+                    cfn.config_version = (cfn.config_version or 0) + 1
 
                     # Regenerate config
                     workspace_ids = self._get_workspace_ids(session, cfn.id)
-                    cfn.config = self.generate_config(cfn.id, workspace_ids, cfn.cfn_config, now)
+                    cfn.config = self.generate_config(cfn.id, workspace_ids, cfn.cfn_config, cfn.config_version)
 
                 session.commit()
 
@@ -188,7 +185,8 @@ class CognitionFabricNodeService:
                 now = datetime.now(timezone.utc)
 
                 # Generate config (no workspaces initially)
-                config = self.generate_config(cfn_id, [], cfn_data.cfn_config, now)
+                initial_version = 1
+                config = self.generate_config(cfn_id, [], cfn_data.cfn_config, initial_version)
 
                 new_cfn = CognitionFabricNodeModel(
                     id=cfn_id,
@@ -198,7 +196,7 @@ class CognitionFabricNodeService:
                     status=CognitionFabricNodeStatus.OFFLINE.value,
                     enabled=True,
                     last_seen=now,
-                    config_timestamp=now,
+                    config_version=initial_version,
                     ip_address=cfn_data.ip_address,
                     port=str(cfn_data.port) if cfn_data.port else None,
                     created_by=user_id,
@@ -239,8 +237,8 @@ class CognitionFabricNodeService:
 
                     # Regenerate CFN config with the workspace
                     workspace_ids_list = [default_workspace.id]
-                    new_cfn.config = self.generate_config(cfn_id, workspace_ids_list, cfn_data.cfn_config, now)
-                    new_cfn.config_timestamp = now
+                    new_cfn.config_version = (new_cfn.config_version or 0) + 1
+                    new_cfn.config = self.generate_config(cfn_id, workspace_ids_list, cfn_data.cfn_config, new_cfn.config_version)
 
                     session.commit()
                     session.refresh(new_cfn)
@@ -349,8 +347,8 @@ class CognitionFabricNodeService:
 
         # Regenerate config with existing workspace associations
         workspace_ids = self._get_workspace_ids(session, cfn.id)
-        cfn.config = self.generate_config(cfn.id, workspace_ids, cfn.cfn_config, now)
-        cfn.config_timestamp = now  # Config regenerated
+        cfn.config_version = (cfn.config_version or 0) + 1
+        cfn.config = self.generate_config(cfn.id, workspace_ids, cfn.cfn_config, cfn.config_version)
 
         session.commit()
         session.refresh(cfn)
@@ -407,8 +405,8 @@ class CognitionFabricNodeService:
         cfn.updated_by = user_id
 
         workspace_ids = self._get_workspace_ids(session, cfn.id)
-        cfn.config = self.generate_config(cfn.id, workspace_ids, cfn.cfn_config)
-        cfn.config_timestamp = now  # Config regenerated
+        cfn.config_version = (cfn.config_version or 0) + 1
+        cfn.config = self.generate_config(cfn.id, workspace_ids, cfn.cfn_config, cfn.config_version)
 
         session.commit()
         session.refresh(cfn)
@@ -507,12 +505,12 @@ class CognitionFabricNodeService:
                 cfn.updated_at = now
                 cfn.updated_by = user_id
 
-                # Update config_timestamp if config changed
+                # Bump config_version if config changed
                 if config_changed or cfn_data.name is not None:
-                    cfn.config_timestamp = now
+                    cfn.config_version = (cfn.config_version or 0) + 1
 
-                # Generate config with timestamp
-                cfn.config = self.generate_config(cfn_id, workspace_ids, cfn.cfn_config, cfn.config_timestamp)
+                # Generate config with version
+                cfn.config = self.generate_config(cfn_id, workspace_ids, cfn.cfn_config, cfn.config_version)
 
                 session.commit()
                 session.refresh(cfn)
@@ -831,7 +829,7 @@ class CognitionFabricNodeService:
             cfn_id: CFN identifier
 
         Returns:
-            CognitionFabricNodeHeartbeatResponse with status, last_seen, and config_timestamp
+            CognitionFabricNodeHeartbeatResponse with status, last_seen, and config_version
 
         Raises:
             HTTPException: 404 if not found, 403 if blocked
@@ -883,16 +881,11 @@ class CognitionFabricNodeService:
                     if cfn.last_seen and cfn.last_seen.tzinfo is None
                     else cfn.last_seen
                 )
-                config_ts = (
-                    cfn.config_timestamp.replace(tzinfo=timezone.utc)
-                    if cfn.config_timestamp and cfn.config_timestamp.tzinfo is None
-                    else cfn.config_timestamp
-                )
 
                 return CognitionFabricNodeHeartbeatResponse(
                     status=CognitionFabricNodeStatus(cfn.status),
                     last_seen=last_seen,
-                    config_timestamp=config_ts,
+                    config_version=cfn.config_version or 0,
                 )
 
             except HTTPException:
@@ -1057,170 +1050,8 @@ class CognitionFabricNodeService:
                 detail=f"Failed to retrieve CFN node: {str(e)}",
             )
 
-    def get_summary(self, cfn_id: str) -> CognitionFabricNodeSummaryResponse:
-        """
-        Get CFN node summary with detailed workspace configuration
-
-        Transforms the internal config format to the summary format:
-        - workspace_id → id, workspace_name → name
-        - cognition_engines → cognition_engines
-        - cognition_engine_id → id, cognition_engine_name → name
-        - agent_id → id
-        - memory_provider_id → id, memory_provider_name → name
-
-        Args:
-            cfn_id: CFN identifier
-
-        Returns:
-            CognitionFabricNodeSummaryResponse with transformed workspace details
-
-        Raises:
-            HTTPException: 404 if not found
-        """
-        try:
-            db = RelationalDB()
-            session = db.get_session()
-
-            try:
-                cfn = (
-                    session.query(CognitionFabricNodeModel)
-                    .filter(
-                        CognitionFabricNodeModel.id == cfn_id,
-                        CognitionFabricNodeModel.deleted_at.is_(None),
-                    )
-                    .first()
-                )
-
-                if not cfn:
-                    raise HTTPException(
-                        status_code=status.HTTP_404_NOT_FOUND,
-                        detail="CFN node not found",
-                    )
-
-                # Transform workspaces from old format to new format
-                transformed_workspaces = []
-                if cfn.config and cfn.config.get("workspaces"):
-                    for ws in cfn.config["workspaces"]:
-                        # Transform cognition engines
-                        cognition_engines = []
-                        for ce in ws.get("cognition_engines", []):
-                            cognition_engines.append(
-                                {
-                                    "id": ce.get("id"),
-                                    "name": ce.get("name"),
-                                    "config": ce.get("config", {}),
-                                    "enabled": ce.get("enabled"),
-                                }
-                            )
-
-                        # Transform multi-agentic systems
-                        mas_list = []
-                        for mas in ws.get("multi_agentic_systems", []):
-                            transformed_mas = {
-                                "id": mas.get("id"),
-                                "name": mas.get("name"),
-                                "description": mas.get("description"),
-                                "config": mas.get("config"),
-                                "created_at": mas.get("created_at"),
-                                "updated_at": mas.get("updated_at"),
-                                "created_by": mas.get("created_by"),
-                                "updated_by": mas.get("updated_by"),
-                            }
-                            # Note: workspace_id is intentionally removed - workspace context is at parent level
-
-                            # Transform shared_memory
-                            if mas.get("shared_memory"):
-                                sm = mas["shared_memory"]
-                                transformed_mas["shared_memory"] = {
-                                    "id": sm.get("id"),
-                                    "name": sm.get("name"),
-                                    "description": sm.get("description"),
-                                    "config": sm.get("config"),
-                                    "enabled": sm.get("enabled"),
-                                    "created_at": sm.get("created_at"),
-                                    "updated_at": sm.get("updated_at"),
-                                    "created_by": sm.get("created_by"),
-                                    "updated_by": sm.get("updated_by"),
-                                }
-                            else:
-                                transformed_mas["shared_memory"] = None
-
-                            # Transform agents
-                            if mas.get("agents"):
-                                transformed_agents = []
-                                for agent in mas["agents"]:
-                                    transformed_agent = {
-                                        "id": agent.get("agent_id"),
-                                        "config": agent.get("config"),
-                                    }
-
-                                    # Transform agentic_memory
-                                    if agent.get("agentic_memory"):
-                                        am = agent["agentic_memory"]
-                                        transformed_agent["agentic_memory"] = {
-                                            "id": am.get("id"),
-                                            "name": am.get("name"),
-                                            "description": am.get("description"),
-                                            "config": am.get("config"),
-                                            "enabled": am.get("enabled"),
-                                            "created_at": am.get("created_at"),
-                                            "updated_at": am.get("updated_at"),
-                                            "created_by": am.get("created_by"),
-                                            "updated_by": am.get("updated_by"),
-                                        }
-                                    else:
-                                        transformed_agent["agentic_memory"] = None
-
-                                    transformed_agents.append(transformed_agent)
-                                transformed_mas["agents"] = transformed_agents
-                            else:
-                                transformed_mas["agents"] = None
-
-                            mas_list.append(transformed_mas)
-
-                        transformed_ws = {
-                            "policies": ws.get("policies", []),
-                            "id": ws.get("workspace_id"),
-                            "name": ws.get("workspace_name"),
-                            "cognition_engines": cognition_engines,
-                            "multi_agentic_systems": mas_list,
-                        }
-                        transformed_workspaces.append(transformed_ws)
-
-                # Build config with transformed workspaces and config_timestamp
-                config = {
-                    "workspaces": transformed_workspaces,
-                    "config_timestamp": cfn.config_timestamp.isoformat() if cfn.config_timestamp else None,
-                }
-
-                return CognitionFabricNodeSummaryResponse(
-                    id=cfn.id,
-                    name=cfn.name,
-                    config=config,
-                    status=CognitionFabricNodeStatus(cfn.status),
-                    last_seen=cfn.last_seen,
-                    enabled=cfn.enabled,
-                    ip_address=cfn.ip_address,
-                    port=int(cfn.port) if cfn.port else None,
-                    created_at=cfn.created_at,
-                    updated_at=cfn.updated_at,
-                    created_by=cfn.created_by,
-                    updated_by=cfn.updated_by,
-                )
-
-            finally:
-                session.close()
-
-        except HTTPException:
-            raise
-        except Exception as e:
-            raise HTTPException(
-                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                detail=f"Failed to retrieve CFN node summary: {str(e)}",
-            )
-
     def generate_config(
-        self, cfn_id: str, workspace_ids: List[str] = None, cfn_config: dict = None, config_timestamp: datetime = None
+        self, cfn_id: str, workspace_ids: List[str] = None, cfn_config: dict = None, config_version: int = 0
     ) -> dict:
         """
         Generate configuration for CFN
@@ -1231,10 +1062,10 @@ class CognitionFabricNodeService:
             cfn_id: CFN identifier
             workspace_ids: List of workspace IDs (if None, fetches from join table)
             cfn_config: CFN-specific configuration to include in the config
-            config_timestamp: Timestamp when config was last modified
+            config_version: Monotonic version counter for change detection
 
         Returns:
-            Dictionary with configuration including cfn_config and config_timestamp
+            Dictionary with configuration including cfn_config and config_version
         """
         db = RelationalDB()
         session = db.get_session()
@@ -1329,11 +1160,7 @@ class CognitionFabricNodeService:
                 providers_payload = []
 
             return {
-                "config_timestamp": (
-                    config_timestamp.isoformat().replace("+00:00", "Z")
-                    if config_timestamp
-                    else datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")
-                ),
+                "config_version": config_version,
                 "cfn_config": cfn_config or {},
                 "workspaces": workspaces_payload,
                 "memory_providers": providers_payload,

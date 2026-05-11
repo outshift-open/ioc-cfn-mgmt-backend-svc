@@ -7,9 +7,9 @@
 -- Table: policy (Workspace-scoped)
 -- ====================
 CREATE TABLE IF NOT EXISTS "policy" (
-  "policy_id" character varying(255) NOT NULL,
+  "id" character varying(36) NOT NULL,
   "workspace_id" character varying(36) NOT NULL,
-  "policy_name" character varying(255) NOT NULL,
+  "name" character varying(255) NOT NULL,
   "config" jsonb NULL,
   "enabled" boolean NOT NULL DEFAULT true,
   "created_at" timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -17,7 +17,7 @@ CREATE TABLE IF NOT EXISTS "policy" (
   "created_by" character varying(36) NOT NULL,
   "updated_by" character varying(36) NULL,
   "deleted_at" timestamp NULL,
-  PRIMARY KEY ("policy_id")
+  PRIMARY KEY ("id")
 );
 
 -- Create indexes for policy table

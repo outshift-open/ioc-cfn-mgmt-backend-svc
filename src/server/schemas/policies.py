@@ -13,17 +13,16 @@ from pydantic import BaseModel, Field
 class PolicyCreate(BaseModel):
     """Schema for creating a policy"""
 
-    policy_id: str = Field(..., description="Policy identifier")
-    policy_name: str = Field(..., description="Policy name")
+    name: str = Field(..., description="Policy name")
     config: Optional[dict] = Field(None, description="Policy-specific configuration")
 
 
 class PolicyListItem(BaseModel):
     """Schema for policy list item"""
 
-    policy_id: str
+    id: str
     workspace_id: str
-    policy_name: str
+    name: str
     config: Optional[dict]
     enabled: bool
     created_at: datetime
@@ -39,7 +38,7 @@ class PolicyList(BaseModel):
 class PolicyUpdate(BaseModel):
     """Schema for updating a policy"""
 
-    policy_name: Optional[str] = Field(None, description="Policy name")
+    name: Optional[str] = Field(None, description="Policy name")
     config: Optional[dict] = Field(None, description="Policy-specific configuration")
     enabled: Optional[bool] = Field(None, description="Whether policy is enabled")
 
@@ -47,9 +46,9 @@ class PolicyUpdate(BaseModel):
 class PolicyDetail(BaseModel):
     """Schema for detailed policy information"""
 
-    policy_id: str
+    id: str
     workspace_id: str
-    policy_name: str
+    name: str
     config: Optional[dict]
     enabled: bool
     created_at: datetime
