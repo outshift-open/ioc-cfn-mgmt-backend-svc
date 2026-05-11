@@ -205,7 +205,7 @@ services:
 
   ioc-cfn-cognition-engine:
     # Image Link: https://github.com/orgs/cisco-eti/packages/container/package/ioc-cfn-cognition-engine
-    image: ghcr.io/cisco-eti/ioc-cfn-cognition-engine:2026-05-07-973f13f
+    image: ghcr.io/cisco-eti/ioc-cfn-cognition-engine:2026-05-11-63cf16c
     ports:
       - "9004:9004"
     platform: ${DOCKER_DEFAULT_PLATFORM}
