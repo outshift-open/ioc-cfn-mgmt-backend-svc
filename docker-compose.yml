@@ -66,7 +66,7 @@ services:
       context: .
       dockerfile: Dockerfile
     # Image Link: https://github.com/orgs/cisco-eti/packages/container/package/ioc-cfn-mgmt-plane-svc
-    image: ghcr.io/cisco-eti/ioc-cfn-mgmt-plane-svc:2026-05-07-cc4582a
+    image: ghcr.io/cisco-eti/ioc-cfn-mgmt-plane-svc:2026-05-11-2e8ed5e
     platform: ${DOCKER_DEFAULT_PLATFORM}
     profiles:
       - full-stack
@@ -108,7 +108,7 @@ services:
   # Port Mapping: 9001:9001 (same port inside and outside container)
   ioc-cfn-mgmt-plane-ui:
     # Image Link: https://github.com/cisco-eti/ioc-cfn-mgmt-ui-svc/pkgs/container/ioc-cfn-mgmt-plane-ui
-    image: ghcr.io/cisco-eti/ioc-cfn-mgmt-plane-ui:2026-05-07-e0f944e
+    image: ghcr.io/cisco-eti/ioc-cfn-mgmt-plane-ui:2026-05-11-ffe6a7c
     platform: ${DOCKER_DEFAULT_PLATFORM}
     profiles:
       - full-stack
@@ -172,7 +172,7 @@ services:
   # Port Mapping(MCP): 9009:9001 (different port inside and outside container)
   ioc-cfn-svc:
     # Image Link: https://github.com/orgs/cisco-eti/packages/container/package/ioc-cfn-svc
-    image: ghcr.io/cisco-eti/ioc-cfn-svc:2026-05-07-a47d2c7
+    image: ghcr.io/cisco-eti/ioc-cfn-svc:2026-05-11-cf3bd58
     container_name: ioc-cfn-svc
     platform: ${DOCKER_DEFAULT_PLATFORM}
     profiles:
