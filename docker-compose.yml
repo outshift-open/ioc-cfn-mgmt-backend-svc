@@ -6,7 +6,7 @@ services:
   #   - Container Port: 5432 (PostgreSQL default, cannot be changed without config)
   #   - it will have cfn_mgmt_db and ioc_knowledge_db both
   ioc-knowledge-db:
-    image: ghcr.io/cisco-eti/ioc-knowledge-memory-svc-db:2.1
+    image: ghcr.io/cisco-eti/ioc-knowledge-memory-svc-db:2.2
     platform: linux/amd64
     profiles:
       - db-only
