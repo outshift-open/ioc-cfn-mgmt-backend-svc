@@ -98,7 +98,7 @@ jobs:
       security-events: write
     steps:
       - name: Harden runner
-        uses: step-security/harden-runner@v2.15.1
+        uses: step-security/harden-runner@v2.19.3
         with:
           egress-policy: audit
 
