@@ -2098,9 +2098,51 @@
       "AgentConfig": {
         "properties": {
           "agent_id": {
-            "type": "string",
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
             "title": "Agent Id",
-            "description": "Unique identifier for the agent"
+            "description": "Unique identifier for the agent (server-generated, ignored on input)"
+          },
+          "name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Name",
+            "description": "Human-readable agent name"
+          },
+          "url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Url",
+            "description": "Agent endpoint URL"
+          },
+          "identity": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/AgentIdentity"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Identity provider configuration"
           },
           "agentic_memory_provider_id": {
             "anyOf": [
@@ -2129,11 +2171,32 @@
           }
         },
         "type": "object",
-        "required": [
-          "agent_id"
-        ],
         "title": "AgentConfig",
         "description": "Schema for individual agent configuration in MAS (input)"
+      },
+      "AgentIdentity": {
+        "properties": {
+          "type": {
+            "type": "string",
+            "title": "Type",
+            "description": "Identity provider type (e.g. openclaw, claude_code, or any custom type)"
+          },
+          "identifiers": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "type": "object",
+            "title": "Identifiers",
+            "description": "Provider-specific identifiers (varies by type)"
+          }
+        },
+        "type": "object",
+        "required": [
+          "type",
+          "identifiers"
+        ],
+        "title": "AgentIdentity",
+        "description": "Schema for agent identity provider configuration"
       },
       "AgentWithMemory": {
         "properties": {
@@ -2141,6 +2204,41 @@
             "type": "string",
             "title": "Agent Id",
             "description": "Unique identifier for the agent"
+          },
+          "name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Name",
+            "description": "Human-readable agent name"
+          },
+          "url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Url",
+            "description": "Agent endpoint URL"
+          },
+          "identity": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/AgentIdentity"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Identity provider configuration"
           },
           "agentic_memory": {
             "anyOf": [
@@ -3456,7 +3554,15 @@
               },
               "config": {
                 "type": "planner"
-              }
+              },
+              "identity": {
+                "identifiers": {
+                  "url": "main::agents::agent-1"
+                },
+                "type": "openclaw"
+              },
+              "name": "retrieval-agent",
+              "url": "http://localhost:8080"
             }
           ],
           "config": {

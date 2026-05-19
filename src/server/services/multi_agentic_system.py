@@ -16,8 +16,10 @@ from server.schemas.multi_agentic_system import (
     MultiAgenticSystem as MultiAgenticSystemSchema,
     MultiAgenticSystems,
     AgentWithMemory,
+    AgentIdentity,
 )
 from server.database.relational_db.models.multi_agentic_system import MultiAgenticSystem as MultiAgenticSystemModel
+from server.database.relational_db.models.agent import Agent as AgentModel
 from server.database.relational_db.models.memory_provider import MemoryProvider as MemoryProviderModel
 from server.database.relational_db.db import RelationalDB
 from server.services.workspace import workspace_service
@@ -28,52 +30,46 @@ from server.utils import generate_uuid
 class MultiAgenticSystemService:
     """Service layer for MAS business logic"""
 
-    def _enrich_from_map(self, mas: MultiAgenticSystemModel, provider_map: dict) -> MultiAgenticSystemSchema:
-        """Enrich MAS data with memory provider details from a pre-fetched map (no DB calls)"""
+    def _build_memory_detail(self, provider) -> MemoryProviderDetail:
+        return MemoryProviderDetail(
+            id=provider.id,
+            name=provider.name,
+            description=provider.description,
+            config=provider.config,
+            enabled=provider.enabled,
+            created_at=provider.created_at,
+            updated_at=provider.updated_at,
+            created_by=provider.created_by,
+            updated_by=provider.updated_by,
+        )
 
+    def _agent_row_to_schema(self, agent_row: AgentModel, provider_map: dict) -> AgentWithMemory:
+        agentic_memory = None
+        if agent_row.agentic_memory_provider_id and agent_row.agentic_memory_provider_id in provider_map:
+            agentic_memory = self._build_memory_detail(provider_map[agent_row.agentic_memory_provider_id])
+
+        identity = None
+        if agent_row.identity_type:
+            identity = AgentIdentity(
+                type=agent_row.identity_type,
+                identifiers=agent_row.identity_identifiers or {},
+            )
+
+        return AgentWithMemory(
+            agent_id=agent_row.agent_id,
+            name=agent_row.name,
+            url=agent_row.url,
+            identity=identity,
+            agentic_memory=agentic_memory,
+            config=agent_row.config,
+        )
+
+    def _enrich_mas(self, mas: MultiAgenticSystemModel, agents: list, provider_map: dict) -> MultiAgenticSystemSchema:
         shared_memory = None
         if mas.shared_memory_provider_id and mas.shared_memory_provider_id in provider_map:
-            shared_provider = provider_map[mas.shared_memory_provider_id]
-            shared_memory = MemoryProviderDetail(
-                id=shared_provider.id,
-                name=shared_provider.name,
-                description=shared_provider.description,
-                config=shared_provider.config,
-                enabled=shared_provider.enabled,
-                created_at=shared_provider.created_at,
-                updated_at=shared_provider.updated_at,
-                created_by=shared_provider.created_by,
-                updated_by=shared_provider.updated_by,
-            )
+            shared_memory = self._build_memory_detail(provider_map[mas.shared_memory_provider_id])
 
-        enriched_agents = None
-        if mas.agents:
-            enriched_agents = []
-            for agent in mas.agents:
-                agentic_memory = None
-                agent_memory_id = agent.get("agentic_memory_provider_id")
-
-                if agent_memory_id and agent_memory_id in provider_map:
-                    agent_provider = provider_map[agent_memory_id]
-                    agentic_memory = MemoryProviderDetail(
-                        id=agent_provider.id,
-                        name=agent_provider.name,
-                        description=agent_provider.description,
-                        config=agent_provider.config,
-                        enabled=agent_provider.enabled,
-                        created_at=agent_provider.created_at,
-                        updated_at=agent_provider.updated_at,
-                        created_by=agent_provider.created_by,
-                        updated_by=agent_provider.updated_by,
-                    )
-
-                enriched_agents.append(
-                    AgentWithMemory(
-                        agent_id=agent.get("agent_id"),
-                        agentic_memory=agentic_memory,
-                        config=agent.get("config"),
-                    )
-                )
+        enriched_agents = [self._agent_row_to_schema(a, provider_map) for a in agents] if agents is not None else None
 
         return MultiAgenticSystemSchema(
             id=mas.id,
@@ -89,87 +85,135 @@ class MultiAgenticSystemService:
             updated_by=mas.updated_by,
         )
 
-    def _enrich_with_memory_providers(self, session, mas: MultiAgenticSystemModel) -> MultiAgenticSystemSchema:
-        """Enrich MAS data with full memory provider details"""
+    def _save_agents(self, session, mas_id: str, agents_data) -> list:
+        """Create agent rows from AgentConfig list. Returns the created AgentModel instances."""
+        if not agents_data:
+            return []
 
-        # Fetch shared memory provider details if exists
-        shared_memory = None
-        if mas.shared_memory_provider_id:
-            shared_provider = (
-                session.query(MemoryProviderModel)
-                .filter(
-                    MemoryProviderModel.id == mas.shared_memory_provider_id,
-                    MemoryProviderModel.deleted_at.is_(None),
+        # Assign server-generated UUIDs where agent_id is not provided
+        for agent_cfg in agents_data:
+            if not agent_cfg.agent_id:
+                agent_cfg.agent_id = generate_uuid()
+
+        # Validate no duplicate agent_ids
+        seen_ids = set()
+        for agent_cfg in agents_data:
+            if agent_cfg.agent_id in seen_ids:
+                raise HTTPException(
+                    status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                    detail=f"Duplicate agent_id in request: '{agent_cfg.agent_id}'",
                 )
-                .first()
+            seen_ids.add(agent_cfg.agent_id)
+
+        # Validate no duplicate agent names within the same MAS
+        seen_names = set()
+        for agent_cfg in agents_data:
+            if agent_cfg.name:
+                if agent_cfg.name in seen_names:
+                    raise HTTPException(
+                        status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                        detail=f"Duplicate agent name in request: '{agent_cfg.name}'",
+                    )
+                seen_names.add(agent_cfg.name)
+
+        agent_rows = []
+        for agent_cfg in agents_data:
+            identity_type = None
+            identity_identifiers = None
+            if agent_cfg.identity:
+                identity_type = agent_cfg.identity.type if agent_cfg.identity.type else None
+                identity_identifiers = agent_cfg.identity.identifiers
+
+            row = AgentModel(
+                mas_id=mas_id,
+                agent_id=agent_cfg.agent_id,
+                name=agent_cfg.name,
+                url=agent_cfg.url,
+                identity_type=identity_type,
+                identity_identifiers=identity_identifiers,
+                agentic_memory_provider_id=agent_cfg.agentic_memory_provider_id,
+                config=agent_cfg.config,
             )
-            if shared_provider:
-                shared_memory = MemoryProviderDetail(
-                    id=shared_provider.id,
-                    name=shared_provider.name,
-                    description=shared_provider.description,
-                    config=shared_provider.config,
-                    enabled=shared_provider.enabled,
-                    created_at=shared_provider.created_at,
-                    updated_at=shared_provider.updated_at,
-                    created_by=shared_provider.created_by,
-                    updated_by=shared_provider.updated_by,
+            session.add(row)
+            agent_rows.append(row)
+
+        return agent_rows
+
+    def _sync_agents(self, session, mas_id: str, incoming_agents) -> None:
+        """Diff-based agent sync: insert new, update existing, hard-delete removed."""
+        now = datetime.now(timezone.utc)
+
+        # Assign server-generated UUIDs where agent_id is not provided
+        for agent_cfg in incoming_agents:
+            if not agent_cfg.agent_id:
+                agent_cfg.agent_id = generate_uuid()
+
+        # Validate no duplicate agent_ids in incoming list
+        seen_ids = set()
+        for agent_cfg in incoming_agents:
+            if agent_cfg.agent_id in seen_ids:
+                raise HTTPException(
+                    status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                    detail=f"Duplicate agent_id in request: '{agent_cfg.agent_id}'",
                 )
+            seen_ids.add(agent_cfg.agent_id)
 
-        # Enrich agents with memory provider details
-        enriched_agents = None
-        if mas.agents:
-            enriched_agents = []
-            for agent in mas.agents:
-                agentic_memory = None
-                agent_memory_id = agent.get("agentic_memory_provider_id")
-
-                if agent_memory_id:
-                    agent_provider = (
-                        session.query(MemoryProviderModel)
-                        .filter(
-                            MemoryProviderModel.id == agent_memory_id,
-                            MemoryProviderModel.deleted_at.is_(None),
-                        )
-                        .first()
+        # Validate no duplicate agent names within the same MAS
+        seen_names = set()
+        for agent_cfg in incoming_agents:
+            if agent_cfg.name:
+                if agent_cfg.name in seen_names:
+                    raise HTTPException(
+                        status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                        detail=f"Duplicate agent name in request: '{agent_cfg.name}'",
                     )
-                    if agent_provider:
-                        agentic_memory = MemoryProviderDetail(
-                            id=agent_provider.id,
-                            name=agent_provider.name,
-                            description=agent_provider.description,
-                            config=agent_provider.config,
-                            enabled=agent_provider.enabled,
-                            created_at=agent_provider.created_at,
-                            updated_at=agent_provider.updated_at,
-                            created_by=agent_provider.created_by,
-                            updated_by=agent_provider.updated_by,
-                        )
+                seen_names.add(agent_cfg.name)
 
-                enriched_agents.append(
-                    AgentWithMemory(
-                        agent_id=agent.get("agent_id"),
-                        agentic_memory=agentic_memory,
-                        config=agent.get("config"),
-                    )
-                )
-
-        return MultiAgenticSystemSchema(
-            id=mas.id,
-            workspace_id=mas.workspace_id,
-            name=mas.name,
-            description=mas.description,
-            shared_memory=shared_memory,
-            agents=enriched_agents,
-            config=mas.config,
-            created_at=mas.created_at,
-            updated_at=mas.updated_at,
-            created_by=mas.created_by,
-            updated_by=mas.updated_by,
+        existing_rows = (
+            session.query(AgentModel)
+            .filter(AgentModel.mas_id == mas_id)
+            .all()
         )
+        existing_map = {row.agent_id: row for row in existing_rows}
+
+        incoming_ids = set()
+        for agent_cfg in incoming_agents:
+            incoming_ids.add(agent_cfg.agent_id)
+
+            identity_type = None
+            identity_identifiers = None
+            if agent_cfg.identity:
+                identity_type = agent_cfg.identity.type if agent_cfg.identity.type else None
+                identity_identifiers = agent_cfg.identity.identifiers
+
+            if agent_cfg.agent_id in existing_map:
+                row = existing_map[agent_cfg.agent_id]
+                row.name = agent_cfg.name
+                row.url = agent_cfg.url
+                row.identity_type = identity_type
+                row.identity_identifiers = identity_identifiers
+                row.agentic_memory_provider_id = agent_cfg.agentic_memory_provider_id
+                row.config = agent_cfg.config
+                row.updated_at = now
+            else:
+                row = AgentModel(
+                    mas_id=mas_id,
+                    agent_id=agent_cfg.agent_id,
+                    name=agent_cfg.name,
+                    url=agent_cfg.url,
+                    identity_type=identity_type,
+                    identity_identifiers=identity_identifiers,
+                    agentic_memory_provider_id=agent_cfg.agentic_memory_provider_id,
+                    config=agent_cfg.config,
+                )
+                session.add(row)
+
+        # Hard-delete agents removed from the incoming list
+        for agent_id, row in existing_map.items():
+            if agent_id not in incoming_ids:
+                session.delete(row)
 
     def create(self, workspace_id: str, mas_data: MultiAgenticSystemRequest) -> MultiAgenticSystemResponse:
-        # Validate workspace exists
         if not workspace_service.exists(workspace_id):
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
@@ -181,7 +225,6 @@ class MultiAgenticSystemService:
             session = db.get_session()
 
             try:
-                # Prevent duplicate active MAS names within the same workspace
                 existing = (
                     session.query(MultiAgenticSystemModel)
                     .filter(
@@ -197,22 +240,21 @@ class MultiAgenticSystemService:
                         detail=f"Multi-agentic system with name '{mas_data.name}' already exists in this workspace",
                     )
 
-                # Convert agents from Pydantic models to dict for JSONB storage
-                agents_json = None
-                if mas_data.agents:
-                    agents_json = [agent.model_dump() for agent in mas_data.agents]
-
                 new_mas = MultiAgenticSystemModel(
                     id=generate_uuid(),
                     workspace_id=workspace_id,
                     name=mas_data.name,
                     description=mas_data.description,
                     shared_memory_provider_id=mas_data.shared_memory_provider_id,
-                    agents=agents_json,
+                    agents=None,
                     config=mas_data.config,
                 )
 
                 session.add(new_mas)
+                session.flush()
+
+                self._save_agents(session, new_mas.id, mas_data.agents)
+
                 session.commit()
                 session.refresh(new_mas)
 
@@ -221,12 +263,10 @@ class MultiAgenticSystemService:
                     name=new_mas.name,
                 )
 
-                # Update CFN config for this workspace
                 from server.services.cognition_fabric_node import cognition_fabric_node_service
 
                 cognition_fabric_node_service.update_config_for_workspace(workspace_id)
 
-                # Onboard per-MAS vector store (non-fatal: logs on failure, does not block MAS creation)
                 from server.services.vector_store_cfn import vector_store_cfn_service
 
                 vector_store_cfn_service.onboard_vector_store(workspace_id, new_mas.id)
@@ -246,7 +286,6 @@ class MultiAgenticSystemService:
                 )
             except HTTPException:
                 session.rollback()
-                # Preserve specific HTTP error codes/messages (e.g., 409 duplicate)
                 raise
             except Exception as e:
                 session.rollback()
@@ -266,7 +305,6 @@ class MultiAgenticSystemService:
             )
 
     def list(self, workspace_id: str) -> MultiAgenticSystems:
-        # Validate workspace exists
         if not workspace_service.exists(workspace_id):
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
@@ -287,17 +325,31 @@ class MultiAgenticSystemService:
                     .all()
                 )
 
-                # Batch fetch: collect all unique memory provider IDs across all MAS and agents
+                mas_ids = [mas.id for mas in systems]
+
+                # Batch fetch all active agents for these MAS
+                all_agents = []
+                if mas_ids:
+                    all_agents = (
+                        session.query(AgentModel)
+                        .filter(AgentModel.mas_id.in_(mas_ids))
+                        .all()
+                    )
+
+                # Group agents by mas_id
+                agents_by_mas = {}
+                for agent in all_agents:
+                    agents_by_mas.setdefault(agent.mas_id, []).append(agent)
+
+                # Collect all unique memory provider IDs
                 provider_ids = set()
                 for mas in systems:
                     if mas.shared_memory_provider_id:
                         provider_ids.add(mas.shared_memory_provider_id)
-                    if mas.agents:
-                        for agent in mas.agents:
-                            if agent.get("agentic_memory_provider_id"):
-                                provider_ids.add(agent["agentic_memory_provider_id"])
+                for agent in all_agents:
+                    if agent.agentic_memory_provider_id:
+                        provider_ids.add(agent.agentic_memory_provider_id)
 
-                # One query to fetch all providers at once
                 provider_map = {}
                 if provider_ids:
                     providers = (
@@ -310,8 +362,9 @@ class MultiAgenticSystemService:
                     )
                     provider_map = {p.id: p for p in providers}
 
-                # Enrich all MAS from the map (pure Python, no DB calls)
-                system_responses = [self._enrich_from_map(mas, provider_map) for mas in systems]
+                system_responses = [
+                    self._enrich_mas(mas, agents_by_mas.get(mas.id, []), provider_map) for mas in systems
+                ]
 
                 return MultiAgenticSystems(systems=system_responses)
 
@@ -348,7 +401,33 @@ class MultiAgenticSystemService:
                         detail="Multi-agentic system not found",
                     )
 
-                return self._enrich_with_memory_providers(session, mas)
+                agents = (
+                    session.query(AgentModel)
+                    .filter(AgentModel.mas_id == mas_id)
+                    .all()
+                )
+
+                # Collect provider IDs
+                provider_ids = set()
+                if mas.shared_memory_provider_id:
+                    provider_ids.add(mas.shared_memory_provider_id)
+                for agent in agents:
+                    if agent.agentic_memory_provider_id:
+                        provider_ids.add(agent.agentic_memory_provider_id)
+
+                provider_map = {}
+                if provider_ids:
+                    providers = (
+                        session.query(MemoryProviderModel)
+                        .filter(
+                            MemoryProviderModel.id.in_(provider_ids),
+                            MemoryProviderModel.deleted_at.is_(None),
+                        )
+                        .all()
+                    )
+                    provider_map = {p.id: p for p in providers}
+
+                return self._enrich_mas(mas, agents, provider_map)
 
             finally:
                 session.close()
@@ -368,7 +447,6 @@ class MultiAgenticSystemService:
             session = db.get_session()
 
             try:
-                # Find the MAS
                 mas = (
                     session.query(MultiAgenticSystemModel)
                     .filter(
@@ -385,9 +463,7 @@ class MultiAgenticSystemService:
                         detail="Multi-agentic system not found",
                     )
 
-                # Update only provided fields
                 if mas_data.name is not None:
-                    # Check for duplicate name in the same workspace
                     existing = (
                         session.query(MultiAgenticSystemModel)
                         .filter(
@@ -412,8 +488,8 @@ class MultiAgenticSystemService:
                     mas.shared_memory_provider_id = mas_data.shared_memory_provider_id
 
                 if mas_data.agents is not None:
-                    # Convert agents from Pydantic models to dict for JSONB storage
-                    mas.agents = [agent.model_dump() for agent in mas_data.agents]
+                    self._sync_agents(session, mas_id, mas_data.agents)
+                    mas.agents = None
 
                 if mas_data.config is not None:
                     mas.config = mas_data.config
@@ -423,14 +499,37 @@ class MultiAgenticSystemService:
                 session.commit()
                 session.refresh(mas)
 
-                # Update CFN config for this workspace
+                # Re-fetch agents after sync
+                agents = (
+                    session.query(AgentModel)
+                    .filter(AgentModel.mas_id == mas_id)
+                    .all()
+                )
+
+                provider_ids = set()
+                if mas.shared_memory_provider_id:
+                    provider_ids.add(mas.shared_memory_provider_id)
+                for agent in agents:
+                    if agent.agentic_memory_provider_id:
+                        provider_ids.add(agent.agentic_memory_provider_id)
+
+                provider_map = {}
+                if provider_ids:
+                    providers = (
+                        session.query(MemoryProviderModel)
+                        .filter(
+                            MemoryProviderModel.id.in_(provider_ids),
+                            MemoryProviderModel.deleted_at.is_(None),
+                        )
+                        .all()
+                    )
+                    provider_map = {p.id: p for p in providers}
+
                 from server.services.cognition_fabric_node import cognition_fabric_node_service
 
                 cognition_fabric_node_service.update_config_for_workspace(workspace_id)
 
-                response = self._enrich_with_memory_providers(session, mas)
-
-                return response
+                return self._enrich_mas(mas, agents, provider_map)
 
             except IntegrityError as e:
                 session.rollback()
@@ -460,7 +559,6 @@ class MultiAgenticSystemService:
             session = db.get_session()
 
             try:
-                # Find the MAS
                 mas = (
                     session.query(MultiAgenticSystemModel)
                     .filter(
@@ -477,16 +575,22 @@ class MultiAgenticSystemService:
                         detail="Multi-agentic system not found",
                     )
 
+                now = datetime.now(timezone.utc)
+
                 if _purge:
+                    # CASCADE on FK handles agent row deletion
                     session.delete(mas)
                     message = "Multi-agentic system permanently deleted"
                 else:
-                    mas.deleted_at = datetime.now(timezone.utc)
+                    mas.deleted_at = now
+                    # Hard-delete associated agents
+                    session.query(AgentModel).filter(
+                        AgentModel.mas_id == mas_id,
+                    ).delete()
                     message = "Multi-agentic system deleted successfully"
 
                 session.commit()
 
-                # Update CFN config for this workspace
                 from server.services.cognition_fabric_node import cognition_fabric_node_service
 
                 cognition_fabric_node_service.update_config_for_workspace(workspace_id)

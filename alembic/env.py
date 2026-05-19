@@ -20,6 +20,7 @@ from alembic import context
 from server.database.relational_db.models import Base
 
 # Each import registers that model's tables on Base.metadata.
+import server.database.relational_db.models.agent  # noqa: F401
 import server.database.relational_db.models.api_key  # noqa: F401
 import server.database.relational_db.models.cognition_fabric_node  # noqa: F401
 import server.database.relational_db.models.cognition_engine  # noqa: F401

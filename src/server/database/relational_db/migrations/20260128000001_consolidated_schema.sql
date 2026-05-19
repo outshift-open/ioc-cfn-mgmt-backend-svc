@@ -136,6 +136,31 @@ CREATE INDEX "idx_mas_deleted_at" ON "multi_agentic_system" ("deleted_at");
 CREATE UNIQUE INDEX "idx_mas_workspace_name_unique" ON "multi_agentic_system" ("workspace_id", "name") WHERE "deleted_at" IS NULL;
 
 -- ====================
+-- Table: agent (Dedicated table for MAS agents)
+-- ====================
+CREATE TABLE "agent" (
+  "agent_id" character varying(255) NOT NULL,
+  "mas_id" character varying(36) NOT NULL,
+  "name" character varying(255) NULL,
+  "url" text NULL,
+  "identity_type" character varying(50) NULL,
+  "identity_identifiers" jsonb NULL,
+  "agentic_memory_provider_id" character varying(255) NULL,
+  "config" jsonb NULL,
+  "created_at" timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  "updated_at" timestamp NULL DEFAULT CURRENT_TIMESTAMP,
+  "created_by" character varying(255) NULL,
+  "updated_by" character varying(255) NULL,
+  PRIMARY KEY ("agent_id"),
+  CONSTRAINT "fk_agent_mas" FOREIGN KEY ("mas_id") REFERENCES "multi_agentic_system" ("id") ON DELETE CASCADE
+);
+
+CREATE INDEX "idx_agent_mas_id" ON "agent" ("mas_id");
+CREATE INDEX "idx_agent_identity_type" ON "agent" ("identity_type");
+CREATE INDEX "idx_agent_agentic_memory" ON "agent" ("agentic_memory_provider_id");
+CREATE UNIQUE INDEX "uq_agent_mas_name" ON "agent" ("mas_id", "name") WHERE "name" IS NOT NULL;
+
+-- ====================
 -- Table: cognition_fabric_node (Global, no workspace FK)
 -- ====================
 CREATE TABLE "cognition_fabric_node" (
@@ -182,6 +207,10 @@ CREATE TABLE "memory_provider" (
 );
 
 CREATE UNIQUE INDEX "idx_mp_name_unique" ON "memory_provider" ("name") WHERE "deleted_at" IS NULL;
+
+-- Add FK from agent to memory_provider (created after memory_provider table exists)
+ALTER TABLE "agent" ADD CONSTRAINT "fk_agent_memory_provider"
+  FOREIGN KEY ("agentic_memory_provider_id") REFERENCES "memory_provider" ("id") ON DELETE SET NULL;
 
 -- ====================
 -- Table: cognition_engine (Workspace-scoped)

@@ -9,10 +9,22 @@ from typing import Optional, Dict, Any, List
 from server.schemas.memory_provider import MemoryProviderDetail
 
 
+class AgentIdentity(BaseModel):
+    """Schema for agent identity provider configuration"""
+
+    type: str = Field(..., description="Identity provider type (e.g. openclaw, claude_code, or any custom type)")
+    identifiers: Dict[str, str] = Field(
+        ..., description="Provider-specific identifiers (varies by type)"
+    )
+
+
 class AgentConfig(BaseModel):
     """Schema for individual agent configuration in MAS (input)"""
 
-    agent_id: str = Field(..., description="Unique identifier for the agent")
+    agent_id: Optional[str] = Field(None, description="Unique identifier for the agent (server-generated, ignored on input)")
+    name: Optional[str] = Field(None, description="Human-readable agent name")
+    url: Optional[str] = Field(None, description="Agent endpoint URL")
+    identity: Optional[AgentIdentity] = Field(None, description="Identity provider configuration")
     agentic_memory_provider_id: Optional[str] = Field(None, description="Memory provider ID for agent's private memory")
     config: Optional[Dict[str, Any]] = Field(None, description="Agent-specific configuration")
 
@@ -21,6 +33,9 @@ class AgentWithMemory(BaseModel):
     """Schema for agent with full memory provider details (output)"""
 
     agent_id: str = Field(..., description="Unique identifier for the agent")
+    name: Optional[str] = Field(None, description="Human-readable agent name")
+    url: Optional[str] = Field(None, description="Agent endpoint URL")
+    identity: Optional[AgentIdentity] = Field(None, description="Identity provider configuration")
     agentic_memory: Optional[MemoryProviderDetail] = Field(
         None, description="Full memory provider configuration for agent's private memory"
     )
@@ -115,6 +130,12 @@ class MultiAgenticSystem(BaseModel):
                 "agents": [
                     {
                         "agent_id": "agent-1",
+                        "name": "retrieval-agent",
+                        "url": "http://localhost:8080",
+                        "identity": {
+                            "type": "openclaw",
+                            "identifiers": {"url": "main::agents::agent-1"},
+                        },
                         "agentic_memory": {
                             "id": "mem-provider-2",
                             "name": "ioc-mem0",
