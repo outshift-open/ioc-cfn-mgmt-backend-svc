@@ -2,7 +2,7 @@
 #
 # SPDX-License-Identifier: Apache-2.0
 
-from pydantic import BaseModel, Field, ConfigDict
+from pydantic import BaseModel, Field, ConfigDict, model_validator
 from datetime import datetime
 from typing import Optional, Dict, Any, List
 
@@ -172,3 +172,20 @@ class MultiAgenticSystems(BaseModel):
     """Schema for listing multi-agentic systems"""
 
     systems: List[MultiAgenticSystem] = Field(..., description="List of multi-agentic systems in the workspace")
+
+
+class MASQueryByIdentity(BaseModel):
+    """Schema for querying MAS by agent identity type and/or identifiers"""
+
+    identity_type: Optional[str] = Field(
+        None, description="Identity provider type to filter by (e.g. 'claude', 'openclaw')"
+    )
+    identity_identifiers: Optional[Dict[str, str]] = Field(
+        None, description="Identity identifiers to match against agent identity_identifiers (e.g. {\"xyz\": \"pqr\"})"
+    )
+
+    @model_validator(mode="after")
+    def at_least_one_filter(self):
+        if not self.identity_type and not self.identity_identifiers:
+            raise ValueError("At least one of 'identity_type' or 'identity_identifiers' must be provided")
+        return self

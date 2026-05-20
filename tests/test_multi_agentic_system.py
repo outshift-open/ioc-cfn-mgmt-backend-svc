@@ -321,3 +321,293 @@ class TestMASEndpoints:
         assert agent["url"] == "http://my-agent:8080"
         assert agent["identity"]["type"] == "claude_code"
         assert agent["identity"]["identifiers"] == {"org_id": "10", "project_id": "20"}
+
+
+class TestMASQueryByIdentity:
+    """Test cases for POST /workspaces/{workspace_id}/multi-agentic-systems/query endpoint."""
+
+    def test_query_by_identity_type_only(self, client, created_workspace):
+        """Test querying MAS by identity_type alone."""
+        mas_data = {
+            "name": "Claude MAS",
+            "agents": [
+                {
+                    "agent_id": "claude-agent-1",
+                    "name": "Claude Agent",
+                    "identity": {
+                        "type": "claude",
+                        "identifiers": {"org_id": "100", "project_id": "200"},
+                    },
+                },
+            ],
+        }
+        client.post(f"/api/workspaces/{created_workspace}/multi-agentic-systems", json=mas_data)
+
+        response = client.post(
+            f"/api/workspaces/{created_workspace}/multi-agentic-systems/query",
+            json={"identity_type": "claude"},
+        )
+
+        assert response.status_code == 200
+        systems = response.json()["systems"]
+        assert len(systems) == 1
+        assert systems[0]["name"] == "Claude MAS"
+
+    def test_query_by_identity_identifiers_only(self, client, created_workspace):
+        """Test querying MAS by identity_identifiers alone (any type)."""
+        mas_data = {
+            "name": "Identifiers MAS",
+            "agents": [
+                {
+                    "agent_id": "agent-1",
+                    "identity": {
+                        "type": "openclaw",
+                        "identifiers": {"xyz": "pqr", "abc": "def"},
+                    },
+                },
+            ],
+        }
+        client.post(f"/api/workspaces/{created_workspace}/multi-agentic-systems", json=mas_data)
+
+        response = client.post(
+            f"/api/workspaces/{created_workspace}/multi-agentic-systems/query",
+            json={"identity_identifiers": {"xyz": "pqr"}},
+        )
+
+        assert response.status_code == 200
+        systems = response.json()["systems"]
+        assert len(systems) == 1
+        assert systems[0]["name"] == "Identifiers MAS"
+
+    def test_query_by_both_type_and_identifiers(self, client, created_workspace):
+        """Test querying MAS by both identity_type and identity_identifiers."""
+        # Create two MAS with different identity types but same identifiers
+        mas_claude = {
+            "name": "Claude MAS",
+            "agents": [
+                {
+                    "agent_id": "claude-1",
+                    "identity": {
+                        "type": "claude",
+                        "identifiers": {"xyz": "pqr"},
+                    },
+                },
+            ],
+        }
+        mas_openclaw = {
+            "name": "OpenClaw MAS",
+            "agents": [
+                {
+                    "agent_id": "openclaw-1",
+                    "identity": {
+                        "type": "openclaw",
+                        "identifiers": {"xyz": "pqr"},
+                    },
+                },
+            ],
+        }
+        client.post(f"/api/workspaces/{created_workspace}/multi-agentic-systems", json=mas_claude)
+        client.post(f"/api/workspaces/{created_workspace}/multi-agentic-systems", json=mas_openclaw)
+
+        response = client.post(
+            f"/api/workspaces/{created_workspace}/multi-agentic-systems/query",
+            json={"identity_type": "claude", "identity_identifiers": {"xyz": "pqr"}},
+        )
+
+        assert response.status_code == 200
+        systems = response.json()["systems"]
+        assert len(systems) == 1
+        assert systems[0]["name"] == "Claude MAS"
+
+    def test_query_empty_payload_returns_422(self, client, created_workspace):
+        """Test that an empty payload returns 422 validation error."""
+        response = client.post(
+            f"/api/workspaces/{created_workspace}/multi-agentic-systems/query",
+            json={},
+        )
+
+        assert response.status_code == 422
+
+    def test_query_no_matches_returns_empty(self, client, created_workspace):
+        """Test that a query with no matches returns empty systems list."""
+        mas_data = {
+            "name": "Some MAS",
+            "agents": [
+                {
+                    "agent_id": "agent-1",
+                    "identity": {
+                        "type": "openclaw",
+                        "identifiers": {"url": "main::agents::agent-1"},
+                    },
+                },
+            ],
+        }
+        client.post(f"/api/workspaces/{created_workspace}/multi-agentic-systems", json=mas_data)
+
+        response = client.post(
+            f"/api/workspaces/{created_workspace}/multi-agentic-systems/query",
+            json={"identity_type": "nonexistent"},
+        )
+
+        assert response.status_code == 200
+        assert response.json()["systems"] == []
+
+    def test_query_partial_identifiers_match(self, client, created_workspace):
+        """Test that partial identifiers match via JSONB containment."""
+        mas_data = {
+            "name": "Multi-Key MAS",
+            "agents": [
+                {
+                    "agent_id": "agent-1",
+                    "identity": {
+                        "type": "claude",
+                        "identifiers": {"org_id": "10", "project_id": "20", "env": "prod"},
+                    },
+                },
+            ],
+        }
+        client.post(f"/api/workspaces/{created_workspace}/multi-agentic-systems", json=mas_data)
+
+        # Query with subset of identifiers — should match
+        response = client.post(
+            f"/api/workspaces/{created_workspace}/multi-agentic-systems/query",
+            json={"identity_type": "claude", "identity_identifiers": {"org_id": "10"}},
+        )
+
+        assert response.status_code == 200
+        systems = response.json()["systems"]
+        assert len(systems) == 1
+        assert systems[0]["name"] == "Multi-Key MAS"
+
+    def test_query_identifiers_no_match_wrong_value(self, client, created_workspace):
+        """Test that identifiers with wrong value don't match."""
+        mas_data = {
+            "name": "Value MAS",
+            "agents": [
+                {
+                    "agent_id": "agent-1",
+                    "identity": {
+                        "type": "claude",
+                        "identifiers": {"xyz": "pqr"},
+                    },
+                },
+            ],
+        }
+        client.post(f"/api/workspaces/{created_workspace}/multi-agentic-systems", json=mas_data)
+
+        response = client.post(
+            f"/api/workspaces/{created_workspace}/multi-agentic-systems/query",
+            json={"identity_type": "claude", "identity_identifiers": {"xyz": "wrong"}},
+        )
+
+        assert response.status_code == 200
+        assert response.json()["systems"] == []
+
+    def test_query_multiple_mas_match(self, client, created_workspace):
+        """Test that multiple MAS can match the same query."""
+        for i in range(3):
+            mas_data = {
+                "name": f"Claude MAS {i}",
+                "agents": [
+                    {
+                        "agent_id": f"agent-{i}",
+                        "identity": {
+                            "type": "claude",
+                            "identifiers": {"team": "alpha"},
+                        },
+                    },
+                ],
+            }
+            client.post(f"/api/workspaces/{created_workspace}/multi-agentic-systems", json=mas_data)
+
+        response = client.post(
+            f"/api/workspaces/{created_workspace}/multi-agentic-systems/query",
+            json={"identity_type": "claude", "identity_identifiers": {"team": "alpha"}},
+        )
+
+        assert response.status_code == 200
+        systems = response.json()["systems"]
+        assert len(systems) == 3
+
+    def test_query_workspace_not_found(self, client):
+        """Test query on non-existent workspace returns 404."""
+        fake_workspace_id = "00000000-0000-0000-0000-000000000000"
+
+        response = client.post(
+            f"/api/workspaces/{fake_workspace_id}/multi-agentic-systems/query",
+            json={"identity_type": "claude"},
+        )
+
+        assert response.status_code == 404
+
+    def test_query_does_not_cross_workspaces(self, client, created_workspace, sample_workspace_data):
+        """Test that query only returns MAS from the specified workspace."""
+        # Create MAS in workspace 1
+        mas_data = {
+            "name": "WS1 MAS",
+            "agents": [
+                {
+                    "agent_id": "agent-1",
+                    "identity": {"type": "claude", "identifiers": {"xyz": "pqr"}},
+                },
+            ],
+        }
+        client.post(f"/api/workspaces/{created_workspace}/multi-agentic-systems", json=mas_data)
+
+        # Create workspace 2 with its own MAS
+        ws2_data = {"name": "Second Workspace", "cfn_id": sample_workspace_data["cfn_id"]}
+        ws2_response = client.post("/api/workspaces/create", json=ws2_data)
+        assert ws2_response.status_code == 201
+        ws2_id = ws2_response.json()["id"]
+
+        mas_data_2 = {
+            "name": "WS2 MAS",
+            "agents": [
+                {
+                    "agent_id": "agent-2",
+                    "identity": {"type": "claude", "identifiers": {"xyz": "pqr"}},
+                },
+            ],
+        }
+        client.post(f"/api/workspaces/{ws2_id}/multi-agentic-systems", json=mas_data_2)
+
+        # Query workspace 1 — should only get WS1 MAS
+        response = client.post(
+            f"/api/workspaces/{created_workspace}/multi-agentic-systems/query",
+            json={"identity_type": "claude", "identity_identifiers": {"xyz": "pqr"}},
+        )
+
+        assert response.status_code == 200
+        systems = response.json()["systems"]
+        assert len(systems) == 1
+        assert systems[0]["name"] == "WS1 MAS"
+
+    def test_query_returns_full_mas_with_all_agents(self, client, created_workspace):
+        """Test that query returns the full MAS including all agents, not just matching ones."""
+        mas_data = {
+            "name": "Multi-Agent MAS",
+            "agents": [
+                {
+                    "agent_id": "claude-agent",
+                    "name": "Claude Agent",
+                    "identity": {"type": "claude", "identifiers": {"xyz": "pqr"}},
+                },
+                {
+                    "agent_id": "other-agent",
+                    "name": "Other Agent",
+                    "identity": {"type": "openclaw", "identifiers": {"url": "main::agents::other"}},
+                },
+            ],
+        }
+        client.post(f"/api/workspaces/{created_workspace}/multi-agentic-systems", json=mas_data)
+
+        response = client.post(
+            f"/api/workspaces/{created_workspace}/multi-agentic-systems/query",
+            json={"identity_type": "claude"},
+        )
+
+        assert response.status_code == 200
+        systems = response.json()["systems"]
+        assert len(systems) == 1
+        agents = systems[0]["agents"]
+        assert len(agents) == 2

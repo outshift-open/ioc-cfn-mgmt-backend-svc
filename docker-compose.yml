@@ -108,7 +108,7 @@ services:
   # Port Mapping: 9001:9001 (same port inside and outside container)
   ioc-cfn-mgmt-plane-ui:
     # Image Link: https://github.com/cisco-eti/ioc-cfn-mgmt-ui-svc/pkgs/container/ioc-cfn-mgmt-plane-ui
-    image: ghcr.io/cisco-eti/ioc-cfn-mgmt-plane-ui:2026-05-11-ffe6a7c
+    image: ghcr.io/cisco-eti/ioc-cfn-mgmt-plane-ui:2026-05-19-11ff5a0
     platform: ${DOCKER_DEFAULT_PLATFORM}
     profiles:
       - full-stack
@@ -172,7 +172,7 @@ services:
   # Port Mapping(MCP): 9009:9001 (different port inside and outside container)
   ioc-cfn-svc:
     # Image Link: https://github.com/orgs/cisco-eti/packages/container/package/ioc-cfn-svc
-    image: ghcr.io/cisco-eti/ioc-cfn-svc:2026-05-14-b537d26
+    image: ghcr.io/cisco-eti/ioc-cfn-svc:2026-05-19-facefd8
     container_name: ioc-cfn-svc
     platform: ${DOCKER_DEFAULT_PLATFORM}
     profiles:

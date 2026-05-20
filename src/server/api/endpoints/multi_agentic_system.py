@@ -7,6 +7,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from server.authn.auth import get_auth_user
 from server.authz.authz_service import authz_service
 from server.schemas.multi_agentic_system import (
+    MASQueryByIdentity,
     MultiAgenticSystem,
     MultiAgenticSystemRequest,
     MultiAgenticSystemResponse,
@@ -73,6 +74,28 @@ def list_multi_agentic_systems(
     check_workspace_exists(workspace_id)
     authz_service.require_permission(auth_user, "list", "multi_agentic_system")
     return multi_agentic_system_service.list(workspace_id)
+
+
+@router.post(
+    "/{workspace_id}/multi-agentic-systems/query",
+    response_model=MultiAgenticSystems,
+)
+def query_multi_agentic_systems_by_identity(
+    workspace_id: str,
+    query: MASQueryByIdentity,
+    auth_user: dict = Depends(get_auth_user),
+):
+    """
+    Query Multi-Agentic Systems that have agents with claude identity matching the given identifiers.
+
+    - **workspace_id**: UUID of the workspace
+    - **identity_identifiers**: Key-value pairs to match against agent identity_identifiers (e.g. {"xyz": "pqr"})
+
+    Returns list of MAS containing agents with identity_type 'claude' and matching identity_identifiers.
+    """
+    check_workspace_exists(workspace_id)
+    authz_service.require_permission(auth_user, "list", "multi_agentic_system")
+    return multi_agentic_system_service.query_by_identity(workspace_id, query)
 
 
 @router.get(

@@ -17,6 +17,7 @@ from server.schemas.multi_agentic_system import (
     MultiAgenticSystems,
     AgentWithMemory,
     AgentIdentity,
+    MASQueryByIdentity,
 )
 from server.database.relational_db.models.multi_agentic_system import MultiAgenticSystem as MultiAgenticSystemModel
 from server.database.relational_db.models.agent import Agent as AgentModel
@@ -551,6 +552,98 @@ class MultiAgenticSystemService:
             raise HTTPException(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
                 detail=f"Failed to update multi-agentic system: {str(e)}",
+            )
+
+    def query_by_identity(self, workspace_id: str, query: MASQueryByIdentity) -> MultiAgenticSystems:
+        """Find MAS that have agents with identity_type='claude' and matching identity_identifiers."""
+        try:
+            db = RelationalDB()
+            session = db.get_session()
+
+            try:
+                agent_query = (
+                    session.query(AgentModel)
+                    .join(
+                        MultiAgenticSystemModel,
+                        AgentModel.mas_id == MultiAgenticSystemModel.id,
+                    )
+                    .filter(
+                        MultiAgenticSystemModel.workspace_id == workspace_id,
+                        MultiAgenticSystemModel.deleted_at.is_(None),
+                    )
+                )
+
+                if query.identity_type:
+                    agent_query = agent_query.filter(
+                        AgentModel.identity_type == query.identity_type,
+                    )
+
+                if query.identity_identifiers:
+                    agent_query = agent_query.filter(
+                        AgentModel.identity_identifiers.contains(query.identity_identifiers),
+                    )
+
+                matching_agents = agent_query.all()
+
+                if not matching_agents:
+                    return MultiAgenticSystems(systems=[])
+
+                mas_ids = list({a.mas_id for a in matching_agents})
+
+                systems = (
+                    session.query(MultiAgenticSystemModel)
+                    .filter(
+                        MultiAgenticSystemModel.id.in_(mas_ids),
+                        MultiAgenticSystemModel.deleted_at.is_(None),
+                    )
+                    .all()
+                )
+
+                all_agents = (
+                    session.query(AgentModel)
+                    .filter(AgentModel.mas_id.in_(mas_ids))
+                    .all()
+                )
+
+                agents_by_mas = {}
+                for agent in all_agents:
+                    agents_by_mas.setdefault(agent.mas_id, []).append(agent)
+
+                provider_ids = set()
+                for mas in systems:
+                    if mas.shared_memory_provider_id:
+                        provider_ids.add(mas.shared_memory_provider_id)
+                for agent in all_agents:
+                    if agent.agentic_memory_provider_id:
+                        provider_ids.add(agent.agentic_memory_provider_id)
+
+                provider_map = {}
+                if provider_ids:
+                    providers = (
+                        session.query(MemoryProviderModel)
+                        .filter(
+                            MemoryProviderModel.id.in_(provider_ids),
+                            MemoryProviderModel.deleted_at.is_(None),
+                        )
+                        .all()
+                    )
+                    provider_map = {p.id: p for p in providers}
+
+                system_responses = [
+                    self._enrich_mas(mas, agents_by_mas.get(mas.id, []), provider_map) for mas in systems
+                ]
+
+                return MultiAgenticSystems(systems=system_responses)
+
+            finally:
+                session.close()
+
+        except HTTPException:
+            raise
+        except Exception as e:
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail=f"Failed to query multi-agentic systems by identity: {str(e)}",
             )
 
     def delete(self, workspace_id: str, mas_id: str, _purge: bool = False) -> dict:
