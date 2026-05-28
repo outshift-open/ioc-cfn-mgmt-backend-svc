@@ -67,6 +67,10 @@ class MultiAgenticSystemRequest(BaseModel):
         None,
         description="Configuration object",
     )
+    task_schedule: Optional[Dict[str, Any]] = Field(
+        None,
+        description="Task schedule configuration (task_name, enabled, schedule)",
+    )
 
 
 class MultiAgenticSystemUpdate(BaseModel):
@@ -93,6 +97,10 @@ class MultiAgenticSystemUpdate(BaseModel):
     config: Optional[Dict[str, Any]] = Field(
         None,
         description="Updated configuration object",
+    )
+    task_schedule: Optional[Dict[str, Any]] = Field(
+        None,
+        description="Updated task schedule configuration (task_name, enabled, schedule)",
     )
 
 
@@ -162,6 +170,7 @@ class MultiAgenticSystem(BaseModel):
         None, description="List of agents with their memory provider configurations"
     )
     config: Optional[Dict[str, Any]] = None
+    task_schedule: Optional[Dict[str, Any]] = None
     created_at: datetime
     updated_at: Optional[datetime] = None
     created_by: Optional[str] = None

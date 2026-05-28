@@ -22,6 +22,7 @@ class MultiAgenticSystem(Base):
     description = Column(Text, nullable=True)
     agents = Column(JSONB, nullable=True)
     config = Column(JSONB, nullable=True)
+    task_schedule = Column(JSONB, nullable=True)
 
     # Memory provider for shared memory across all agents in MAS
     shared_memory_provider_id = Column(

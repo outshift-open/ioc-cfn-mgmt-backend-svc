@@ -107,6 +107,7 @@ def upgrade() -> None:
       "description" text NULL,
       "agents" jsonb NULL,
       "config" jsonb NULL,
+      "task_schedule" jsonb NULL,
       "created_at" timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
       "updated_at" timestamp NULL DEFAULT CURRENT_TIMESTAMP,
       "created_by" character varying(255) NULL,

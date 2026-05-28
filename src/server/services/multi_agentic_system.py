@@ -6,6 +6,8 @@
 
 from datetime import datetime, timezone
 
+from croniter import croniter
+
 from fastapi import HTTPException, status
 from sqlalchemy.exc import IntegrityError
 
@@ -44,6 +46,46 @@ class MultiAgenticSystemService:
             updated_by=provider.updated_by,
         )
 
+    def _validate_task_schedule(self, task_schedule: dict) -> None:
+        """Validate task_schedule before persisting to ensure cfn can parse and schedule it.
+
+        Checks: task_name is a non-empty string, schedule is a valid 5-field cron expression,
+        and the schedule interval is at least 30 minutes (to avoid overlap with callback deadlines).
+        Raises HTTPException(400) on validation failure.
+        """
+        if not task_schedule:
+            return
+
+        task_name = task_schedule.get("task_name", "")
+        if not task_name or not isinstance(task_name, str):
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="task_schedule.task_name must be a non-empty string",
+            )
+
+        schedule = task_schedule.get("schedule", "")
+        if not schedule or not isinstance(schedule, str):
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="task_schedule.schedule must be a non-empty string",
+            )
+
+        try:
+            cron = croniter(schedule.strip())
+        except (ValueError, KeyError) as e:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"task_schedule.schedule is not a valid cron expression: {e}",
+            )
+
+        first = cron.get_next(datetime)
+        second = cron.get_next(datetime)
+        if (second - first).total_seconds() < 1800:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="task_schedule.schedule interval must be at least 30 minutes",
+            )
+
     def _agent_row_to_schema(self, agent_row: AgentModel, provider_map: dict) -> AgentWithMemory:
         agentic_memory = None
         if agent_row.agentic_memory_provider_id and agent_row.agentic_memory_provider_id in provider_map:
@@ -80,6 +122,7 @@ class MultiAgenticSystemService:
             shared_memory=shared_memory,
             agents=enriched_agents,
             config=mas.config,
+            task_schedule=mas.task_schedule,
             created_at=mas.created_at,
             updated_at=mas.updated_at,
             created_by=mas.created_by,
@@ -241,6 +284,9 @@ class MultiAgenticSystemService:
                         detail=f"Multi-agentic system with name '{mas_data.name}' already exists in this workspace",
                     )
 
+                if mas_data.task_schedule:
+                    self._validate_task_schedule(mas_data.task_schedule)
+
                 new_mas = MultiAgenticSystemModel(
                     id=generate_uuid(),
                     workspace_id=workspace_id,
@@ -249,6 +295,7 @@ class MultiAgenticSystemService:
                     shared_memory_provider_id=mas_data.shared_memory_provider_id,
                     agents=None,
                     config=mas_data.config,
+                    task_schedule=mas_data.task_schedule,
                 )
 
                 session.add(new_mas)
@@ -494,6 +541,10 @@ class MultiAgenticSystemService:
 
                 if mas_data.config is not None:
                     mas.config = mas_data.config
+
+                if mas_data.task_schedule is not None:
+                    self._validate_task_schedule(mas_data.task_schedule)
+                    mas.task_schedule = mas_data.task_schedule
 
                 mas.updated_at = datetime.now(timezone.utc)
 
