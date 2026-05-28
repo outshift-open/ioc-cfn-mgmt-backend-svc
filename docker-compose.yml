@@ -22,11 +22,10 @@ services:
       - ./scripts/init-multi-db.sh:/docker-entrypoint-initdb.d/init-multi-db.sh:ro
     restart: unless-stopped
     healthcheck:
-      test:
-        [
+      test: [
           "CMD-SHELL",
           "pg_isready -h localhost -p 5432 -U ${IOC_KNOWLEDGE_DB_USER} -d
-            ${IOC_KNOWLEDGE_DB:-ioc-knowledge-db}",
+          ${IOC_KNOWLEDGE_DB:-ioc-knowledge-db}",
         ]
       interval: 10s
       timeout: 5s
@@ -66,7 +65,7 @@ services:
       context: .
       dockerfile: Dockerfile
     # Image Link: https://github.com/orgs/cisco-eti/packages/container/package/ioc-cfn-mgmt-plane-svc
-    image: ghcr.io/cisco-eti/ioc-cfn-mgmt-plane-svc:2026-05-11-2e8ed5e
+    image: ghcr.io/cisco-eti/ioc-cfn-mgmt-plane-svc:2026-05-28-cb67668
     platform: ${DOCKER_DEFAULT_PLATFORM}
     profiles:
       - full-stack
@@ -172,7 +171,7 @@ services:
   # Port Mapping(MCP): 9009:9001 (different port inside and outside container)
   ioc-cfn-svc:
     # Image Link: https://github.com/orgs/cisco-eti/packages/container/package/ioc-cfn-svc
-    image: ghcr.io/cisco-eti/ioc-cfn-svc:2026-05-22-ded3b17
+    image: ghcr.io/cisco-eti/ioc-cfn-svc:2026-05-22-d9b6001
     container_name: ioc-cfn-svc
     platform: ${DOCKER_DEFAULT_PLATFORM}
     profiles:
@@ -195,6 +194,7 @@ services:
       - KNOWLEDGE_MEMORY_SVC_URL=http://ioc-knowledge-memory-svc:9003
       - LLM_PROVIDER=${LLM_PROVIDER:-azure-openai}
       - COGNITION_ENGINE_SVC_URL=http://ioc-cfn-cognition-engine:9004
+      - MCP_PORT=9001
     depends_on:
       ioc-knowledge-db:
         condition: service_healthy
@@ -205,7 +205,7 @@ services:
 
   ioc-cfn-cognition-engine:
     # Image Link: https://github.com/orgs/cisco-eti/packages/container/package/ioc-cfn-cognition-engine
-    image: ghcr.io/cisco-eti/ioc-cfn-cognition-engine:2026-05-22-83ad2ad
+    image: ghcr.io/cisco-eti/ioc-cfn-cognition-engine:2026-05-22-cfb858c
     ports:
       - "9004:9004"
     platform: ${DOCKER_DEFAULT_PLATFORM}
@@ -223,7 +223,7 @@ services:
       - COGNITION_ENGINE_PORT=9004
       - CFN_URL=http://ioc-cfn-svc:9002
     healthcheck:
-      test: [ "CMD", "curl", "-f", "http://localhost:9004/health" ]
+      test: ["CMD", "curl", "-f", "http://localhost:9004/health"]
       interval: 30s
       timeout: 10s
       retries: 3
