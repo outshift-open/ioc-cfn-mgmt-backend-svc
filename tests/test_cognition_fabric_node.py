@@ -990,6 +990,85 @@ class TestCognitionFabricNodeConfigVersion:
         assert registration_config["config_version"] == heartbeat_version
 
 
+class TestCFNConfigCognitionEngines:
+    """cognition_engines appear in CFN config payload with auth decrypted."""
+
+    _AUTH = {"type": "api_key", "credentials": {"api_key": "secret-key"}}
+
+    def _register_ce(self, client, cfn_id, name="test-ce"):
+        resp = client.post(
+            "/api/cognition-engines",
+            json={
+                "cfn_id": cfn_id,
+                "name": name,
+                "url": "http://ce.internal:9004",
+                "version": "1.0.0",
+                "type": "custom",
+                "auth": self._AUTH,
+            },
+        )
+        assert resp.status_code == 201
+        return resp.json()["ce_id"]
+
+    def test_workspaces_config_includes_cognition_engines(self, client, created_cfn):
+        """GET /cognitive-fabric-node/{id}/workspaces includes cognition_engines at top level."""
+        _, cfn_id = created_cfn
+        self._register_ce(client, cfn_id)
+
+        resp = client.get(f"/api/cognitive-fabric-node/{cfn_id}/workspaces")
+        assert resp.status_code == 200
+        assert "cognition_engines" in resp.json()
+
+    def test_workspaces_config_ce_auth_is_decrypted(self, client, created_cfn):
+        """auth.credentials is decrypted in the config payload."""
+        _, cfn_id = created_cfn
+        self._register_ce(client, cfn_id)
+
+        engines = client.get(f"/api/cognitive-fabric-node/{cfn_id}/workspaces").json()["cognition_engines"]
+        assert len(engines) == 1
+        auth = engines[0]["auth"]
+        assert auth["credentials"]["api_key"] == "secret-key"
+        assert "credentials_encrypted" not in auth
+
+    def test_workspaces_config_ce_fields_present(self, client, created_cfn):
+        """CE entry in config payload includes all expected fields."""
+        _, cfn_id = created_cfn
+        self._register_ce(client, cfn_id)
+
+        engine = client.get(f"/api/cognitive-fabric-node/{cfn_id}/workspaces").json()["cognition_engines"][0]
+        for field in ("id", "name", "url", "type", "enabled", "status", "capabilities", "metrics", "config", "mas_config", "auth"):
+            assert field in engine
+
+    def test_workspaces_config_no_ce_when_none_registered(self, client, created_cfn):
+        """cognition_engines is empty when no CEs are registered for this CFN."""
+        _, cfn_id = created_cfn
+
+        engines = client.get(f"/api/cognitive-fabric-node/{cfn_id}/workspaces").json()["cognition_engines"]
+        assert engines == []
+
+    def test_workspaces_config_ce_scoped_to_cfn(self, client, created_cfn):
+        """CEs from another CFN do not appear in this CFN's config."""
+        _, cfn_id = created_cfn
+
+        other_cfn_id = client.post(
+            "/api/cognition-fabric-nodes/register",
+            json={"name": "other-cfn"},
+        ).json()["id"]
+        self._register_ce(client, other_cfn_id, name="other-ce")
+
+        engines = client.get(f"/api/cognitive-fabric-node/{cfn_id}/workspaces").json()["cognition_engines"]
+        assert engines == []
+
+    def test_get_cfn_detail_config_includes_cognition_engines(self, client, created_cfn):
+        """GET /cognition-fabric-nodes/{id} config field includes cognition_engines."""
+        _, cfn_id = created_cfn
+        self._register_ce(client, cfn_id)
+
+        detail = client.get(f"/api/cognition-fabric-nodes/{cfn_id}").json()
+        assert "cognition_engines" in detail["config"]
+        assert len(detail["config"]["cognition_engines"]) == 1
+
+
 # Pytest fixtures
 
 

@@ -17,6 +17,7 @@ from server.database.relational_db.models.api_key import ApiKey
 from server.database.relational_db.models.cognition_fabric_node import (
     CognitionFabricNode,
 )
+from server.database.relational_db.models.mas_cognition_engine import MasCognitionEngine
 from server.database.relational_db.models.multi_agentic_system import MultiAgenticSystem
 from server.database.relational_db.models.user import User
 from server.database.relational_db.models.workspace import Workspace
@@ -152,6 +153,7 @@ def setup_test_environment():
         try:
             session.query(WorkspaceInvitation).delete()
             session.query(WorkspaceMember).delete()
+            session.query(MasCognitionEngine).delete()
             session.query(MultiAgenticSystem).delete()
             session.query(Workspace).delete()
             session.query(CognitionFabricNode).delete()

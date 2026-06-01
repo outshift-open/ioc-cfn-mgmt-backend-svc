@@ -4,139 +4,151 @@
 
 """Cognition Engine service - Business logic for Cognition Engine operations"""
 
-from datetime import datetime, timezone
+import copy
+from datetime import datetime, timedelta, timezone
+from typing import Optional
 
 from fastapi import HTTPException, status
+from sqlalchemy import and_
 
 from server.database.relational_db.db import RelationalDB
 from server.database.relational_db.models.cognition_engine import CognitionEngine as CognitionEngineModel
 from server.schemas.cognition_engine import (
-    CognitionEngineCreate,
+    CognitionEngineAssociateResponse,
     CognitionEngineDetail,
+    CognitionEngineHeartbeatResponse,
     CognitionEngineList,
     CognitionEngineListItem,
-    CognitionEngineUpdate,
+    CognitionEnginePatchRequest,
+    CognitionEngineRegisterRequest,
+    CognitionEngineResponse,
 )
-from server.services.workspace import workspace_service
+
 from server.utils import generate_uuid
+from server.utils.encryption import process_config_for_storage
+
+_IMMUTABLE_CE_FIELDS = {"url", "cfn_id", "version", "name", "type", "auto_attach"}
 
 
 class CognitionEngineService:
     """Service layer for Cognition Engine business logic"""
 
-    def create(self, workspace_id: str, engine_data: CognitionEngineCreate, user_id: str) -> CognitionEngineDetail:
+    def register(
+        self, engine_data: CognitionEngineRegisterRequest, user_id: str
+    ) -> tuple[CognitionEngineResponse, bool]:
         """
-        Create a new Cognition Engine
+        Register or update a Cognition Engine (idempotent upsert).
 
-        Args:
-            workspace_id: Workspace identifier
-            engine_data: Cognition engine creation data
-            user_id: ID of the user creating the engine
-
-        Returns:
-            CognitionEngineDetail with the created engine
-
-        Raises:
-            HTTPException: If engine with same name already exists in workspace or creation fails
+        Returns (response, created) — created=True for new, False for update.
+        Raises HTTPException 404 if the CFN does not exist.
         """
-        # Validate workspace exists
-        if not workspace_service.exists(workspace_id):
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail="Workspace not found",
-            )
-
         try:
             db = RelationalDB()
             session = db.get_session()
 
             try:
-                # Check if engine with same name already exists in this workspace
-                existing_engine = (
+                from server.database.relational_db.models.cognition_fabric_node import CognitionFabricNode
+
+                cfn = (
+                    session.query(CognitionFabricNode)
+                    .filter(
+                        CognitionFabricNode.id == engine_data.cfn_id,
+                        CognitionFabricNode.deleted_at.is_(None),
+                    )
+                    .first()
+                )
+                if not cfn:
+                    raise HTTPException(
+                        status_code=status.HTTP_404_NOT_FOUND,
+                        detail=f"Cognition Fabric Node '{engine_data.cfn_id}' not found",
+                    )
+
+                existing = (
                     session.query(CognitionEngineModel)
                     .filter(
-                        CognitionEngineModel.workspace_id == workspace_id,
+                        CognitionEngineModel.cfn_id == engine_data.cfn_id,
                         CognitionEngineModel.name == engine_data.name,
+                        CognitionEngineModel.version == engine_data.version,
                         CognitionEngineModel.deleted_at.is_(None),
                     )
                     .first()
                 )
 
-                if existing_engine:
-                    raise HTTPException(
-                        status_code=status.HTTP_409_CONFLICT,
-                        detail=(
-                            f"Cognition engine with name '{engine_data.name}' "
-                            f"already exists in this workspace"
-                        ),
+                if existing:
+                    existing.url = engine_data.url
+                    existing.type = engine_data.type
+                    existing.auth = _auth_for_storage(engine_data.auth)
+                    existing.capabilities = engine_data.capabilities or []
+                    existing.metrics = engine_data.metrics or []
+                    existing.auto_attach = engine_data.auto_attach
+                    existing.config = engine_data.config or {}
+                    existing.mas_config = engine_data.mas_config or {}
+                    existing.updated_by = user_id
+                    existing.updated_at = datetime.now(timezone.utc)
+                    session.commit()
+                    session.refresh(existing)
+                    engine, created = existing, False
+                else:
+                    engine = CognitionEngineModel(
+                        id=generate_uuid(),
+                        cfn_id=engine_data.cfn_id,
+                        name=engine_data.name,
+                        url=engine_data.url,
+                        version=engine_data.version,
+                        type=engine_data.type,
+                        auth=_auth_for_storage(engine_data.auth),
+                        capabilities=engine_data.capabilities or [],
+                        metrics=engine_data.metrics or [],
+                        enabled=True,
+                        auto_attach=engine_data.auto_attach,
+                        status="offline",
+                        config=engine_data.config or {},
+                        mas_config=engine_data.mas_config or {},
+                        created_by=user_id,
                     )
+                    session.add(engine)
+                    session.commit()
+                    session.refresh(engine)
+                    created = True
 
-                # Generate unique ID for the engine
-                cognition_engine_id = generate_uuid()
-
-                # Create new engine
-                new_engine = CognitionEngineModel(
-                    id=cognition_engine_id,
-                    workspace_id=workspace_id,
-                    name=engine_data.name,
-                    config=engine_data.config,
-                    enabled=True,
-                    created_by=user_id,
-                )
-
-                session.add(new_engine)
-                session.commit()
-                session.refresh(new_engine)
-
-                # Update all CFN configs since engines are workspace-scoped
-                from server.services.cognition_fabric_node import cognition_fabric_node_service
-
-                cognition_fabric_node_service.update_config_for_all_cfns()
-
-                return CognitionEngineDetail(
-                    id=new_engine.id,
-                    workspace_id=new_engine.workspace_id,
-                    name=new_engine.name,
-                    config=new_engine.config,
-                    enabled=new_engine.enabled,
-                    created_at=new_engine.created_at,
-                    updated_at=new_engine.updated_at,
-                    created_by=new_engine.created_by,
-                    updated_by=new_engine.updated_by,
+                response = (
+                    CognitionEngineResponse(
+                        ce_id=engine.id,
+                        cfn_id=engine.cfn_id,
+                        name=engine.name,
+                        version=engine.version,
+                        type=engine.type,
+                        enabled=engine.enabled,
+                        auto_attach=engine.auto_attach,
+                        status=engine.status,
+                        created=created,
+                    ),
+                    created,
                 )
 
             finally:
                 session.close()
+
+            from server.services.cognition_fabric_node import cognition_fabric_node_service
+
+            cognition_fabric_node_service.update_config_for_cfn(engine_data.cfn_id)
+
+            return response
 
         except HTTPException:
             raise
         except Exception as e:
             raise HTTPException(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                detail=f"Failed to create cognition engine: {str(e)}",
+                detail=f"Failed to register cognition engine: {str(e)}",
             )
 
-    def get(self, workspace_id: str, cognition_engine_id: str) -> CognitionEngineDetail:
+    def get(self, ce_id: str) -> CognitionEngineDetail:
         """
-        Get a specific Cognition Engine by ID
+        Get a Cognition Engine by ID.
 
-        Args:
-            workspace_id: Workspace identifier
-            cognition_engine_id: ID of the cognition engine
-
-        Returns:
-            CognitionEngineDetail with the engine details
-
-        Raises:
-            HTTPException: If engine not found
+        Raises HTTPException 404 if not found.
         """
-        # Validate workspace exists
-        if not workspace_service.exists(workspace_id):
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail="Workspace not found",
-            )
-
         try:
             db = RelationalDB()
             session = db.get_session()
@@ -145,8 +157,7 @@ class CognitionEngineService:
                 engine = (
                     session.query(CognitionEngineModel)
                     .filter(
-                        CognitionEngineModel.workspace_id == workspace_id,
-                        CognitionEngineModel.id == cognition_engine_id,
+                        CognitionEngineModel.id == ce_id,
                         CognitionEngineModel.deleted_at.is_(None),
                     )
                     .first()
@@ -155,20 +166,12 @@ class CognitionEngineService:
                 if not engine:
                     raise HTTPException(
                         status_code=status.HTTP_404_NOT_FOUND,
-                        detail=f"Cognition engine with ID '{cognition_engine_id}' not found in this workspace",
+                        detail=f"CE {ce_id} not found",
                     )
 
-                return CognitionEngineDetail(
-                    id=engine.id,
-                    workspace_id=engine.workspace_id,
-                    name=engine.name,
-                    config=engine.config,
-                    enabled=engine.enabled,
-                    created_at=engine.created_at,
-                    updated_at=engine.updated_at,
-                    created_by=engine.created_by,
-                    updated_by=engine.updated_by,
-                )
+                _validate_cfn_active(session, engine.cfn_id)
+
+                return _to_detail(engine)
 
             finally:
                 session.close()
@@ -181,52 +184,47 @@ class CognitionEngineService:
                 detail=f"Failed to get cognition engine: {str(e)}",
             )
 
-    def list(self, workspace_id: str) -> CognitionEngineList:
+    def list(self, cfn_id: Optional[str] = None, status: Optional[str] = None) -> CognitionEngineList:
         """
-        List all Cognition Engines in workspace
-
-        Args:
-            workspace_id: Workspace identifier
-
-        Returns:
-            CognitionEngineList with engines and total count
+        List Cognition Engines, optionally filtered by cfn_id and/or status.
         """
-        # Validate workspace exists
-        if not workspace_service.exists(workspace_id):
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail="Workspace not found",
-            )
-
         try:
             db = RelationalDB()
             session = db.get_session()
 
             try:
-                # Query all enabled engines in workspace
-                engines = (
-                    session.query(CognitionEngineModel)
-                    .filter(
-                        CognitionEngineModel.workspace_id == workspace_id,
-                        CognitionEngineModel.deleted_at.is_(None),
-                        CognitionEngineModel.enabled.is_(True),
-                    )
-                    .all()
+                if cfn_id is not None:
+                    _validate_cfn_active(session, cfn_id)
+
+                query = session.query(CognitionEngineModel).filter(CognitionEngineModel.deleted_at.is_(None))
+
+                if cfn_id is not None:
+                    query = query.filter(CognitionEngineModel.cfn_id == cfn_id)
+                if status is not None:
+                    query = query.filter(CognitionEngineModel.status == status)
+
+                engines = query.all()
+
+                return CognitionEngineList(
+                    cognition_engines=[
+                        CognitionEngineListItem(
+                            id=e.id,
+                            cfn_id=e.cfn_id,
+                            name=e.name,
+                            version=e.version,
+                            type=e.type,
+                            url=e.url,
+                            enabled=e.enabled,
+                            auto_attach=e.auto_attach,
+                            status=e.status,
+                            last_seen=e.last_seen,
+                            config=e.config,
+                            mas_config=e.mas_config,
+                        )
+                        for e in engines
+                    ],
+                    total=len(engines),
                 )
-
-                engine_list = [
-                    CognitionEngineListItem(
-                        id=engine.id,
-                        workspace_id=engine.workspace_id,
-                        name=engine.name,
-                        config=engine.config,
-                        enabled=engine.enabled,
-                        created_at=engine.created_at.isoformat() if engine.created_at else None,
-                    )
-                    for engine in engines
-                ]
-
-                return CognitionEngineList(engines=engine_list, total=len(engine_list))
 
             finally:
                 session.close()
@@ -239,29 +237,142 @@ class CognitionEngineService:
                 detail=f"Failed to list cognition engines: {str(e)}",
             )
 
-    def update(
-        self, workspace_id: str, cognition_engine_id: str, update_data: CognitionEngineUpdate, user_id: str
-    ) -> CognitionEngineDetail:
+    def delete(self, ce_id: str, user_id: str) -> None:
         """
-        Update a Cognition Engine
+        Soft delete a Cognition Engine by ID.
 
-        Args:
-            workspace_id: Workspace identifier
-            cognition_engine_id: ID of the cognition engine to update
-            update_data: Cognition engine update data
-            user_id: ID of the user updating the engine
-
-        Returns:
-            CognitionEngineDetail with the updated engine
-
-        Raises:
-            HTTPException: If engine not found or update fails
+        Raises HTTPException 404 if not found.
         """
-        # Validate workspace exists
-        if not workspace_service.exists(workspace_id):
+        try:
+            db = RelationalDB()
+            session = db.get_session()
+
+            try:
+                engine = (
+                    session.query(CognitionEngineModel)
+                    .filter(
+                        CognitionEngineModel.id == ce_id,
+                        CognitionEngineModel.deleted_at.is_(None),
+                    )
+                    .first()
+                )
+
+                if not engine:
+                    raise HTTPException(
+                        status_code=status.HTTP_404_NOT_FOUND,
+                        detail=f"CE {ce_id} not found",
+                    )
+
+                _validate_cfn_active(session, engine.cfn_id)
+
+                if engine.enabled:
+                    raise HTTPException(
+                        status_code=status.HTTP_409_CONFLICT,
+                        detail="CE must be disabled before it can be deleted",
+                    )
+
+                cfn_id = engine.cfn_id
+                engine.deleted_at = datetime.now(timezone.utc)
+                engine.updated_by = user_id
+                engine.updated_at = datetime.now(timezone.utc)
+
+                session.commit()
+
+            finally:
+                session.close()
+
+            from server.services.cognition_fabric_node import cognition_fabric_node_service
+
+            cognition_fabric_node_service.update_config_for_cfn(cfn_id)
+
+        except HTTPException:
+            raise
+        except Exception as e:
             raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail="Workspace not found",
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail=f"Failed to delete cognition engine: {str(e)}",
+            )
+
+    def heartbeat(self, ce_id: str) -> CognitionEngineHeartbeatResponse:
+        """
+        Update CE heartbeat: sets last_seen to now and flips offline→online.
+
+        Raises HTTPException 404 if not found.
+        """
+        try:
+            db = RelationalDB()
+            session = db.get_session()
+
+            try:
+                engine = (
+                    session.query(CognitionEngineModel)
+                    .filter(
+                        CognitionEngineModel.id == ce_id,
+                        CognitionEngineModel.deleted_at.is_(None),
+                    )
+                    .first()
+                )
+
+                if not engine:
+                    raise HTTPException(
+                        status_code=status.HTTP_404_NOT_FOUND,
+                        detail=f"CE {ce_id} not found",
+                    )
+
+                _validate_cfn_active(session, engine.cfn_id)
+
+                engine.last_seen = datetime.now(timezone.utc)
+                if engine.status == "offline":
+                    engine.status = "online"
+
+                session.commit()
+                session.refresh(engine)
+
+                last_seen = (
+                    engine.last_seen.replace(tzinfo=timezone.utc)
+                    if engine.last_seen and engine.last_seen.tzinfo is None
+                    else engine.last_seen
+                )
+
+                return CognitionEngineHeartbeatResponse(
+                    status=engine.status,
+                    last_seen=last_seen,
+                )
+
+            except HTTPException:
+                session.rollback()
+                raise
+            except Exception as e:
+                session.rollback()
+                raise HTTPException(
+                    status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                    detail=f"Failed to process heartbeat: {str(e)}",
+                )
+            finally:
+                session.close()
+
+        except HTTPException:
+            raise
+        except Exception as e:
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail=f"Failed to process heartbeat: {str(e)}",
+            )
+
+    def patch(self, ce_id: str, patch_data: CognitionEnginePatchRequest, user_id: str) -> CognitionEngineDetail:
+        """
+        Partially update a Cognition Engine.
+
+        Raises 400 if any immutable fields are included in the request.
+        Raises 404 if the CE does not exist.
+        """
+        provided = patch_data.model_dump(exclude_none=True)
+
+        attempted_immutable = _IMMUTABLE_CE_FIELDS & set(provided.keys())
+        if attempted_immutable:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"The following fields cannot be updated: {sorted(attempted_immutable)}",
             )
 
         try:
@@ -272,8 +383,7 @@ class CognitionEngineService:
                 engine = (
                     session.query(CognitionEngineModel)
                     .filter(
-                        CognitionEngineModel.workspace_id == workspace_id,
-                        CognitionEngineModel.id == cognition_engine_id,
+                        CognitionEngineModel.id == ce_id,
                         CognitionEngineModel.deleted_at.is_(None),
                     )
                     .first()
@@ -282,16 +392,32 @@ class CognitionEngineService:
                 if not engine:
                     raise HTTPException(
                         status_code=status.HTTP_404_NOT_FOUND,
-                        detail=f"Cognition engine with ID '{cognition_engine_id}' not found in this workspace",
+                        detail=f"CE {ce_id} not found",
                     )
 
-                # Update fields if provided
-                if update_data.name is not None:
-                    engine.name = update_data.name
-                if update_data.config is not None:
-                    engine.config = update_data.config
-                if update_data.enabled is not None:
-                    engine.enabled = update_data.enabled
+                _validate_cfn_active(session, engine.cfn_id)
+
+                if "enabled" in provided:
+                    if not provided["enabled"]:
+                        from server.database.relational_db.models.mas_cognition_engine import MasCognitionEngine
+
+                        attached = session.query(MasCognitionEngine).filter(MasCognitionEngine.ce_id == ce_id).count()
+                        if attached:
+                            raise HTTPException(
+                                status_code=status.HTTP_409_CONFLICT,
+                                detail="CE cannot be disabled while it has attached MAS",
+                            )
+                    engine.enabled = provided["enabled"]
+                if "capabilities" in provided:
+                    engine.capabilities = provided["capabilities"]
+                if "metrics" in provided:
+                    engine.metrics = provided["metrics"]
+                if "config" in provided:
+                    engine.config = provided["config"]
+                if "mas_config" in provided:
+                    engine.mas_config = provided["mas_config"]
+                if "auth" in provided:
+                    engine.auth = _auth_for_storage(provided["auth"])
 
                 engine.updated_by = user_id
                 engine.updated_at = datetime.now(timezone.utc)
@@ -299,22 +425,7 @@ class CognitionEngineService:
                 session.commit()
                 session.refresh(engine)
 
-                # Update all CFN configs since engines are workspace-scoped
-                from server.services.cognition_fabric_node import cognition_fabric_node_service
-
-                cognition_fabric_node_service.update_config_for_all_cfns()
-
-                return CognitionEngineDetail(
-                    id=engine.id,
-                    workspace_id=engine.workspace_id,
-                    name=engine.name,
-                    config=engine.config,
-                    enabled=engine.enabled,
-                    created_at=engine.created_at,
-                    updated_at=engine.updated_at,
-                    created_by=engine.created_by,
-                    updated_by=engine.updated_by,
-                )
+                return _to_detail(engine)
 
             finally:
                 session.close()
@@ -327,29 +438,22 @@ class CognitionEngineService:
                 detail=f"Failed to update cognition engine: {str(e)}",
             )
 
-    def delete(self, workspace_id: str, cognition_engine_id: str, user_id: str) -> dict:
+    def associate(self, mas_id: str, ce_id: str, user_id: str) -> CognitionEngineAssociateResponse:
         """
-        Soft delete a Cognition Engine
+        Associate a CE with a MAS.
 
-        Args:
-            workspace_id: Workspace identifier
-            cognition_engine_id: ID of the cognition engine to delete
-            user_id: ID of the user deleting the engine
-
-        Returns:
-            Dict with success message
-
-        Raises:
-            HTTPException: If engine not found or deletion fails
+        Validates:
+        - CE exists and is not deleted
+        - CE's CFN is active
+        - MAS exists and is not deleted
+        - MAS's workspace belongs to the same CFN as the CE (boundary constraint)
+        - Association does not already exist
         """
-        # Validate workspace exists
-        if not workspace_service.exists(workspace_id):
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail="Workspace not found",
-            )
-
         try:
+            from server.database.relational_db.models.mas_cognition_engine import MasCognitionEngine
+            from server.database.relational_db.models.multi_agentic_system import MultiAgenticSystem
+            from server.database.relational_db.models.workspace import Workspace
+
             db = RelationalDB()
             session = db.get_session()
 
@@ -357,35 +461,65 @@ class CognitionEngineService:
                 engine = (
                     session.query(CognitionEngineModel)
                     .filter(
-                        CognitionEngineModel.workspace_id == workspace_id,
-                        CognitionEngineModel.id == cognition_engine_id,
+                        CognitionEngineModel.id == ce_id,
                         CognitionEngineModel.deleted_at.is_(None),
                     )
                     .first()
                 )
-
                 if not engine:
+                    raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"CE {ce_id} not found")
+
+                _validate_cfn_active(session, engine.cfn_id)
+
+                mas = (
+                    session.query(MultiAgenticSystem)
+                    .filter(
+                        MultiAgenticSystem.id == mas_id,
+                        MultiAgenticSystem.deleted_at.is_(None),
+                    )
+                    .first()
+                )
+                if not mas:
                     raise HTTPException(
                         status_code=status.HTTP_404_NOT_FOUND,
-                        detail=f"Cognition engine with ID '{cognition_engine_id}' not found in this workspace",
+                        detail=f"MAS {mas_id} not found",
                     )
 
-                # Soft delete by setting deleted_at timestamp
-                engine.deleted_at = datetime.now(timezone.utc)
-                engine.updated_by = user_id
-                engine.updated_at = datetime.now(timezone.utc)
+                workspace = session.query(Workspace).filter(Workspace.id == mas.workspace_id).first()
+                if not workspace or workspace.cfn_id != engine.cfn_id:
+                    raise HTTPException(
+                        status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
+                        detail="MAS belongs to a workspace on a different CFN than the CE",
+                    )
 
+                existing = (
+                    session.query(MasCognitionEngine)
+                    .filter(
+                        MasCognitionEngine.mas_id == mas_id,
+                        MasCognitionEngine.ce_id == ce_id,
+                    )
+                    .first()
+                )
+                if existing:
+                    raise HTTPException(
+                        status_code=status.HTTP_409_CONFLICT,
+                        detail="CE is already associated with this MAS",
+                    )
+
+                association = MasCognitionEngine(
+                    mas_id=mas_id,
+                    ce_id=ce_id,
+                    created_by=user_id,
+                )
+                session.add(association)
                 session.commit()
+                session.refresh(association)
 
-                # Update all CFN configs since engines are workspace-scoped
-                from server.services.cognition_fabric_node import cognition_fabric_node_service
-
-                cognition_fabric_node_service.update_config_for_all_cfns()
-
-                return {
-                    "message": f"Cognition engine '{cognition_engine_id}' deleted successfully",
-                    "id": cognition_engine_id,
-                }
+                return CognitionEngineAssociateResponse(
+                    ce_id=ce_id,
+                    mas_id=mas_id,
+                    created_at=association.created_at,
+                )
 
             finally:
                 session.close()
@@ -395,8 +529,247 @@ class CognitionEngineService:
         except Exception as e:
             raise HTTPException(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                detail=f"Failed to delete cognition engine: {str(e)}",
+                detail=f"Failed to associate cognition engine: {str(e)}",
             )
+
+    def disassociate(self, ce_id: str, mas_id: str, user_id: str) -> None:
+        """
+        Remove the association between a CE and a MAS.
+
+        Raises 404 if the CE does not exist or the association does not exist.
+        """
+        try:
+            from server.database.relational_db.models.mas_cognition_engine import MasCognitionEngine
+
+            db = RelationalDB()
+            session = db.get_session()
+
+            try:
+                engine = (
+                    session.query(CognitionEngineModel)
+                    .filter(
+                        CognitionEngineModel.id == ce_id,
+                        CognitionEngineModel.deleted_at.is_(None),
+                    )
+                    .first()
+                )
+                if not engine:
+                    raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"CE {ce_id} not found")
+
+                _validate_cfn_active(session, engine.cfn_id)
+
+                association = (
+                    session.query(MasCognitionEngine)
+                    .filter(
+                        MasCognitionEngine.ce_id == ce_id,
+                        MasCognitionEngine.mas_id == mas_id,
+                    )
+                    .first()
+                )
+                if not association:
+                    raise HTTPException(
+                        status_code=status.HTTP_404_NOT_FOUND,
+                        detail=f"No association found between CE {ce_id} and MAS {mas_id}",
+                    )
+
+                session.delete(association)
+                session.commit()
+
+            finally:
+                session.close()
+
+        except HTTPException:
+            raise
+        except Exception as e:
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail=f"Failed to disassociate cognition engine: {str(e)}",
+            )
+
+    def list_for_cfn(self, cfn_id: str) -> list:
+        """
+        List Cognition Engines with raw auth for CFN consumption.
+
+        Bypasses response masking so process_config_for_cfn() can decrypt credentials.
+        """
+        try:
+            db = RelationalDB()
+            session = db.get_session()
+
+            try:
+                engines = (
+                    session.query(CognitionEngineModel)
+                    .filter(
+                        CognitionEngineModel.cfn_id == cfn_id,
+                        CognitionEngineModel.deleted_at.is_(None),
+                    )
+                    .all()
+                )
+
+                return [
+                    {
+                        "id": e.id,
+                        "name": e.name,
+                        "url": e.url,
+                        "type": e.type,
+                        "enabled": e.enabled,
+                        "status": e.status,
+                        "capabilities": e.capabilities or [],
+                        "metrics": e.metrics or [],
+                        "config": e.config or {},
+                        "mas_config": e.mas_config or {},
+                        "auth": e.auth,
+                    }
+                    for e in engines
+                ]
+
+            finally:
+                session.close()
+
+        except Exception as e:
+            import logging
+
+            logging.getLogger(__name__).error(f"Failed to list cognition engines for CFN: {str(e)}")
+            return []
+
+    def mark_stale_engines_offline(self, threshold_minutes: int = 2) -> int:
+        """
+        Background job: mark engines offline if last_seen exceeds threshold.
+
+        Returns count of engines marked offline.
+        """
+        try:
+            db = RelationalDB()
+            session = db.get_session()
+
+            try:
+                threshold_time = datetime.now(timezone.utc) - timedelta(minutes=threshold_minutes)
+
+                stale_engines = (
+                    session.query(CognitionEngineModel)
+                    .filter(
+                        and_(
+                            CognitionEngineModel.status == "online",
+                            CognitionEngineModel.last_seen < threshold_time,
+                            CognitionEngineModel.deleted_at.is_(None),
+                        )
+                    )
+                    .all()
+                )
+
+                count = 0
+                for engine in stale_engines:
+                    engine.status = "offline"
+                    count += 1
+
+                if count > 0:
+                    session.commit()
+
+                return count
+
+            finally:
+                session.close()
+
+        except Exception as e:
+            import logging
+
+            logging.getLogger(__name__).error(f"Error marking stale cognition engines offline: {str(e)}")
+            return 0
+
+    def auto_attach_for_new_mas(self, mas_id: str, cfn_id: str) -> None:
+        """Auto-attach: on MAS create/update, associate all enabled auto_attach=True CEs in the CFN."""
+        if not cfn_id:
+            return
+
+        try:
+            from server.database.relational_db.models.mas_cognition_engine import MasCognitionEngine
+
+            db = RelationalDB()
+            session = db.get_session()
+
+            try:
+                auto_ce_ids = [
+                    row[0]
+                    for row in session.query(CognitionEngineModel.id)
+                    .filter(
+                        CognitionEngineModel.cfn_id == cfn_id,
+                        CognitionEngineModel.auto_attach.is_(True),
+                        CognitionEngineModel.enabled.is_(True),
+                        CognitionEngineModel.deleted_at.is_(None),
+                    )
+                    .all()
+                ]
+
+                for ce_id in auto_ce_ids:
+                    exists = (
+                        session.query(MasCognitionEngine)
+                        .filter(
+                            MasCognitionEngine.ce_id == ce_id,
+                            MasCognitionEngine.mas_id == mas_id,
+                        )
+                        .first()
+                    )
+                    if not exists:
+                        session.add(MasCognitionEngine(mas_id=mas_id, ce_id=ce_id, created_by="system"))
+
+                if auto_ce_ids:
+                    session.commit()
+
+            finally:
+                session.close()
+
+        except Exception as e:
+            import logging
+
+            logging.getLogger(__name__).error(f"Auto-attach MAS {mas_id} to CEs failed: {e}")
+
+
+def _validate_cfn_active(session, cfn_id: str) -> None:
+    """Raise 404 if the CFN does not exist, is soft-deleted, or is disabled."""
+    from server.database.relational_db.models.cognition_fabric_node import CognitionFabricNode
+
+    cfn = (
+        session.query(CognitionFabricNode)
+        .filter(
+            CognitionFabricNode.id == cfn_id,
+            CognitionFabricNode.deleted_at.is_(None),
+            CognitionFabricNode.enabled.is_(True),
+        )
+        .first()
+    )
+    if not cfn:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Cognition Fabric Node '{cfn_id}' not found or inactive",
+        )
+
+
+def _to_detail(engine: CognitionEngineModel) -> CognitionEngineDetail:
+    return CognitionEngineDetail(
+        id=engine.id,
+        cfn_id=engine.cfn_id,
+        name=engine.name,
+        version=engine.version,
+        type=engine.type,
+        url=engine.url,
+        enabled=engine.enabled,
+        auto_attach=engine.auto_attach,
+        capabilities=engine.capabilities,
+        metrics=engine.metrics,
+        status=engine.status,
+        last_seen=engine.last_seen,
+        config=engine.config,
+        mas_config=engine.mas_config,
+        created_at=engine.created_at,
+        updated_at=engine.updated_at,
+    )
+
+
+def _auth_for_storage(auth: Optional[dict]) -> Optional[dict]:
+    """Encrypt credentials inside an auth dict before DB storage."""
+    if not auth:
+        return auth
+    return process_config_for_storage({"auth": copy.deepcopy(auth)}).get("auth")
 
 
 # Singleton instance

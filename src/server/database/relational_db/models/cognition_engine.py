@@ -6,27 +6,53 @@
 
 from datetime import datetime, timezone
 
-from sqlalchemy import TIMESTAMP, Boolean, Column, String, func
+from sqlalchemy import TIMESTAMP, Boolean, Column, ForeignKey, String, func
 from sqlalchemy.dialects.postgresql import JSONB
 
 from server.database.relational_db.models import Base
 
 
 class CognitionEngine(Base):
-    """Cognition Engine model - represents a cognition processing engine"""
+    """Cognition Engine model - CFN-scoped cognition processing engine"""
 
     __tablename__ = "cognition_engine"
 
     id = Column(String(255), primary_key=True, nullable=False)
-    workspace_id = Column(String(36), nullable=False, index=True)
+    cfn_id = Column(String(255), ForeignKey("cognition_fabric_node.id"), nullable=False, index=True)
     name = Column(String(255), nullable=False)
-    config = Column(JSONB, nullable=True)  # Engine-specific configuration (host, port, etc.)
+
+    # Connection info
+    url = Column(String(512), nullable=False)
+
+    # Authentication (optional - credentials for CFN to reach CE, encrypted)
+    auth = Column(JSONB, nullable=True)
+
+    # Type and capabilities
+    type = Column(String(50), nullable=False, default="custom")
+    capabilities = Column(JSONB, nullable=True, default=list)
+    metrics = Column(JSONB, nullable=True, default=list)
+
+    # Versioning
+    version = Column(String(50), nullable=False)
+
+    # Lifecycle
     enabled = Column(Boolean, nullable=False, default=True)
-    created_at = Column(TIMESTAMP, nullable=False, default=lambda: datetime.now(timezone.utc))
-    updated_at = Column(TIMESTAMP, nullable=True, onupdate=func.now())
-    created_by = Column(String(36), nullable=False)
+    auto_attach = Column(Boolean, nullable=False, default=False)
+
+    # Status
+    status = Column(String(20), nullable=False, default="offline")
+    last_seen = Column(TIMESTAMP(timezone=True), nullable=True)
+
+    # Configuration
+    config = Column(JSONB, nullable=True, default=dict)
+    mas_config = Column(JSONB, nullable=True, default=dict)
+
+    # Audit fields
+    created_at = Column(TIMESTAMP(timezone=True), nullable=False, default=lambda: datetime.now(timezone.utc))
+    updated_at = Column(TIMESTAMP(timezone=True), nullable=True, onupdate=func.now())
+    deleted_at = Column(TIMESTAMP(timezone=True), nullable=True)
+    created_by = Column(String(36), nullable=True)
     updated_by = Column(String(36), nullable=True)
-    deleted_at = Column(TIMESTAMP, nullable=True)
 
     def __repr__(self):
-        return f"<CognitionEngine(id={self.id}, workspace_id={self.workspace_id}, name={self.name})>"
+        return f"<CognitionEngine(id={self.id}, cfn_id={self.cfn_id}, name={self.name})>"

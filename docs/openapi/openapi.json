@@ -1133,6 +1133,64 @@
         }
       }
     },
+    "/api/workspaces/{workspace_id}/multi-agentic-systems/query": {
+      "post": {
+        "tags": [
+          "multi-agentic-systems"
+        ],
+        "summary": "Query Multi Agentic Systems By Identity",
+        "description": "Query Multi-Agentic Systems that have agents with claude identity matching the given identifiers.\n\n- **workspace_id**: UUID of the workspace\n- **identity_identifiers**: Key-value pairs to match against agent identity_identifiers (e.g. {\"xyz\": \"pqr\"})\n\nReturns list of MAS containing agents with identity_type 'claude' and matching identity_identifiers.",
+        "operationId": "query_multi_agentic_systems_by_identity_api_workspaces__workspace_id__multi_agentic_systems_query_post",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "workspace_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Workspace Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MASQueryByIdentity"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MultiAgenticSystems"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/workspaces/{workspace_id}/multi-agentic-systems/{mas_id}": {
       "get": {
         "tags": [
@@ -1313,14 +1371,14 @@
         }
       }
     },
-    "/api/workspaces/{workspace_id}/cognition-engines": {
+    "/api/workspaces/{workspace_id}/multi-agentic-systems/{mas_id}/cognition-engines": {
       "post": {
         "tags": [
-          "cognition-engines"
+          "multi-agentic-systems"
         ],
-        "summary": "Create Cognition Engine",
-        "description": "Create a new cognition engine in workspace",
-        "operationId": "create_cognition_engine_api_workspaces__workspace_id__cognition_engines_post",
+        "summary": "Associate CE with MAS",
+        "description": "Add a Cognition Engine to a Multi-Agentic System. The CE's CFN must match the workspace's CFN.",
+        "operationId": "associate_cognition_engine_api_workspaces__workspace_id__multi_agentic_systems__mas_id__cognition_engines_post",
         "security": [
           {
             "HTTPBearer": []
@@ -1335,6 +1393,15 @@
               "type": "string",
               "title": "Workspace Id"
             }
+          },
+          {
+            "name": "mas_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Mas Id"
+            }
           }
         ],
         "requestBody": {
@@ -1342,7 +1409,7 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/CognitionEngineCreate"
+                "$ref": "#/components/schemas/MasCognitionEngineAssociateRequest"
               }
             }
           }
@@ -1353,7 +1420,113 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/CognitionEngineDetail"
+                  "$ref": "#/components/schemas/CognitionEngineAssociateResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/workspaces/{workspace_id}/multi-agentic-systems/{mas_id}/cognition-engines/{ce_id}": {
+      "delete": {
+        "tags": [
+          "multi-agentic-systems"
+        ],
+        "summary": "Disassociate CE from MAS",
+        "description": "Remove a Cognition Engine from a Multi-Agentic System.",
+        "operationId": "disassociate_cognition_engine_api_workspaces__workspace_id__multi_agentic_systems__mas_id__cognition_engines__ce_id__delete",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "workspace_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Workspace Id"
+            }
+          },
+          {
+            "name": "mas_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Mas Id"
+            }
+          },
+          {
+            "name": "ce_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Ce Id"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/cognition-engines": {
+      "post": {
+        "tags": [
+          "cognition-engines"
+        ],
+        "summary": "Register Cognition Engine",
+        "description": "Register or update a Cognition Engine with a CFN. Idempotent: same (cfn_id, name, version) updates the record (200) or creates it (201). Same name with a different version creates a new record.",
+        "operationId": "register_cognition_engine_api_cognition_engines_post",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CognitionEngineRegisterRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CognitionEngineResponse"
                 }
               }
             }
@@ -1375,8 +1548,8 @@
           "cognition-engines"
         ],
         "summary": "List Cognition Engines",
-        "description": "Get list of all cognition engines in workspace",
-        "operationId": "list_cognition_engines_api_workspaces__workspace_id__cognition_engines_get",
+        "description": "List cognition engines, optionally filtered by cfn_id and/or status.",
+        "operationId": "list_cognition_engines_api_cognition_engines_get",
         "security": [
           {
             "HTTPBearer": []
@@ -1384,13 +1557,40 @@
         ],
         "parameters": [
           {
-            "name": "workspace_id",
-            "in": "path",
-            "required": true,
+            "name": "cfn_id",
+            "in": "query",
+            "required": false,
             "schema": {
-              "type": "string",
-              "title": "Workspace Id"
-            }
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Filter by CFN ID",
+              "title": "Cfn Id"
+            },
+            "description": "Filter by CFN ID"
+          },
+          {
+            "name": "status",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Filter by status: 'online' or 'offline'",
+              "title": "Status"
+            },
+            "description": "Filter by status: 'online' or 'offline'"
           }
         ],
         "responses": {
@@ -1417,14 +1617,14 @@
         }
       }
     },
-    "/api/workspaces/{workspace_id}/cognition-engines/{id}": {
+    "/api/cognition-engines/{ce_id}": {
       "get": {
         "tags": [
           "cognition-engines"
         ],
         "summary": "Get Cognition Engine",
-        "description": "Get details of a specific cognition engine",
-        "operationId": "get_cognition_engine_api_workspaces__workspace_id__cognition_engines__id__get",
+        "description": "Get details of a specific cognition engine.",
+        "operationId": "get_cognition_engine_api_cognition_engines__ce_id__get",
         "security": [
           {
             "HTTPBearer": []
@@ -1432,21 +1632,12 @@
         ],
         "parameters": [
           {
-            "name": "workspace_id",
+            "name": "ce_id",
             "in": "path",
             "required": true,
             "schema": {
               "type": "string",
-              "title": "Workspace Id"
-            }
-          },
-          {
-            "name": "id",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "title": "Id"
+              "title": "Ce Id"
             }
           }
         ],
@@ -1478,8 +1669,8 @@
           "cognition-engines"
         ],
         "summary": "Update Cognition Engine",
-        "description": "Update an existing cognition engine",
-        "operationId": "update_cognition_engine_api_workspaces__workspace_id__cognition_engines__id__patch",
+        "description": "Partially update a Cognition Engine. Immutable fields (url, cfn_id, version, name, type, auto_attach) cannot be updated \u2014 returns 400 if attempted.",
+        "operationId": "patch_cognition_engine_api_cognition_engines__ce_id__patch",
         "security": [
           {
             "HTTPBearer": []
@@ -1487,21 +1678,12 @@
         ],
         "parameters": [
           {
-            "name": "workspace_id",
+            "name": "ce_id",
             "in": "path",
             "required": true,
             "schema": {
               "type": "string",
-              "title": "Workspace Id"
-            }
-          },
-          {
-            "name": "id",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "title": "Id"
+              "title": "Ce Id"
             }
           }
         ],
@@ -1510,7 +1692,7 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/CognitionEngineUpdate"
+                "$ref": "#/components/schemas/CognitionEnginePatchRequest"
               }
             }
           }
@@ -1542,9 +1724,9 @@
         "tags": [
           "cognition-engines"
         ],
-        "summary": "Delete Cognition Engine",
-        "description": "Delete a cognition engine (soft delete)",
-        "operationId": "delete_cognition_engine_api_workspaces__workspace_id__cognition_engines__id__delete",
+        "summary": "Deregister Cognition Engine",
+        "description": "Soft-delete (deregister) a cognition engine.",
+        "operationId": "delete_cognition_engine_api_cognition_engines__ce_id__delete",
         "security": [
           {
             "HTTPBearer": []
@@ -1552,21 +1734,53 @@
         ],
         "parameters": [
           {
-            "name": "workspace_id",
+            "name": "ce_id",
             "in": "path",
             "required": true,
             "schema": {
               "type": "string",
-              "title": "Workspace Id"
+              "title": "Ce Id"
             }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
           },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/cognition-engines/{ce_id}/heartbeat": {
+      "put": {
+        "tags": [
+          "cognition-engines"
+        ],
+        "summary": "Cognition Engine Heartbeat",
+        "description": "Update last_seen and flip status to online. Called by the CE to signal it is alive.",
+        "operationId": "heartbeat_cognition_engine_api_cognition_engines__ce_id__heartbeat_put",
+        "security": [
           {
-            "name": "id",
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "ce_id",
             "in": "path",
             "required": true,
             "schema": {
               "type": "string",
-              "title": "Id"
+              "title": "Ce Id"
             }
           }
         ],
@@ -1576,11 +1790,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "object",
-                  "additionalProperties": {
-                    "type": "string"
-                  },
-                  "title": "Response Delete Cognition Engine Api Workspaces  Workspace Id  Cognition Engines  Id  Delete"
+                  "$ref": "#/components/schemas/CognitionEngineHeartbeatResponse"
                 }
               }
             }
@@ -2433,33 +2643,30 @@
         "title": "AuditCfnPageInfo",
         "description": "Pagination metadata matching the upstream cfn-svc response."
       },
-      "CognitionEngineCreate": {
+      "CognitionEngineAssociateResponse": {
         "properties": {
-          "name": {
+          "ce_id": {
             "type": "string",
-            "title": "Name",
-            "description": "Engine name"
+            "title": "Ce Id"
           },
-          "config": {
-            "anyOf": [
-              {
-                "additionalProperties": true,
-                "type": "object"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Config",
-            "description": "Engine-specific configuration"
+          "mas_id": {
+            "type": "string",
+            "title": "Mas Id"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
           }
         },
         "type": "object",
         "required": [
-          "name"
+          "ce_id",
+          "mas_id",
+          "created_at"
         ],
-        "title": "CognitionEngineCreate",
-        "description": "Schema for creating a cognition engine"
+        "title": "CognitionEngineAssociateResponse",
+        "description": "Schema for CE-MAS association response"
       },
       "CognitionEngineDetail": {
         "properties": {
@@ -2467,13 +2674,73 @@
             "type": "string",
             "title": "Id"
           },
-          "workspace_id": {
+          "cfn_id": {
             "type": "string",
-            "title": "Workspace Id"
+            "title": "Cfn Id"
           },
           "name": {
             "type": "string",
             "title": "Name"
+          },
+          "version": {
+            "type": "string",
+            "title": "Version"
+          },
+          "type": {
+            "type": "string",
+            "title": "Type"
+          },
+          "url": {
+            "type": "string",
+            "title": "Url"
+          },
+          "enabled": {
+            "type": "boolean",
+            "title": "Enabled"
+          },
+          "auto_attach": {
+            "type": "boolean",
+            "title": "Auto Attach"
+          },
+          "capabilities": {
+            "anyOf": [
+              {
+                "items": {},
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Capabilities"
+          },
+          "metrics": {
+            "anyOf": [
+              {
+                "items": {},
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Metrics"
+          },
+          "status": {
+            "type": "string",
+            "title": "Status"
+          },
+          "last_seen": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Seen"
           },
           "config": {
             "anyOf": [
@@ -2487,9 +2754,17 @@
             ],
             "title": "Config"
           },
-          "enabled": {
-            "type": "boolean",
-            "title": "Enabled"
+          "mas_config": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Mas Config"
           },
           "created_at": {
             "type": "string",
@@ -2507,57 +2782,67 @@
               }
             ],
             "title": "Updated At"
-          },
-          "created_by": {
-            "type": "string",
-            "title": "Created By"
-          },
-          "updated_by": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Updated By"
           }
         },
         "type": "object",
         "required": [
           "id",
-          "workspace_id",
+          "cfn_id",
           "name",
-          "config",
+          "version",
+          "type",
+          "url",
           "enabled",
+          "auto_attach",
+          "capabilities",
+          "metrics",
+          "status",
+          "last_seen",
+          "config",
+          "mas_config",
           "created_at",
-          "updated_at",
-          "created_by",
-          "updated_by"
+          "updated_at"
         ],
         "title": "CognitionEngineDetail",
         "description": "Schema for detailed cognition engine information"
       },
-      "CognitionEngineList": {
+      "CognitionEngineHeartbeatResponse": {
         "properties": {
-          "engines": {
-            "items": {
-              "$ref": "#/components/schemas/CognitionEngineListItem"
-            },
-            "type": "array",
-            "title": "Engines",
-            "description": "List of cognition engines"
+          "status": {
+            "type": "string",
+            "title": "Status"
           },
-          "total": {
-            "type": "integer",
-            "title": "Total",
-            "description": "Total number of engines"
+          "last_seen": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Last Seen"
           }
         },
         "type": "object",
         "required": [
-          "engines",
+          "status",
+          "last_seen"
+        ],
+        "title": "CognitionEngineHeartbeatResponse",
+        "description": "Schema for CE heartbeat response"
+      },
+      "CognitionEngineList": {
+        "properties": {
+          "cognition_engines": {
+            "items": {
+              "$ref": "#/components/schemas/CognitionEngineListItem"
+            },
+            "type": "array",
+            "title": "Cognition Engines"
+          },
+          "total": {
+            "type": "integer",
+            "title": "Total"
+          }
+        },
+        "type": "object",
+        "required": [
+          "cognition_engines",
           "total"
         ],
         "title": "CognitionEngineList",
@@ -2569,13 +2854,49 @@
             "type": "string",
             "title": "Id"
           },
-          "workspace_id": {
+          "cfn_id": {
             "type": "string",
-            "title": "Workspace Id"
+            "title": "Cfn Id"
           },
           "name": {
             "type": "string",
             "title": "Name"
+          },
+          "version": {
+            "type": "string",
+            "title": "Version"
+          },
+          "type": {
+            "type": "string",
+            "title": "Type"
+          },
+          "url": {
+            "type": "string",
+            "title": "Url"
+          },
+          "enabled": {
+            "type": "boolean",
+            "title": "Enabled"
+          },
+          "auto_attach": {
+            "type": "boolean",
+            "title": "Auto Attach"
+          },
+          "status": {
+            "type": "string",
+            "title": "Status"
+          },
+          "last_seen": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Seen"
           },
           "config": {
             "anyOf": [
@@ -2589,41 +2910,80 @@
             ],
             "title": "Config"
           },
-          "enabled": {
-            "type": "boolean",
-            "title": "Enabled"
-          },
-          "created_at": {
-            "type": "string",
-            "format": "date-time",
-            "title": "Created At"
-          }
-        },
-        "type": "object",
-        "required": [
-          "id",
-          "workspace_id",
-          "name",
-          "config",
-          "enabled",
-          "created_at"
-        ],
-        "title": "CognitionEngineListItem",
-        "description": "Schema for cognition engine list item"
-      },
-      "CognitionEngineUpdate": {
-        "properties": {
-          "name": {
+          "mas_config": {
             "anyOf": [
               {
-                "type": "string"
+                "additionalProperties": true,
+                "type": "object"
               },
               {
                 "type": "null"
               }
             ],
-            "title": "Name",
-            "description": "Engine name"
+            "title": "Mas Config"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "cfn_id",
+          "name",
+          "version",
+          "type",
+          "url",
+          "enabled",
+          "auto_attach",
+          "status",
+          "last_seen",
+          "config",
+          "mas_config"
+        ],
+        "title": "CognitionEngineListItem",
+        "description": "Schema for a cognition engine in the list response"
+      },
+      "CognitionEnginePatchRequest": {
+        "properties": {
+          "enabled": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Enabled",
+            "description": "Enable or disable the CE"
+          },
+          "capabilities": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Capabilities",
+            "description": "Capability names"
+          },
+          "metrics": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Metrics",
+            "description": "Metric names"
           },
           "config": {
             "anyOf": [
@@ -2636,9 +2996,95 @@
               }
             ],
             "title": "Config",
-            "description": "Engine-specific configuration"
+            "description": "CE-level configuration"
           },
-          "enabled": {
+          "mas_config": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Mas Config",
+            "description": "MAS-specific config keyed by mas_id"
+          },
+          "auth": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Auth",
+            "description": "Auth credentials"
+          },
+          "url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Url",
+            "description": "Immutable \u2014 cannot be updated via PATCH"
+          },
+          "cfn_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cfn Id",
+            "description": "Immutable \u2014 cannot be updated via PATCH"
+          },
+          "version": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Version",
+            "description": "Immutable \u2014 cannot be updated via PATCH"
+          },
+          "name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Name",
+            "description": "Immutable \u2014 cannot be updated via PATCH"
+          },
+          "type": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Type",
+            "description": "Immutable \u2014 cannot be updated via PATCH"
+          },
+          "auto_attach": {
             "anyOf": [
               {
                 "type": "boolean"
@@ -2647,13 +3093,182 @@
                 "type": "null"
               }
             ],
-            "title": "Enabled",
-            "description": "Whether engine is enabled"
+            "title": "Auto Attach",
+            "description": "Immutable \u2014 cannot be updated via PATCH"
           }
         },
         "type": "object",
-        "title": "CognitionEngineUpdate",
-        "description": "Schema for updating a cognition engine"
+        "title": "CognitionEnginePatchRequest",
+        "description": "Schema for PATCH /cognition-engines/{id}.\n\nOnly the fields listed here can be updated.\nAttempting to update immutable fields (url, cfn_id, version, name, type, auto_attach)\nwill be rejected with 400."
+      },
+      "CognitionEngineRegisterRequest": {
+        "properties": {
+          "cfn_id": {
+            "type": "string",
+            "title": "Cfn Id",
+            "description": "CFN this engine is registering under"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name",
+            "description": "Engine name"
+          },
+          "url": {
+            "type": "string",
+            "title": "Url",
+            "description": "URL for the CFN to reach this engine"
+          },
+          "version": {
+            "type": "string",
+            "title": "Version",
+            "description": "CE software version, e.g. '1.2.3'"
+          },
+          "type": {
+            "type": "string",
+            "title": "Type",
+            "description": "Engine type: 'knowledge_management', 'semantic_negotiation', 'distillation', 'custom'"
+          },
+          "auto_attach": {
+            "type": "boolean",
+            "title": "Auto Attach",
+            "description": "If true, CE is auto-attached to all MAS under the same CFN's workspaces",
+            "default": false
+          },
+          "auth": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Auth",
+            "description": "Auth credentials, e.g. {\"type\": \"api_key\", \"credentials\": {...}}"
+          },
+          "capabilities": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Capabilities",
+            "description": "Capability names"
+          },
+          "metrics": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Metrics",
+            "description": "Metric names the CE will publish"
+          },
+          "config": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Config",
+            "description": "CE-level configuration"
+          },
+          "mas_config": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Mas Config",
+            "description": "MAS-specific config keyed by mas_id"
+          }
+        },
+        "type": "object",
+        "required": [
+          "cfn_id",
+          "name",
+          "url",
+          "version",
+          "type"
+        ],
+        "title": "CognitionEngineRegisterRequest",
+        "description": "Schema for CE self-registration (idempotent upsert)"
+      },
+      "CognitionEngineResponse": {
+        "properties": {
+          "ce_id": {
+            "type": "string",
+            "title": "Ce Id"
+          },
+          "cfn_id": {
+            "type": "string",
+            "title": "Cfn Id"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "version": {
+            "type": "string",
+            "title": "Version"
+          },
+          "type": {
+            "type": "string",
+            "title": "Type"
+          },
+          "enabled": {
+            "type": "boolean",
+            "title": "Enabled"
+          },
+          "auto_attach": {
+            "type": "boolean",
+            "title": "Auto Attach"
+          },
+          "status": {
+            "type": "string",
+            "title": "Status"
+          },
+          "created": {
+            "type": "boolean",
+            "title": "Created",
+            "description": "True if new registration, False if existing record was updated"
+          }
+        },
+        "type": "object",
+        "required": [
+          "ce_id",
+          "cfn_id",
+          "name",
+          "version",
+          "type",
+          "enabled",
+          "auto_attach",
+          "status",
+          "created"
+        ],
+        "title": "CognitionEngineResponse",
+        "description": "Schema for CE registration response"
       },
       "CognitionFabricNodeHeartbeatResponse": {
         "properties": {
@@ -3091,6 +3706,55 @@
         "type": "object",
         "title": "HTTPValidationError"
       },
+      "MASQueryByIdentity": {
+        "properties": {
+          "identity_type": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Identity Type",
+            "description": "Identity provider type to filter by (e.g. 'claude', 'openclaw')"
+          },
+          "identity_identifiers": {
+            "anyOf": [
+              {
+                "additionalProperties": {
+                  "type": "string"
+                },
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Identity Identifiers",
+            "description": "Identity identifiers to match against agent identity_identifiers (e.g. {\"xyz\": \"pqr\"})"
+          }
+        },
+        "type": "object",
+        "title": "MASQueryByIdentity",
+        "description": "Schema for querying MAS by agent identity type and/or identifiers"
+      },
+      "MasCognitionEngineAssociateRequest": {
+        "properties": {
+          "ce_id": {
+            "type": "string",
+            "title": "Ce Id",
+            "description": "ID of the Cognition Engine to associate with this MAS"
+          }
+        },
+        "type": "object",
+        "required": [
+          "ce_id"
+        ],
+        "title": "MasCognitionEngineAssociateRequest",
+        "description": "Schema for adding a Cognition Engine to a MAS"
+      },
       "MemoryProviderAuthConfig": {
         "properties": {
           "type": {
@@ -3491,6 +4155,18 @@
             ],
             "title": "Config"
           },
+          "task_schedule": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Task Schedule"
+          },
           "created_at": {
             "type": "string",
             "format": "date-time",
@@ -3647,6 +4323,19 @@
             ],
             "title": "Config",
             "description": "Configuration object"
+          },
+          "task_schedule": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Task Schedule",
+            "description": "Task schedule configuration (task_name, enabled, schedule)"
           }
         },
         "type": "object",
@@ -3748,6 +4437,19 @@
             ],
             "title": "Config",
             "description": "Updated configuration object"
+          },
+          "task_schedule": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Task Schedule",
+            "description": "Updated task schedule configuration (task_name, enabled, schedule)"
           }
         },
         "type": "object",

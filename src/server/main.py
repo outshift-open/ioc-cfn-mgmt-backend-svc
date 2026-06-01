@@ -25,6 +25,7 @@ setup_logging(service_name)
 
 from server.api.api import api_router  # noqa: E402
 from server.database.relational_db.db import RelationalDB  # noqa: E402
+from server.services.cognition_engine_monitor import cognition_engine_monitor  # noqa: E402
 from server.services.cognition_fabric_node_monitor import cognition_fabric_node_monitor  # noqa: E402
 from server.services.user import UserService  # noqa: E402
 from server.utils.version import get_app_version  # noqa: E402
@@ -87,6 +88,10 @@ async def lifespan(app: FastAPI):
     cognition_fabric_node_monitor_task = asyncio.create_task(cognition_fabric_node_monitor.start())
     logger.info("Cognitive Fabric Node monitor started")
 
+    # Start Cognition Engine monitor background task
+    cognition_engine_monitor_task = asyncio.create_task(cognition_engine_monitor.start())
+    logger.info("Cognition Engine monitor started")
+
     yield
 
     # Shutdown
@@ -98,6 +103,15 @@ async def lifespan(app: FastAPI):
         logger.warning("Cognitive Fabric Node monitor task did not stop gracefully, cancelling...")
         cognition_fabric_node_monitor_task.cancel()
     logger.info("Cognitive Fabric Node monitor stopped")
+
+    logger.info("Stopping Cognition Engine monitor...")
+    cognition_engine_monitor.stop()
+    try:
+        await asyncio.wait_for(cognition_engine_monitor_task, timeout=5.0)
+    except asyncio.TimeoutError:
+        logger.warning("Cognition Engine monitor task did not stop gracefully, cancelling...")
+        cognition_engine_monitor_task.cancel()
+    logger.info("Cognition Engine monitor stopped")
 
     logger.info("Closing database connections...")
     db.close()

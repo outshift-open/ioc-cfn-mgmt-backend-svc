@@ -213,11 +213,7 @@ class MultiAgenticSystemService:
                     )
                 seen_names.add(agent_cfg.name)
 
-        existing_rows = (
-            session.query(AgentModel)
-            .filter(AgentModel.mas_id == mas_id)
-            .all()
-        )
+        existing_rows = session.query(AgentModel).filter(AgentModel.mas_id == mas_id).all()
         existing_map = {row.agent_id: row for row in existing_rows}
 
         incoming_ids = set()
@@ -311,6 +307,11 @@ class MultiAgenticSystemService:
                     name=new_mas.name,
                 )
 
+                from server.database.relational_db.models.workspace import Workspace
+
+                workspace = session.query(Workspace).filter(Workspace.id == workspace_id).first()
+                workspace_cfn_id = workspace.cfn_id if workspace else None
+
                 from server.services.cognition_fabric_node import cognition_fabric_node_service
 
                 cognition_fabric_node_service.update_config_for_workspace(workspace_id)
@@ -318,6 +319,10 @@ class MultiAgenticSystemService:
                 from server.services.vector_store_cfn import vector_store_cfn_service
 
                 vector_store_cfn_service.onboard_vector_store(workspace_id, new_mas.id)
+
+                from server.services.cognition_engine import cognition_engine_service
+
+                cognition_engine_service.auto_attach_for_new_mas(new_mas.id, workspace_cfn_id)
 
                 return response
 
@@ -378,11 +383,7 @@ class MultiAgenticSystemService:
                 # Batch fetch all active agents for these MAS
                 all_agents = []
                 if mas_ids:
-                    all_agents = (
-                        session.query(AgentModel)
-                        .filter(AgentModel.mas_id.in_(mas_ids))
-                        .all()
-                    )
+                    all_agents = session.query(AgentModel).filter(AgentModel.mas_id.in_(mas_ids)).all()
 
                 # Group agents by mas_id
                 agents_by_mas = {}
@@ -449,11 +450,7 @@ class MultiAgenticSystemService:
                         detail="Multi-agentic system not found",
                     )
 
-                agents = (
-                    session.query(AgentModel)
-                    .filter(AgentModel.mas_id == mas_id)
-                    .all()
-                )
+                agents = session.query(AgentModel).filter(AgentModel.mas_id == mas_id).all()
 
                 # Collect provider IDs
                 provider_ids = set()
@@ -552,11 +549,7 @@ class MultiAgenticSystemService:
                 session.refresh(mas)
 
                 # Re-fetch agents after sync
-                agents = (
-                    session.query(AgentModel)
-                    .filter(AgentModel.mas_id == mas_id)
-                    .all()
-                )
+                agents = session.query(AgentModel).filter(AgentModel.mas_id == mas_id).all()
 
                 provider_ids = set()
                 if mas.shared_memory_provider_id:
@@ -580,6 +573,13 @@ class MultiAgenticSystemService:
                 from server.services.cognition_fabric_node import cognition_fabric_node_service
 
                 cognition_fabric_node_service.update_config_for_workspace(workspace_id)
+
+                from server.database.relational_db.models.workspace import Workspace
+                from server.services.cognition_engine import cognition_engine_service
+
+                workspace_obj = session.query(Workspace).filter(Workspace.id == workspace_id).first()
+                workspace_cfn_id = workspace_obj.cfn_id if workspace_obj else None
+                cognition_engine_service.auto_attach_for_new_mas(mas.id, workspace_cfn_id)
 
                 return self._enrich_mas(mas, agents, provider_map)
 
@@ -650,11 +650,7 @@ class MultiAgenticSystemService:
                     .all()
                 )
 
-                all_agents = (
-                    session.query(AgentModel)
-                    .filter(AgentModel.mas_id.in_(mas_ids))
-                    .all()
-                )
+                all_agents = session.query(AgentModel).filter(AgentModel.mas_id.in_(mas_ids)).all()
 
                 agents_by_mas = {}
                 for agent in all_agents:

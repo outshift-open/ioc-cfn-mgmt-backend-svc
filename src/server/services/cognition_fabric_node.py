@@ -50,6 +50,38 @@ class CognitionFabricNodeService:
         )
         return [ws.id for ws in workspaces]
 
+    def update_config_for_cfn(self, cfn_id: str) -> None:
+        """
+        Update config_version and regenerate config for a single CFN.
+
+        Called when CFN-scoped resources change (cognition engines, etc.)
+        """
+        try:
+            db = RelationalDB()
+            session = db.get_session()
+
+            try:
+                cfn = (
+                    session.query(CognitionFabricNodeModel)
+                    .filter(
+                        CognitionFabricNodeModel.id == cfn_id,
+                        CognitionFabricNodeModel.deleted_at.is_(None),
+                    )
+                    .first()
+                )
+
+                if cfn:
+                    cfn.config_version = (cfn.config_version or 0) + 1
+                    workspace_ids = self._get_workspace_ids(session, cfn.id)
+                    cfn.config = self.generate_config(cfn.id, workspace_ids, cfn.cfn_config, cfn.config_version)
+                    session.commit()
+
+            finally:
+                session.close()
+
+        except Exception:
+            pass
+
     def update_config_for_workspace(self, workspace_id: str) -> None:
         """
         Update config_version and regenerate config for all CFNs serving this workspace.
@@ -238,7 +270,9 @@ class CognitionFabricNodeService:
                     # Regenerate CFN config with the workspace
                     workspace_ids_list = [default_workspace.id]
                     new_cfn.config_version = (new_cfn.config_version or 0) + 1
-                    new_cfn.config = self.generate_config(cfn_id, workspace_ids_list, cfn_data.cfn_config, new_cfn.config_version)
+                    new_cfn.config = self.generate_config(
+                        cfn_id, workspace_ids_list, cfn_data.cfn_config, new_cfn.config_version
+                    )
 
                     session.commit()
                     session.refresh(new_cfn)
@@ -1095,7 +1129,6 @@ class CognitionFabricNodeService:
                     "workspace_id": ws_id,
                     "workspace_name": workspace_name,
                     "multi_agentic_systems": [],
-                    "cognition_engines": [],
                     "policies": [],
                 }
 
@@ -1126,21 +1159,6 @@ class CognitionFabricNodeService:
                 except Exception as e:
                     logger.error(f"Error processing MAS for CFN: {e}", exc_info=True)
 
-                # Get Cognition Engines for this workspace
-                try:
-                    engines = cognition_engine_service.list(ws_id).engines
-                    workspace_obj["cognition_engines"] = [
-                        {
-                            "id": engine.id,
-                            "name": engine.name,
-                            "config": engine.config or {},
-                            "enabled": engine.enabled,
-                        }
-                        for engine in engines
-                    ]
-                except Exception:
-                    pass
-
                 workspaces_payload.append(workspace_obj)
 
             # Fetch Memory Providers (global, not workspace-scoped)
@@ -1159,11 +1177,21 @@ class CognitionFabricNodeService:
             except Exception:
                 providers_payload = []
 
+            # Fetch Cognition Engines (CFN-scoped, not workspace-scoped)
+            try:
+                engines_payload = [
+                    {**e, "auth": process_config_for_cfn({"auth": e["auth"]}).get("auth") if e["auth"] else None}
+                    for e in cognition_engine_service.list_for_cfn(cfn_id)
+                ]
+            except Exception:
+                engines_payload = []
+
             return {
                 "config_version": config_version,
                 "cfn_config": cfn_config or {},
                 "workspaces": workspaces_payload,
                 "memory_providers": providers_payload,
+                "cognition_engines": engines_payload,
             }
 
         finally:

@@ -26,7 +26,7 @@ api_router.include_router(cognition_fabric_node_router, prefix="", tags=["cognit
 api_router.include_router(memory_provider_router, prefix="", tags=["memory-providers"])
 api_router.include_router(workspaces_router, prefix="/workspaces", tags=["workspaces"])
 api_router.include_router(multi_agentic_system_router, prefix="/workspaces", tags=["multi-agentic-systems"])
-api_router.include_router(cognition_engine_router, prefix="/workspaces", tags=["cognition-engines"])
+api_router.include_router(cognition_engine_router, prefix="", tags=["cognition-engines"])
 api_router.include_router(policy_router, prefix="/workspaces", tags=["policies"])
 api_router.include_router(audit_cfn_events_router, prefix="/audit-events", tags=["audit-events"])
 api_router.include_router(

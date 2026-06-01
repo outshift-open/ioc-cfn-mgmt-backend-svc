@@ -6,8 +6,10 @@ from fastapi import APIRouter, Depends, HTTPException, status
 
 from server.authn.auth import get_auth_user
 from server.authz.authz_service import authz_service
+from server.schemas.cognition_engine import CognitionEngineAssociateResponse
 from server.schemas.multi_agentic_system import (
     MASQueryByIdentity,
+    MasCognitionEngineAssociateRequest,
     MultiAgenticSystem,
     MultiAgenticSystemRequest,
     MultiAgenticSystemResponse,
@@ -170,3 +172,42 @@ def delete_multi_agentic_system(
     authz_service.require_permission(auth_user, "delete", "multi_agentic_system")
     multi_agentic_system_service.delete(workspace_id, mas_id, _purge)
     return None
+
+
+@router.post(
+    "/{workspace_id}/multi-agentic-systems/{mas_id}/cognition-engines",
+    response_model=CognitionEngineAssociateResponse,
+    status_code=status.HTTP_201_CREATED,
+    summary="Associate CE with MAS",
+    description=("Add a Cognition Engine to a Multi-Agentic System. " "The CE's CFN must match the workspace's CFN."),
+)
+def associate_cognition_engine(
+    workspace_id: str,
+    mas_id: str,
+    request: MasCognitionEngineAssociateRequest,
+    auth_user: dict = Depends(get_auth_user),
+):
+    from server.services.cognition_engine import cognition_engine_service
+
+    check_workspace_exists(workspace_id)
+    authz_service.require_permission(auth_user, "associate", "multi_agentic_system")
+    return cognition_engine_service.associate(mas_id, request.ce_id, auth_user.get("id", "unknown"))
+
+
+@router.delete(
+    "/{workspace_id}/multi-agentic-systems/{mas_id}/cognition-engines/{ce_id}",
+    status_code=status.HTTP_204_NO_CONTENT,
+    summary="Disassociate CE from MAS",
+    description="Remove a Cognition Engine from a Multi-Agentic System.",
+)
+def disassociate_cognition_engine(
+    workspace_id: str,
+    mas_id: str,
+    ce_id: str,
+    auth_user: dict = Depends(get_auth_user),
+):
+    from server.services.cognition_engine import cognition_engine_service
+
+    check_workspace_exists(workspace_id)
+    authz_service.require_permission(auth_user, "disassociate", "multi_agentic_system")
+    cognition_engine_service.disassociate(ce_id, mas_id, auth_user.get("id", "unknown"))

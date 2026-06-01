@@ -7,732 +7,980 @@
 import pytest
 from fastapi import status
 
+from server.database.relational_db.db import RelationalDB
+from server.database.relational_db.models.cognition_engine import CognitionEngine as CognitionEngineModel
+from server.utils.encryption import decrypt_credentials
 
-class TestCognitionEngineCreate:
-    """Test cognition engine creation with different configurations"""
 
-    def test_create_cognition_engine_invalid_workspace(self, client):
-        """Test creating cognition engine with non-existent workspace"""
-        payload = {
-            "name": "test-engine",
-            "config": {"type": "reasoning"},
-        }
+def _base_payload(cfn_id: str, name: str = "test-engine") -> dict:
+    return {
+        "cfn_id": cfn_id,
+        "name": name,
+        "url": "http://ce.internal:8080",
+        "version": "1.0.0",
+        "type": "custom",
+    }
 
+
+def _register(client, cfn_id, name="test-engine", **extra):
+    resp = client.post(
+        "/api/cognition-engines",
+        json={**_base_payload(cfn_id, name), **extra},
+    )
+    assert resp.status_code == status.HTTP_201_CREATED
+    return resp.json()["ce_id"]
+
+
+def _delete(client, ce_id: str) -> None:
+    """Disable then soft-delete a CE."""
+    client.patch(f"/api/cognition-engines/{ce_id}", json={"enabled": False})
+    resp = client.delete(f"/api/cognition-engines/{ce_id}")
+    assert resp.status_code == status.HTTP_204_NO_CONTENT
+
+
+class TestCognitionEngineRegister:
+    """Tests for POST /cognition-engines"""
+
+    def test_register_invalid_cfn(self, client):
+        """Registration under a non-existent CFN returns 404"""
         response = client.post(
-            "/api/workspaces/non-existent-workspace-id/cognition-engines",
-            json=payload,
+            "/api/cognition-engines",
+            json=_base_payload("non-existent-cfn-id"),
         )
-
         assert response.status_code == status.HTTP_404_NOT_FOUND
-        assert "workspace not found" in response.json()["detail"].lower()
+        assert "cognition fabric node" in response.json()["detail"].lower()
 
-    def test_create_cognition_engine_basic(self, client, created_workspace):
-        """Test creating cognition engine with basic configuration"""
-        payload = {
-            "name": "reasoning-engine",
-            "config": {
-                "type": "reasoning",
-                "model": "gpt-4",
-                "temperature": 0.7,
-            },
-        }
-
+    def test_register_new_engine_returns_201(self, client, registered_cfn):
+        """New registration returns 201 and created=true"""
         response = client.post(
-            f"/api/workspaces/{created_workspace}/cognition-engines",
-            json=payload,
+            "/api/cognition-engines",
+            json=_base_payload(registered_cfn),
         )
 
         assert response.status_code == status.HTTP_201_CREATED
         data = response.json()
-        assert data["name"] == "reasoning-engine"
-        assert data["workspace_id"] == created_workspace
-        assert data["config"]["type"] == "reasoning"
-        assert data["config"]["model"] == "gpt-4"
-        assert data["enabled"] is True
-        assert "id" in data
-        assert "created_at" in data
-        assert "created_by" in data
+        assert data["ce_id"]
+        assert data["cfn_id"] == registered_cfn
+        assert data["name"] == "test-engine"
+        assert data["version"] == "1.0.0"
+        assert data["type"] == "custom"
+        assert data["status"] == "offline"
+        assert data["created"] is True
 
-    def test_create_cognition_engine_planning(self, client, created_workspace):
-        """Test creating planning engine"""
+    def test_register_same_version_upserts_returns_200(self, client, registered_cfn):
+        """Re-registering the same (cfn_id, name, version) updates the record and returns 200 + created=false"""
+        payload = _base_payload(registered_cfn, "idempotent-engine")
+
+        first = client.post("/api/cognition-engines", json=payload)
+        assert first.status_code == status.HTTP_201_CREATED
+        ce_id = first.json()["ce_id"]
+
+        second = client.post(
+            "/api/cognition-engines",
+            json={**payload, "url": "http://ce-updated.internal:8080"},
+        )
+
+        assert second.status_code == status.HTTP_200_OK
+        data = second.json()
+        assert data["ce_id"] == ce_id
+        assert data["created"] is False
+
+    def test_register_new_version_creates_new_record(self, client, registered_cfn):
+        """Re-registering the same (cfn_id, name) with a different version creates a new record (201)"""
+        payload = _base_payload(registered_cfn, "versioned-engine")
+
+        first = client.post("/api/cognition-engines", json=payload)
+        assert first.status_code == status.HTTP_201_CREATED
+        ce_id_v1 = first.json()["ce_id"]
+
+        second = client.post(
+            "/api/cognition-engines",
+            json={**payload, "version": "2.0.0"},
+        )
+
+        assert second.status_code == status.HTTP_201_CREATED
+        data = second.json()
+        assert data["ce_id"] != ce_id_v1
+        assert data["version"] == "2.0.0"
+        assert data["created"] is True
+
+    def test_register_full_payload(self, client, registered_cfn):
+        """Registration with all optional fields"""
         payload = {
-            "name": "planning-engine",
-            "config": {
-                "type": "planning",
-                "horizon": "short-term",
-                "max_steps": 10,
-            },
+            "cfn_id": registered_cfn,
+            "name": "knowledge-engine",
+            "url": "https://ke.internal:9090",
+            "version": "2.3.1",
+            "type": "knowledge_management",
+            "capabilities": ["ingestion", "retrieval", "similarity_search"],
+            "metrics": ["kb.documents.indexed", "kb.search.latency_ms"],
+            "auth": {"type": "api_key", "credentials": {"api_key": "secret"}},
+            "config": {"max_concurrent_requests": 100},
+            "mas_config": {"880e8400-e29b-41d4-a716-446655440000": {"timeout": 30, "max_requests": 3000}},
         }
 
-        response = client.post(
-            f"/api/workspaces/{created_workspace}/cognition-engines",
-            json=payload,
-        )
+        response = client.post("/api/cognition-engines", json=payload)
 
         assert response.status_code == status.HTTP_201_CREATED
         data = response.json()
-        assert data["name"] == "planning-engine"
-        assert data["config"]["type"] == "planning"
-        assert data["config"]["horizon"] == "short-term"
+        assert data["type"] == "knowledge_management"
+        assert data["created"] is True
 
-    def test_create_cognition_engine_no_config(self, client, created_workspace):
-        """Test creating cognition engine without config"""
-        payload = {
-            "name": "simple-engine",
-        }
+    def test_register_missing_required_fields(self, client, registered_cfn):
+        """Missing url, version, or type is rejected with 422"""
+        response = client.post(
+            "/api/cognition-engines",
+            json={"cfn_id": registered_cfn, "name": "incomplete-engine", "type": "custom"},
+        )
+        assert response.status_code == status.HTTP_422_UNPROCESSABLE_CONTENT
 
         response = client.post(
-            f"/api/workspaces/{created_workspace}/cognition-engines",
-            json=payload,
+            "/api/cognition-engines",
+            json={"cfn_id": registered_cfn, "name": "incomplete-engine", "url": "http://ce:8080", "version": "1.0.0"},
         )
+        assert response.status_code == status.HTTP_422_UNPROCESSABLE_CONTENT
 
-        assert response.status_code == status.HTTP_201_CREATED
-        data = response.json()
-        assert data["name"] == "simple-engine"
-        assert data["config"] is None
-        assert data["enabled"] is True
+    def test_register_same_name_different_cfns(self, client):
+        """Same engine name can be registered under different CFNs"""
+        cfn1_id = client.post(
+            "/api/cognition-fabric-nodes/register",
+            json={"id": "cfn-ce-test-1", "name": "CFN CE Test 1"},
+        ).json()["id"]
 
-    def test_create_cognition_engine_duplicate_name(self, client, created_workspace):
-        """Test that duplicate engine names within same workspace are rejected"""
-        payload = {
-            "name": "duplicate-test",
-            "config": {"type": "test"},
-        }
+        cfn2_id = client.post(
+            "/api/cognition-fabric-nodes/register",
+            json={"id": "cfn-ce-test-2", "name": "CFN CE Test 2"},
+        ).json()["id"]
 
-        # Create first engine
-        response1 = client.post(
-            f"/api/workspaces/{created_workspace}/cognition-engines",
-            json=payload,
-        )
-        assert response1.status_code == status.HTTP_201_CREATED
+        resp1 = client.post("/api/cognition-engines", json=_base_payload(cfn1_id, "shared-engine"))
+        assert resp1.status_code == status.HTTP_201_CREATED
 
-        # Try to create duplicate
-        response2 = client.post(
-            f"/api/workspaces/{created_workspace}/cognition-engines",
-            json=payload,
-        )
-        assert response2.status_code == status.HTTP_409_CONFLICT
-        assert "already exists" in response2.json()["detail"].lower()
-
-    def test_create_cognition_engine_different_workspaces(
-        self, client, registered_cfn
-    ):
-        """Test that same engine name can exist in different workspaces"""
-        # Create two workspaces
-        ws1_response = client.post(
-            "/api/workspaces/create",
-            json={"name": "Workspace 1", "cfn_id": registered_cfn},
-        )
-        ws1_id = ws1_response.json()["id"]
-
-        ws2_response = client.post(
-            "/api/workspaces/create",
-            json={"name": "Workspace 2", "cfn_id": registered_cfn},
-        )
-        ws2_id = ws2_response.json()["id"]
-
-        payload = {
-            "name": "shared-name-engine",
-            "config": {"type": "test"},
-        }
-
-        # Create engine in workspace 1
-        response1 = client.post(
-            f"/api/workspaces/{ws1_id}/cognition-engines",
-            json=payload,
-        )
-        assert response1.status_code == status.HTTP_201_CREATED
-
-        # Create engine with same name in workspace 2 - should succeed
-        response2 = client.post(
-            f"/api/workspaces/{ws2_id}/cognition-engines",
-            json=payload,
-        )
-        assert response2.status_code == status.HTTP_201_CREATED
-        assert response2.json()["workspace_id"] == ws2_id
+        resp2 = client.post("/api/cognition-engines", json=_base_payload(cfn2_id, "shared-engine"))
+        assert resp2.status_code == status.HTTP_201_CREATED
+        assert resp2.json()["cfn_id"] == cfn2_id
+        assert resp2.json()["ce_id"] != resp1.json()["ce_id"]
 
 
 class TestCognitionEngineList:
-    """Test cognition engine listing"""
+    """Tests for GET /cognition-engines"""
 
-    def test_list_cognition_engines_invalid_workspace(self, client):
-        """Test listing cognition engines with non-existent workspace"""
-        response = client.get(
-            "/api/workspaces/non-existent-workspace-id/cognition-engines"
-        )
-
-        assert response.status_code == status.HTTP_404_NOT_FOUND
-        assert "workspace not found" in response.json()["detail"].lower()
-
-    def test_list_cognition_engines_empty(self, client, created_workspace):
-        """Test listing when no engines exist"""
-        response = client.get(
-            f"/api/workspaces/{created_workspace}/cognition-engines"
-        )
+    def test_list_empty(self, client, registered_cfn):
+        """No engines registered under CFN returns empty list"""
+        response = client.get(f"/api/cognition-engines?cfn_id={registered_cfn}")
 
         assert response.status_code == status.HTTP_200_OK
         data = response.json()
         assert data["total"] == 0
-        assert data["engines"] == []
+        assert data["cognition_engines"] == []
 
-    def test_list_cognition_engines(self, client, created_workspace):
-        """Test listing cognition engines"""
-        # Create multiple engines
-        engines = [
-            {
-                "name": "reasoning-engine",
-                "config": {"type": "reasoning"},
-            },
-            {
-                "name": "planning-engine",
-                "config": {"type": "planning"},
-            },
-            {
-                "name": "learning-engine",
-                "config": {"type": "learning"},
-            },
-        ]
+    def test_list_by_cfn_id(self, client, registered_cfn):
+        """Lists all engines under a CFN"""
+        for name in ("reasoning-engine", "planning-engine", "learning-engine"):
+            _register(client, registered_cfn, name)
 
-        for engine in engines:
-            response = client.post(
-                f"/api/workspaces/{created_workspace}/cognition-engines",
-                json=engine,
-            )
-            assert response.status_code == status.HTTP_201_CREATED
-
-        # List engines
-        response = client.get(
-            f"/api/workspaces/{created_workspace}/cognition-engines"
-        )
+        response = client.get(f"/api/cognition-engines?cfn_id={registered_cfn}")
 
         assert response.status_code == status.HTTP_200_OK
         data = response.json()
         assert data["total"] == 3
-        assert len(data["engines"]) == 3
+        names = [e["name"] for e in data["cognition_engines"]]
+        assert "reasoning-engine" in names
+        assert "planning-engine" in names
+        assert "learning-engine" in names
 
-        # Verify all engines are present
-        engine_names = [e["name"] for e in data["engines"]]
-        assert "reasoning-engine" in engine_names
-        assert "planning-engine" in engine_names
-        assert "learning-engine" in engine_names
+    def test_list_filter_by_status(self, client, registered_cfn):
+        """Status filter returns only matching engines"""
+        ce_id = _register(client, registered_cfn, "online-engine")
+        _register(client, registered_cfn, "offline-engine")
 
-    def test_list_only_shows_enabled_engines(self, client, created_workspace):
-        """Test that listing only returns enabled engines"""
-        # Create two engines
-        client.post(
-            f"/api/workspaces/{created_workspace}/cognition-engines",
-            json={"name": "enabled-engine"},
-        )
+        # Bring one engine online via heartbeat
+        client.put(f"/api/cognition-engines/{ce_id}/heartbeat")
 
-        disabled_response = client.post(
-            f"/api/workspaces/{created_workspace}/cognition-engines",
-            json={"name": "disabled-engine"},
-        )
-        disabled_id = disabled_response.json()["id"]
-
-        # Disable one engine
-        client.patch(
-            f"/api/workspaces/{created_workspace}/cognition-engines/{disabled_id}",
-            json={"enabled": False},
-        )
-
-        # List should only show enabled engine
-        response = client.get(
-            f"/api/workspaces/{created_workspace}/cognition-engines"
-        )
+        response = client.get(f"/api/cognition-engines?cfn_id={registered_cfn}&status=online")
 
         assert response.status_code == status.HTTP_200_OK
         data = response.json()
         assert data["total"] == 1
-        assert data["engines"][0]["name"] == "enabled-engine"
+        assert data["cognition_engines"][0]["name"] == "online-engine"
 
-    def test_list_engines_workspace_isolation(self, client, registered_cfn):
-        """Test that listing only shows engines from specific workspace"""
-        # Create two workspaces
-        ws1_response = client.post(
-            "/api/workspaces/create",
-            json={"name": "Workspace 1", "cfn_id": registered_cfn},
-        )
-        ws1_id = ws1_response.json()["id"]
+    def test_list_cfn_isolation(self, client):
+        """Engines from one CFN don't appear in another CFN's listing"""
+        cfn1_id = client.post(
+            "/api/cognition-fabric-nodes/register",
+            json={"id": "cfn-list-iso-1", "name": "CFN List Iso 1"},
+        ).json()["id"]
 
-        ws2_response = client.post(
-            "/api/workspaces/create",
-            json={"name": "Workspace 2", "cfn_id": registered_cfn},
-        )
-        ws2_id = ws2_response.json()["id"]
+        cfn2_id = client.post(
+            "/api/cognition-fabric-nodes/register",
+            json={"id": "cfn-list-iso-2", "name": "CFN List Iso 2"},
+        ).json()["id"]
 
-        # Create engine in workspace 1
-        client.post(
-            f"/api/workspaces/{ws1_id}/cognition-engines",
-            json={"name": "ws1-engine"},
-        )
+        _register(client, cfn1_id, "cfn1-engine")
+        _register(client, cfn2_id, "cfn2-engine")
 
-        # Create engine in workspace 2
-        client.post(
-            f"/api/workspaces/{ws2_id}/cognition-engines",
-            json={"name": "ws2-engine"},
-        )
+        resp1 = client.get(f"/api/cognition-engines?cfn_id={cfn1_id}")
+        assert resp1.json()["total"] == 1
+        assert resp1.json()["cognition_engines"][0]["name"] == "cfn1-engine"
 
-        # List engines in workspace 1
-        response1 = client.get(f"/api/workspaces/{ws1_id}/cognition-engines")
-        data1 = response1.json()
-        assert data1["total"] == 1
-        assert data1["engines"][0]["name"] == "ws1-engine"
+        resp2 = client.get(f"/api/cognition-engines?cfn_id={cfn2_id}")
+        assert resp2.json()["total"] == 1
+        assert resp2.json()["cognition_engines"][0]["name"] == "cfn2-engine"
 
-        # List engines in workspace 2
-        response2 = client.get(f"/api/workspaces/{ws2_id}/cognition-engines")
-        data2 = response2.json()
-        assert data2["total"] == 1
-        assert data2["engines"][0]["name"] == "ws2-engine"
+    def test_list_deleted_engines_excluded(self, client, registered_cfn):
+        """Soft-deleted engines do not appear in the list"""
+        _register(client, registered_cfn, "keep-engine")
+        del_id = _register(client, registered_cfn, "delete-engine")
+
+        _delete(client, del_id)
+
+        data = client.get(f"/api/cognition-engines?cfn_id={registered_cfn}").json()
+        assert data["total"] == 1
+        assert data["cognition_engines"][0]["name"] == "keep-engine"
+
+    def test_list_response_fields(self, client, registered_cfn):
+        """List items contain the expected fields per spec"""
+        _register(client, registered_cfn, "field-check-engine")
+
+        item = client.get(f"/api/cognition-engines?cfn_id={registered_cfn}").json()["cognition_engines"][0]
+
+        for field in ("id", "cfn_id", "name", "version", "type", "url", "enabled", "status", "config", "mas_config"):
+            assert field in item
+        assert "auth" not in item
 
 
 class TestCognitionEngineGet:
-    """Test getting individual cognition engine"""
+    """Tests for GET /cognition-engines/{ce_id}"""
 
-    def test_get_cognition_engine_invalid_workspace(self, client):
-        """Test getting cognition engine with non-existent workspace"""
-        response = client.get(
-            "/api/workspaces/non-existent-workspace-id/cognition-engines/some-engine-id"
+    def test_get_cognition_engine(self, client, registered_cfn):
+        """Returns full detail for a known engine"""
+        ce_id = _register(
+            client, registered_cfn, "get-test-engine",
+            type="distillation",
+            capabilities=["summarize"],
+            metrics=["latency_ms"],
         )
 
-        assert response.status_code == status.HTTP_404_NOT_FOUND
-        assert "workspace not found" in response.json()["detail"].lower()
-
-    def test_get_cognition_engine(self, client, created_workspace):
-        """Test getting a specific cognition engine"""
-        # Create engine
-        create_response = client.post(
-            f"/api/workspaces/{created_workspace}/cognition-engines",
-            json={
-                "name": "test-engine",
-                "config": {"type": "reasoning", "model": "gpt-4"},
-            },
-        )
-        engine_id = create_response.json()["id"]
-
-        # Get engine
-        response = client.get(
-            f"/api/workspaces/{created_workspace}/cognition-engines/{engine_id}"
-        )
+        response = client.get(f"/api/cognition-engines/{ce_id}")
 
         assert response.status_code == status.HTTP_200_OK
         data = response.json()
-        assert data["id"] == engine_id
-        assert data["name"] == "test-engine"
-        assert data["workspace_id"] == created_workspace
-        assert data["config"]["type"] == "reasoning"
-        assert data["enabled"] is True
-
-    def test_get_nonexistent_cognition_engine(self, client, created_workspace):
-        """Test getting an engine that doesn't exist"""
-        response = client.get(
-            f"/api/workspaces/{created_workspace}/cognition-engines/nonexistent-id"
-        )
-        assert response.status_code == status.HTTP_404_NOT_FOUND
-
-    def test_get_engine_from_wrong_workspace(self, client, registered_cfn):
-        """Test that you can't get an engine using wrong workspace_id"""
-        # Create two workspaces
-        ws1_response = client.post(
-            "/api/workspaces/create",
-            json={"name": "Workspace 1", "cfn_id": registered_cfn},
-        )
-        ws1_id = ws1_response.json()["id"]
-
-        ws2_response = client.post(
-            "/api/workspaces/create",
-            json={"name": "Workspace 2", "cfn_id": registered_cfn},
-        )
-        ws2_id = ws2_response.json()["id"]
-
-        # Create engine in workspace 1
-        create_response = client.post(
-            f"/api/workspaces/{ws1_id}/cognition-engines",
-            json={"name": "ws1-engine"},
-        )
-        engine_id = create_response.json()["id"]
-
-        # Try to get it from workspace 2
-        response = client.get(
-            f"/api/workspaces/{ws2_id}/cognition-engines/{engine_id}"
-        )
-        assert response.status_code == status.HTTP_404_NOT_FOUND
-
-
-class TestCognitionEngineUpdate:
-    """Test cognition engine updates"""
-
-    def test_update_cognition_engine_invalid_workspace(self, client):
-        """Test updating cognition engine with non-existent workspace"""
-        response = client.patch(
-            "/api/workspaces/non-existent-workspace-id/cognition-engines/some-engine-id",
-            json={"name": "new-name"},
-        )
-
-        assert response.status_code == status.HTTP_404_NOT_FOUND
-        assert "workspace not found" in response.json()["detail"].lower()
-
-    def test_update_cognition_engine_name(self, client, created_workspace):
-        """Test updating cognition engine name"""
-        # Create engine
-        create_response = client.post(
-            f"/api/workspaces/{created_workspace}/cognition-engines",
-            json={"name": "old-name"},
-        )
-        engine_id = create_response.json()["id"]
-
-        # Update name
-        update_payload = {"name": "new-name"}
-        response = client.patch(
-            f"/api/workspaces/{created_workspace}/cognition-engines/{engine_id}",
-            json=update_payload,
-        )
-
-        assert response.status_code == status.HTTP_200_OK
-        data = response.json()
-        assert data["name"] == "new-name"
+        assert data["id"] == ce_id
+        assert data["cfn_id"] == registered_cfn
+        assert data["name"] == "get-test-engine"
+        assert data["type"] == "distillation"
+        assert data["capabilities"] == ["summarize"]
+        assert data["metrics"] == ["latency_ms"]
+        assert data["status"] == "offline"
+        assert "created_at" in data
         assert "updated_at" in data
-        assert "updated_by" in data
+        assert "auth" not in data
 
-    def test_update_cognition_engine_config(self, client, created_workspace):
-        """Test updating cognition engine configuration"""
-        # Create engine
-        create_response = client.post(
-            f"/api/workspaces/{created_workspace}/cognition-engines",
-            json={
-                "name": "update-config-test",
-                "config": {"type": "reasoning", "model": "gpt-3.5"},
-            },
-        )
-        engine_id = create_response.json()["id"]
-
-        # Update config
-        update_payload = {
-            "config": {
-                "type": "reasoning",
-                "model": "gpt-4",
-                "temperature": 0.8,
-                "max_tokens": 2000,
-            }
-        }
-        response = client.patch(
-            f"/api/workspaces/{created_workspace}/cognition-engines/{engine_id}",
-            json=update_payload,
-        )
-
-        assert response.status_code == status.HTTP_200_OK
-        data = response.json()
-        assert data["config"]["model"] == "gpt-4"
-        assert data["config"]["temperature"] == 0.8
-        assert data["config"]["max_tokens"] == 2000
-
-    def test_update_cognition_engine_enable_disable(self, client, created_workspace):
-        """Test enabling/disabling cognition engine"""
-        # Create engine
-        create_response = client.post(
-            f"/api/workspaces/{created_workspace}/cognition-engines",
-            json={"name": "disable-test"},
-        )
-        engine_id = create_response.json()["id"]
-
-        # Disable engine
-        response = client.patch(
-            f"/api/workspaces/{created_workspace}/cognition-engines/{engine_id}",
-            json={"enabled": False},
-        )
-
-        assert response.status_code == status.HTTP_200_OK
-        assert response.json()["enabled"] is False
-
-        # Re-enable engine
-        response = client.patch(
-            f"/api/workspaces/{created_workspace}/cognition-engines/{engine_id}",
-            json={"enabled": True},
-        )
-
-        assert response.status_code == status.HTTP_200_OK
-        assert response.json()["enabled"] is True
-
-    def test_update_multiple_fields(self, client, created_workspace):
-        """Test updating multiple fields at once"""
-        # Create engine
-        create_response = client.post(
-            f"/api/workspaces/{created_workspace}/cognition-engines",
-            json={
-                "name": "multi-update-test",
-                "config": {"type": "old"},
-            },
-        )
-        engine_id = create_response.json()["id"]
-
-        # Update multiple fields
-        update_payload = {
-            "name": "multi-updated",
-            "config": {"type": "new", "version": "2.0"},
-            "enabled": False,
-        }
-        response = client.patch(
-            f"/api/workspaces/{created_workspace}/cognition-engines/{engine_id}",
-            json=update_payload,
-        )
-
-        assert response.status_code == status.HTTP_200_OK
-        data = response.json()
-        assert data["name"] == "multi-updated"
-        assert data["config"]["type"] == "new"
-        assert data["config"]["version"] == "2.0"
-        assert data["enabled"] is False
-
-    def test_update_nonexistent_engine(self, client, created_workspace):
-        """Test updating an engine that doesn't exist"""
-        response = client.patch(
-            f"/api/workspaces/{created_workspace}/cognition-engines/nonexistent-id",
-            json={"name": "new-name"},
-        )
+    def test_get_nonexistent_engine(self, client):
+        """Returns 404 for unknown ce_id"""
+        response = client.get("/api/cognition-engines/nonexistent-id")
         assert response.status_code == status.HTTP_404_NOT_FOUND
+        assert "not found" in response.json()["detail"].lower()
+
 
 
 class TestCognitionEngineDelete:
-    """Test cognition engine deletion"""
+    """Tests for DELETE /cognition-engines/{ce_id}"""
 
-    def test_delete_cognition_engine_invalid_workspace(self, client):
-        """Test deleting cognition engine with non-existent workspace"""
-        response = client.delete(
-            "/api/workspaces/non-existent-workspace-id/cognition-engines/some-engine-id"
-        )
+    def test_delete_enabled_ce_returns_409(self, client, registered_cfn):
+        """Deleting an enabled CE returns 409 — must disable first."""
+        ce_id = _register(client, registered_cfn, "delete-guard-test")
 
+        response = client.delete(f"/api/cognition-engines/{ce_id}")
+
+        assert response.status_code == status.HTTP_409_CONFLICT
+        assert "disabled" in response.json()["detail"].lower()
+
+    def test_delete_returns_204_after_disable(self, client, registered_cfn):
+        """Disabling then deleting returns 204 No Content."""
+        ce_id = _register(client, registered_cfn, "delete-test")
+        client.patch(f"/api/cognition-engines/{ce_id}", json={"enabled": False})
+
+        response = client.delete(f"/api/cognition-engines/{ce_id}")
+
+        assert response.status_code == status.HTTP_204_NO_CONTENT
+
+    def test_deleted_engine_not_accessible(self, client, registered_cfn):
+        """Deleted engine returns 404 on get."""
+        ce_id = _register(client, registered_cfn, "soft-delete-test")
+        _delete(client, ce_id)
+
+        assert client.get(f"/api/cognition-engines/{ce_id}").status_code == status.HTTP_404_NOT_FOUND
+
+    def test_delete_nonexistent_engine(self, client):
+        """Deleting an unknown ce_id returns 404."""
+        response = client.delete("/api/cognition-engines/nonexistent-id")
         assert response.status_code == status.HTTP_404_NOT_FOUND
-        assert "workspace not found" in response.json()["detail"].lower()
+        assert "not found" in response.json()["detail"].lower()
 
-    def test_delete_cognition_engine(self, client, created_workspace):
-        """Test deleting a cognition engine"""
-        # Create engine
-        create_response = client.post(
-            f"/api/workspaces/{created_workspace}/cognition-engines",
-            json={"name": "delete-test"},
-        )
-        engine_id = create_response.json()["id"]
+    def test_deleted_engine_excluded_from_list(self, client, registered_cfn):
+        """Deleted engines do not appear in list results."""
+        _register(client, registered_cfn, "keep-engine")
+        del_id = _register(client, registered_cfn, "gone-engine")
+        _delete(client, del_id)
 
-        # Delete engine
-        response = client.delete(
-            f"/api/workspaces/{created_workspace}/cognition-engines/{engine_id}"
-        )
-
-        assert response.status_code == status.HTTP_200_OK
-        assert "deleted successfully" in response.json()["message"].lower()
-        assert response.json()["id"] == engine_id
-
-        # Verify it's deleted (soft delete)
-        get_response = client.get(
-            f"/api/workspaces/{created_workspace}/cognition-engines/{engine_id}"
-        )
-        assert get_response.status_code == status.HTTP_404_NOT_FOUND
-
-    def test_delete_nonexistent_engine(self, client, created_workspace):
-        """Test deleting an engine that doesn't exist"""
-        response = client.delete(
-            f"/api/workspaces/{created_workspace}/cognition-engines/nonexistent-id"
-        )
-        assert response.status_code == status.HTTP_404_NOT_FOUND
-
-    def test_deleted_engine_not_in_list(self, client, created_workspace):
-        """Test that deleted engines don't appear in list"""
-        # Create two engines
-        client.post(
-            f"/api/workspaces/{created_workspace}/cognition-engines",
-            json={"name": "keep-engine"},
-        )
-
-        delete_response = client.post(
-            f"/api/workspaces/{created_workspace}/cognition-engines",
-            json={"name": "delete-engine"},
-        )
-        delete_id = delete_response.json()["id"]
-
-        # Delete one
-        client.delete(
-            f"/api/workspaces/{created_workspace}/cognition-engines/{delete_id}"
-        )
-
-        # List should only show the non-deleted engine
-        list_response = client.get(
-            f"/api/workspaces/{created_workspace}/cognition-engines"
-        )
-        data = list_response.json()
+        data = client.get(f"/api/cognition-engines?cfn_id={registered_cfn}").json()
         assert data["total"] == 1
-        assert data["engines"][0]["name"] == "keep-engine"
+        assert data["cognition_engines"][0]["name"] == "keep-engine"
+
+    def test_deleted_engine_name_can_be_reregistered(self, client, registered_cfn):
+        """After deletion the same name can be registered again (partial unique index)."""
+        ce_id = _register(client, registered_cfn, "reuse-name")
+        _delete(client, ce_id)
+
+        new = client.post("/api/cognition-engines", json=_base_payload(registered_cfn, "reuse-name"))
+        assert new.status_code == status.HTTP_201_CREATED
+        assert new.json()["ce_id"] != ce_id
 
 
-class TestCognitionEngineCFNIntegration:
-    """Test integration with CFN config generation"""
+class TestCognitionEngineHeartbeat:
+    def test_heartbeat_sets_status_online(self, client, registered_cfn):
+        """Heartbeat flips offline→online and returns status/last_seen"""
+        ce_id = _register(client, registered_cfn, "hb-engine")
 
-    def test_engines_in_cfn_config(self, client, created_workspace):
-        """Test that cognition engines appear in CFN configuration"""
-        # Get the CFN ID for this workspace
-        workspace_response = client.get(f"/api/workspaces/{created_workspace}")
-        cfn_id = workspace_response.json()["cfn_id"]
+        # Verify initial status is offline
+        detail = client.get(f"/api/cognition-engines/{ce_id}").json()
+        assert detail["status"] == "offline"
+        assert detail["last_seen"] is None
 
-        # Create cognition engines
-        engine1_response = client.post(
-            f"/api/workspaces/{created_workspace}/cognition-engines",
+        resp = client.put(f"/api/cognition-engines/{ce_id}/heartbeat")
+        assert resp.status_code == status.HTTP_200_OK
+
+        body = resp.json()
+        assert body["status"] == "online"
+        assert body["last_seen"] is not None
+
+    def test_heartbeat_updates_last_seen(self, client, registered_cfn):
+        """Two consecutive heartbeats produce increasing last_seen timestamps"""
+        ce_id = _register(client, registered_cfn, "hb-ts-engine")
+
+        r1 = client.put(f"/api/cognition-engines/{ce_id}/heartbeat")
+        r2 = client.put(f"/api/cognition-engines/{ce_id}/heartbeat")
+
+        assert r1.status_code == status.HTTP_200_OK
+        assert r2.status_code == status.HTTP_200_OK
+        assert r2.json()["last_seen"] >= r1.json()["last_seen"]
+
+    def test_heartbeat_keeps_online_status(self, client, registered_cfn):
+        """Heartbeat on an already-online engine keeps status online"""
+        ce_id = _register(client, registered_cfn, "hb-online-engine")
+
+        # First heartbeat → online
+        client.put(f"/api/cognition-engines/{ce_id}/heartbeat")
+
+        # Second heartbeat → still online
+        resp = client.put(f"/api/cognition-engines/{ce_id}/heartbeat")
+        assert resp.json()["status"] == "online"
+
+    def test_heartbeat_nonexistent_engine(self, client):
+        """Heartbeat for unknown ce_id returns 404"""
+        resp = client.put("/api/cognition-engines/nonexistent-ce/heartbeat")
+        assert resp.status_code == status.HTTP_404_NOT_FOUND
+
+    def test_heartbeat_reflects_in_get(self, client, registered_cfn):
+        """After heartbeat, GET shows updated status and last_seen"""
+        ce_id = _register(client, registered_cfn, "hb-reflect-engine")
+
+        client.put(f"/api/cognition-engines/{ce_id}/heartbeat")
+
+        detail = client.get(f"/api/cognition-engines/{ce_id}").json()
+        assert detail["status"] == "online"
+        assert detail["last_seen"] is not None
+
+
+def _db_auth(ce_id: str) -> dict:
+    """Read the raw auth JSONB column directly from the DB."""
+    db = RelationalDB()
+    session = db.session_factory()
+    try:
+        engine = session.query(CognitionEngineModel).filter(CognitionEngineModel.id == ce_id).first()
+        return engine.auth or {}
+    finally:
+        session.close()
+
+
+class TestCognitionEngineAuthEncryption:
+    """Auth credentials must be encrypted at rest and excluded from API responses."""
+
+    _AUTH = {"type": "api_key", "credentials": {"api_key": "super-secret"}}
+
+    def test_register_encrypts_credentials_at_rest(self, client, registered_cfn):
+        """After registration, DB stores credentials_encrypted, not plaintext credentials."""
+        ce_id = _register(client, registered_cfn, "enc-register", auth=self._AUTH)
+
+        raw = _db_auth(ce_id)
+        assert "credentials_encrypted" in raw
+        assert "credentials" not in raw
+
+    def test_register_stored_value_decrypts_correctly(self, client, registered_cfn):
+        """The encrypted value round-trips back to the original credentials."""
+        ce_id = _register(client, registered_cfn, "enc-roundtrip", auth=self._AUTH)
+
+        raw = _db_auth(ce_id)
+        decrypted = decrypt_credentials(raw["credentials_encrypted"])
+        assert decrypted == self._AUTH["credentials"]
+
+    def test_idempotent_register_re_encrypts_updated_auth(self, client, registered_cfn):
+        """Re-registering with new auth credentials encrypts the new value."""
+        _register(client, registered_cfn, "enc-idem", auth=self._AUTH)
+
+        new_auth = {"type": "api_key", "credentials": {"api_key": "new-secret"}}
+        resp = client.post(
+            "/api/cognition-engines",
+            json={**_base_payload(registered_cfn, "enc-idem"), "auth": new_auth},
+        )
+        assert resp.status_code == status.HTTP_200_OK
+        ce_id = resp.json()["ce_id"]
+
+        raw = _db_auth(ce_id)
+        assert "credentials_encrypted" in raw
+        assert decrypt_credentials(raw["credentials_encrypted"]) == {"api_key": "new-secret"}
+
+    def test_auth_absent_from_get_response(self, client, registered_cfn):
+        """GET response never includes auth regardless of what is stored."""
+        ce_id = _register(client, registered_cfn, "enc-get", auth=self._AUTH)
+        detail = client.get(f"/api/cognition-engines/{ce_id}").json()
+        assert "auth" not in detail
+
+    def test_auth_absent_from_list_response(self, client, registered_cfn):
+        """List response items never include auth."""
+        _register(client, registered_cfn, "enc-list", auth=self._AUTH)
+        items = client.get(f"/api/cognition-engines?cfn_id={registered_cfn}").json()["cognition_engines"]
+        assert all("auth" not in item for item in items)
+
+
+class TestCognitionEngineEnabled:
+    """enabled is a lifecycle field set by the service — not the caller."""
+
+    def test_new_ce_is_enabled_on_registration(self, client, registered_cfn):
+        """A freshly registered CE always has enabled=true."""
+        ce_id = _register(client, registered_cfn, "enabled-check")
+
+        detail = client.get(f"/api/cognition-engines/{ce_id}").json()
+        assert detail["enabled"] is True
+
+    def test_enabled_present_in_registration_response(self, client, registered_cfn):
+        """Registration response includes enabled=true."""
+        resp = client.post("/api/cognition-engines", json=_base_payload(registered_cfn, "enabled-reg"))
+        assert resp.status_code == status.HTTP_201_CREATED
+        assert resp.json()["enabled"] is True
+
+    def test_enabled_present_in_list_response(self, client, registered_cfn):
+        """List items include enabled field."""
+        _register(client, registered_cfn, "enabled-list")
+        item = client.get(f"/api/cognition-engines?cfn_id={registered_cfn}").json()["cognition_engines"][0]
+        assert "enabled" in item
+        assert item["enabled"] is True
+
+    def test_caller_cannot_set_enabled_via_registration(self, client, registered_cfn):
+        """enabled is ignored even if the caller tries to pass it in the registration payload."""
+        payload = {**_base_payload(registered_cfn, "enabled-override"), "enabled": False}
+        resp = client.post("/api/cognition-engines", json=payload)
+        assert resp.status_code == status.HTTP_201_CREATED
+
+        detail = client.get(f"/api/cognition-engines/{resp.json()['ce_id']}").json()
+        assert detail["enabled"] is True
+
+
+class TestCognitionEngineAutoAttach:
+    """auto_attach is caller-provided at registration — defaults to false."""
+
+    def test_auto_attach_defaults_to_false(self, client, registered_cfn):
+        """CE registered without auto_attach has auto_attach=false."""
+        ce_id = _register(client, registered_cfn, "no-auto-attach")
+        detail = client.get(f"/api/cognition-engines/{ce_id}").json()
+        assert detail["auto_attach"] is False
+
+    def test_auto_attach_can_be_set_true_on_registration(self, client, registered_cfn):
+        """CE registered with auto_attach=true reflects that value."""
+        resp = client.post(
+            "/api/cognition-engines",
+            json={**_base_payload(registered_cfn, "ootb-engine"), "auto_attach": True},
+        )
+        assert resp.status_code == status.HTTP_201_CREATED
+        assert resp.json()["auto_attach"] is True
+
+        detail = client.get(f"/api/cognition-engines/{resp.json()['ce_id']}").json()
+        assert detail["auto_attach"] is True
+
+    def test_auto_attach_present_in_list_response(self, client, registered_cfn):
+        """List items include auto_attach field."""
+        _register(client, registered_cfn, "auto-attach-list")
+        item = client.get(f"/api/cognition-engines?cfn_id={registered_cfn}").json()["cognition_engines"][0]
+        assert "auto_attach" in item
+
+    def test_auto_attach_preserved_on_upsert(self, client, registered_cfn):
+        """Re-registering same (cfn_id, name, version) with auto_attach=true updates the flag."""
+        payload = _base_payload(registered_cfn, "upsert-auto-attach")
+
+        client.post("/api/cognition-engines", json=payload)
+
+        resp = client.post("/api/cognition-engines", json={**payload, "auto_attach": True})
+        assert resp.status_code == status.HTTP_200_OK
+        assert resp.json()["auto_attach"] is True
+
+
+class TestCognitionEnginePatch:
+    """Tests for PATCH /cognition-engines/{ce_id}"""
+
+    def test_patch_enabled_false(self, client, registered_cfn):
+        """PATCH can disable a CE (enabled=false)."""
+        ce_id = _register(client, registered_cfn, "patch-disable")
+
+        resp = client.patch(f"/api/cognition-engines/{ce_id}", json={"enabled": False})
+
+        assert resp.status_code == status.HTTP_200_OK
+        assert resp.json()["enabled"] is False
+
+    def test_patch_enabled_true(self, client, registered_cfn):
+        """PATCH can re-enable a disabled CE."""
+        ce_id = _register(client, registered_cfn, "patch-enable")
+        client.patch(f"/api/cognition-engines/{ce_id}", json={"enabled": False})
+
+        resp = client.patch(f"/api/cognition-engines/{ce_id}", json={"enabled": True})
+
+        assert resp.status_code == status.HTTP_200_OK
+        assert resp.json()["enabled"] is True
+
+    def test_patch_mutable_fields(self, client, registered_cfn):
+        """PATCH updates mutable fields and returns updated detail."""
+        ce_id = _register(client, registered_cfn, "patch-fields")
+
+        resp = client.patch(
+            f"/api/cognition-engines/{ce_id}",
             json={
-                "name": "reasoning-engine",
-                "config": {"type": "reasoning", "model": "gpt-4"},
+                "capabilities": ["ingestion", "retrieval"],
+                "metrics": ["latency_ms"],
+                "config": {"timeout": 60},
+                "mas_config": {"mas-1": {"max_requests": 100}},
             },
         )
-        engine1_id = engine1_response.json()["id"]
 
-        engine2_response = client.post(
-            f"/api/workspaces/{created_workspace}/cognition-engines",
-            json={
-                "name": "planning-engine",
-                "config": {"type": "planning", "horizon": "long-term"},
-            },
-        )
-        engine2_id = engine2_response.json()["id"]
+        assert resp.status_code == status.HTTP_200_OK
+        data = resp.json()
+        assert data["capabilities"] == ["ingestion", "retrieval"]
+        assert data["metrics"] == ["latency_ms"]
+        assert data["config"] == {"timeout": 60}
+        assert data["mas_config"] == {"mas-1": {"max_requests": 100}}
 
-        # Get CFN config
-        cfn_config_response = client.get(f"/api/cognition-fabric-nodes/{cfn_id}")
-        assert cfn_config_response.status_code == status.HTTP_200_OK
+    def test_patch_only_provided_fields_updated(self, client, registered_cfn):
+        """Unprovided fields are not changed."""
+        ce_id = _register(client, registered_cfn, "patch-partial", config={"key": "original"})
 
-        cfn_config = cfn_config_response.json()
-        assert "config" in cfn_config
-        assert "workspaces" in cfn_config["config"]
+        client.patch(f"/api/cognition-engines/{ce_id}", json={"enabled": False})
 
-        # Find our workspace in the config
-        workspaces = cfn_config["config"]["workspaces"]
-        test_workspace = next(
-            (ws for ws in workspaces if ws["workspace_id"] == created_workspace), None
-        )
-        assert test_workspace is not None
+        detail = client.get(f"/api/cognition-engines/{ce_id}").json()
+        assert detail["config"] == {"key": "original"}
+        assert detail["enabled"] is False
 
-        # Verify cognition engines are in the config
-        assert "cognition_engines" in test_workspace
-        engines = test_workspace["cognition_engines"]
-        assert len(engines) == 2
+    def test_patch_immutable_field_returns_400(self, client, registered_cfn):
+        """Attempting to update an immutable field returns 400."""
+        ce_id = _register(client, registered_cfn, "patch-immutable")
 
-        # Verify engine details
-        engine_ids = [e["id"] for e in engines]
-        assert engine1_id in engine_ids
-        assert engine2_id in engine_ids
+        for field, value in [
+            ("name", "new-name"),
+            ("url", "http://new-url:8080"),
+            ("cfn_id", "other-cfn"),
+            ("version", "9.9.9"),
+            ("type", "distillation"),
+            ("auto_attach", True),
+        ]:
+            resp = client.patch(f"/api/cognition-engines/{ce_id}", json={field: value})
+            assert resp.status_code == status.HTTP_400_BAD_REQUEST, f"Expected 400 for field '{field}'"
+            assert field in resp.json()["detail"]
 
-        # Verify engine configs are present
-        reasoning_engine = next(
-            (e for e in engines if e["name"] == "reasoning-engine"),
-            None,
-        )
-        assert reasoning_engine is not None
-        assert reasoning_engine["config"]["type"] == "reasoning"
-        assert reasoning_engine["config"]["model"] == "gpt-4"
-        assert reasoning_engine["enabled"] is True
+    def test_patch_nonexistent_ce_returns_404(self, client):
+        """PATCH on unknown ce_id returns 404."""
+        resp = client.patch("/api/cognition-engines/nonexistent-id", json={"enabled": False})
+        assert resp.status_code == status.HTTP_404_NOT_FOUND
 
-    def test_disabled_engines_not_in_cfn_config(self, client, created_workspace):
-        """Test that disabled engines don't appear in CFN config"""
-        # Get the CFN ID for this workspace
-        workspace_response = client.get(f"/api/workspaces/{created_workspace}")
-        cfn_id = workspace_response.json()["cfn_id"]
+    def test_patch_empty_body_is_no_op(self, client, registered_cfn):
+        """Empty PATCH body leaves the CE unchanged."""
+        ce_id = _register(client, registered_cfn, "patch-empty")
+        before = client.get(f"/api/cognition-engines/{ce_id}").json()
 
-        # Create and disable an engine
-        engine_response = client.post(
-            f"/api/workspaces/{created_workspace}/cognition-engines",
-            json={"name": "disabled-engine"},
-        )
-        engine_id = engine_response.json()["id"]
+        resp = client.patch(f"/api/cognition-engines/{ce_id}", json={})
+        assert resp.status_code == status.HTTP_200_OK
 
-        client.patch(
-            f"/api/workspaces/{created_workspace}/cognition-engines/{engine_id}",
-            json={"enabled": False},
+        after = client.get(f"/api/cognition-engines/{ce_id}").json()
+        assert before["enabled"] == after["enabled"]
+        assert before["config"] == after["config"]
+
+    def test_patch_disable_with_attached_mas_returns_409(self, client, registered_cfn, created_workspace):
+        """Cannot disable a CE while it has at least one MAS attached."""
+        ce_id = _register(client, registered_cfn, "patch-disable-guard")
+        mas_id = _create_mas(client, created_workspace, "guard-mas")
+        client.post(
+            f"/api/workspaces/{created_workspace}/multi-agentic-systems/{mas_id}/cognition-engines",
+            json={"ce_id": ce_id},
         )
 
-        # Get CFN config
-        cfn_config_response = client.get(f"/api/cognition-fabric-nodes/{cfn_id}")
-        cfn_config = cfn_config_response.json()
+        resp = client.patch(f"/api/cognition-engines/{ce_id}", json={"enabled": False})
 
-        # Find our workspace
-        workspaces = cfn_config["config"]["workspaces"]
-        test_workspace = next(
-            (ws for ws in workspaces if ws["workspace_id"] == created_workspace), None
+        assert resp.status_code == status.HTTP_409_CONFLICT
+        assert "mas" in resp.json()["detail"].lower()
+
+    def test_patch_disable_allowed_after_disassociation(self, client, registered_cfn, created_workspace):
+        """Disable succeeds once all MAS are disassociated."""
+        ce_id = _register(client, registered_cfn, "patch-disable-after-disassoc")
+        mas_id = _create_mas(client, created_workspace, "disassoc-guard-mas")
+        client.post(
+            f"/api/workspaces/{created_workspace}/multi-agentic-systems/{mas_id}/cognition-engines",
+            json={"ce_id": ce_id},
         )
-
-        # Verify no engines in config (disabled engine should not appear)
-        engines = test_workspace.get("cognition_engines", [])
-        assert len(engines) == 0
-
-    def test_engine_update_triggers_cfn_config_update(self, client, created_workspace):
-        """Test that updating an engine updates the CFN configuration"""
-        # Get the CFN ID
-        workspace_response = client.get(f"/api/workspaces/{created_workspace}")
-        cfn_id = workspace_response.json()["cfn_id"]
-
-        # Create engine
-        engine_response = client.post(
-            f"/api/workspaces/{created_workspace}/cognition-engines",
-            json={
-                "name": "test-engine",
-                "config": {"version": "1.0"},
-            },
-        )
-        engine_id = engine_response.json()["id"]
-
-        # Update engine
-        client.patch(
-            f"/api/workspaces/{created_workspace}/cognition-engines/{engine_id}",
-            json={"config": {"version": "2.0"}},
-        )
-
-        # Get updated CFN config
-        cfn_config = client.get(f"/api/cognition-fabric-nodes/{cfn_id}").json()
-
-        # Verify updated config is in CFN config
-        workspaces = cfn_config["config"]["workspaces"]
-        test_workspace = next(
-            (ws for ws in workspaces if ws["workspace_id"] == created_workspace), None
-        )
-        engines = test_workspace["cognition_engines"]
-        test_engine = next(
-            (e for e in engines if e["id"] == engine_id), None
-        )
-        assert test_engine is not None
-        assert test_engine["config"]["version"] == "2.0"
-
-    def test_engine_delete_triggers_cfn_config_update(self, client, created_workspace):
-        """Test that deleting an engine removes it from CFN configuration"""
-        # Get the CFN ID
-        workspace_response = client.get(f"/api/workspaces/{created_workspace}")
-        cfn_id = workspace_response.json()["cfn_id"]
-
-        # Create engine
-        engine_response = client.post(
-            f"/api/workspaces/{created_workspace}/cognition-engines",
-            json={"name": "delete-me"},
-        )
-        engine_id = engine_response.json()["id"]
-
-        # Verify engine is in CFN config
-        cfn_config_before = client.get(f"/api/cognition-fabric-nodes/{cfn_id}").json()
-        workspaces_before = cfn_config_before["config"]["workspaces"]
-        test_workspace_before = next(
-            (ws for ws in workspaces_before if ws["workspace_id"] == created_workspace),
-            None,
-        )
-        engines_before = test_workspace_before.get("cognition_engines", [])
-        engine_ids_before = [e["id"] for e in engines_before]
-        assert engine_id in engine_ids_before
-
-        # Delete engine
         client.delete(
-            f"/api/workspaces/{created_workspace}/cognition-engines/{engine_id}"
+            f"/api/workspaces/{created_workspace}/multi-agentic-systems/{mas_id}/cognition-engines/{ce_id}"
         )
 
-        # Get updated CFN config
-        cfn_config_after = client.get(f"/api/cognition-fabric-nodes/{cfn_id}").json()
+        resp = client.patch(f"/api/cognition-engines/{ce_id}", json={"enabled": False})
 
-        # Verify engine is removed from CFN config
-        workspaces_after = cfn_config_after["config"]["workspaces"]
-        test_workspace_after = next(
-            (ws for ws in workspaces_after if ws["workspace_id"] == created_workspace),
-            None,
+        assert resp.status_code == status.HTTP_200_OK
+        assert resp.json()["enabled"] is False
+
+
+def _disable_cfn(client, cfn_id: str) -> None:
+    resp = client.patch(f"/api/cognition-fabric-nodes/{cfn_id}/disable")
+    assert resp.status_code == status.HTTP_200_OK
+
+
+def _create_mas(client, workspace_id: str, name: str = "test-mas") -> str:
+    resp = client.post(
+        f"/api/workspaces/{workspace_id}/multi-agentic-systems",
+        json={"name": name},
+    )
+    assert resp.status_code == status.HTTP_201_CREATED
+    return resp.json()["id"]
+
+
+class TestCognitionEngineCfnValidation:
+    """All non-register ops must reject requests when the CE's CFN is inactive."""
+
+    def test_get_rejects_inactive_cfn(self, client, registered_cfn):
+        ce_id = _register(client, registered_cfn, "cfn-val-get")
+        _disable_cfn(client, registered_cfn)
+
+        resp = client.get(f"/api/cognition-engines/{ce_id}")
+        assert resp.status_code == status.HTTP_404_NOT_FOUND
+        assert "inactive" in resp.json()["detail"].lower()
+
+    def test_list_rejects_inactive_cfn(self, client, registered_cfn):
+        _disable_cfn(client, registered_cfn)
+
+        resp = client.get(f"/api/cognition-engines?cfn_id={registered_cfn}")
+        assert resp.status_code == status.HTTP_404_NOT_FOUND
+
+    def test_list_without_cfn_id_unaffected(self, client, registered_cfn):
+        """LIST with no cfn_id filter bypasses CFN validation."""
+        _register(client, registered_cfn, "cfn-val-list-global")
+        _disable_cfn(client, registered_cfn)
+
+        resp = client.get("/api/cognition-engines")
+        assert resp.status_code == status.HTTP_200_OK
+
+    def test_patch_rejects_inactive_cfn(self, client, registered_cfn):
+        ce_id = _register(client, registered_cfn, "cfn-val-patch")
+        _disable_cfn(client, registered_cfn)
+
+        resp = client.patch(f"/api/cognition-engines/{ce_id}", json={"enabled": False})
+        assert resp.status_code == status.HTTP_404_NOT_FOUND
+
+    def test_delete_rejects_inactive_cfn(self, client, registered_cfn):
+        ce_id = _register(client, registered_cfn, "cfn-val-delete")
+        _disable_cfn(client, registered_cfn)
+
+        resp = client.delete(f"/api/cognition-engines/{ce_id}")
+        assert resp.status_code == status.HTTP_404_NOT_FOUND
+
+    def test_heartbeat_rejects_inactive_cfn(self, client, registered_cfn):
+        ce_id = _register(client, registered_cfn, "cfn-val-hb")
+        _disable_cfn(client, registered_cfn)
+
+        resp = client.put(f"/api/cognition-engines/{ce_id}/heartbeat")
+        assert resp.status_code == status.HTTP_404_NOT_FOUND
+
+    def test_registration_allowed_even_with_inactive_cfn(self, client, registered_cfn):
+        """Registration does not check CFN active status — it only checks existence."""
+        _disable_cfn(client, registered_cfn)
+
+        resp = client.post("/api/cognition-engines", json=_base_payload(registered_cfn, "cfn-val-register"))
+        assert resp.status_code == status.HTTP_201_CREATED
+
+
+class TestCognitionEngineMasAssociation:
+    """Tests for POST /workspaces/{ws}/multi-agentic-systems/{mas}/cognition-engines
+    and DELETE /workspaces/{ws}/multi-agentic-systems/{mas}/cognition-engines/{ce}"""
+
+    def test_associate_returns_201(self, client, registered_cfn, created_workspace):
+        """Associating a CE with a MAS on the same CFN returns 201."""
+        ce_id = _register(client, registered_cfn, "assoc-ce")
+        mas_id = _create_mas(client, created_workspace, "assoc-mas")
+
+        resp = client.post(
+            f"/api/workspaces/{created_workspace}/multi-agentic-systems/{mas_id}/cognition-engines",
+            json={"ce_id": ce_id},
         )
-        engines_after = test_workspace_after.get("cognition_engines", [])
-        engine_ids_after = [e["id"] for e in engines_after]
-        assert engine_id not in engine_ids_after
+
+        assert resp.status_code == status.HTTP_201_CREATED
+        data = resp.json()
+        assert data["ce_id"] == ce_id
+        assert data["mas_id"] == mas_id
+        assert "created_at" in data
+
+    def test_associate_duplicate_returns_409(self, client, registered_cfn, created_workspace):
+        """Associating the same CE-MAS pair twice returns 409."""
+        ce_id = _register(client, registered_cfn, "assoc-dup-ce")
+        mas_id = _create_mas(client, created_workspace, "assoc-dup-mas")
+
+        client.post(
+            f"/api/workspaces/{created_workspace}/multi-agentic-systems/{mas_id}/cognition-engines",
+            json={"ce_id": ce_id},
+        )
+        resp = client.post(
+            f"/api/workspaces/{created_workspace}/multi-agentic-systems/{mas_id}/cognition-engines",
+            json={"ce_id": ce_id},
+        )
+
+        assert resp.status_code == status.HTTP_409_CONFLICT
+
+    def test_associate_wrong_cfn_returns_422(self, client, registered_cfn, created_workspace):
+        """Associating a CE with a MAS on a different CFN returns 422."""
+        ce_id = _register(client, registered_cfn, "assoc-boundary-ce")
+
+        # Create a second CFN and workspace not linked to registered_cfn
+        other_cfn_id = client.post(
+            "/api/cognition-fabric-nodes/register",
+            json={"name": "Other CFN", "cfn_config": {}},
+        ).json()["id"]
+        other_ws_id = client.post(
+            "/api/workspaces/create",
+            json={"name": "Other Workspace", "cfn_id": other_cfn_id},
+        ).json()["id"]
+        other_mas_id = _create_mas(client, other_ws_id, "other-mas")
+
+        resp = client.post(
+            f"/api/workspaces/{other_ws_id}/multi-agentic-systems/{other_mas_id}/cognition-engines",
+            json={"ce_id": ce_id},
+        )
+
+        assert resp.status_code == status.HTTP_422_UNPROCESSABLE_CONTENT
+        assert "cfn" in resp.json()["detail"].lower()
+
+    def test_associate_nonexistent_ce_returns_404(self, client, registered_cfn, created_workspace):
+        """Associating a non-existent CE returns 404."""
+        mas_id = _create_mas(client, created_workspace, "assoc-404-mas")
+
+        resp = client.post(
+            f"/api/workspaces/{created_workspace}/multi-agentic-systems/{mas_id}/cognition-engines",
+            json={"ce_id": "nonexistent-ce"},
+        )
+
+        assert resp.status_code == status.HTTP_404_NOT_FOUND
+
+    def test_associate_nonexistent_mas_returns_404(self, client, registered_cfn, created_workspace):
+        """Associating with a non-existent MAS returns 404."""
+        ce_id = _register(client, registered_cfn, "assoc-404-ce")
+
+        resp = client.post(
+            f"/api/workspaces/{created_workspace}/multi-agentic-systems/nonexistent-mas/cognition-engines",
+            json={"ce_id": ce_id},
+        )
+
+        assert resp.status_code == status.HTTP_404_NOT_FOUND
+
+    def test_disassociate_returns_204(self, client, registered_cfn, created_workspace):
+        """Disassociating an existing CE-MAS pair returns 204."""
+        ce_id = _register(client, registered_cfn, "disassoc-ce")
+        mas_id = _create_mas(client, created_workspace, "disassoc-mas")
+        client.post(
+            f"/api/workspaces/{created_workspace}/multi-agentic-systems/{mas_id}/cognition-engines",
+            json={"ce_id": ce_id},
+        )
+
+        resp = client.delete(
+            f"/api/workspaces/{created_workspace}/multi-agentic-systems/{mas_id}/cognition-engines/{ce_id}"
+        )
+
+        assert resp.status_code == status.HTTP_204_NO_CONTENT
+
+    def test_disassociate_nonexistent_returns_404(self, client, registered_cfn, created_workspace):
+        """Disassociating a pair that doesn't exist returns 404."""
+        ce_id = _register(client, registered_cfn, "disassoc-404-ce")
+        mas_id = _create_mas(client, created_workspace, "disassoc-404-mas")
+
+        resp = client.delete(
+            f"/api/workspaces/{created_workspace}/multi-agentic-systems/{mas_id}/cognition-engines/{ce_id}"
+        )
+
+        assert resp.status_code == status.HTTP_404_NOT_FOUND
+
+    def test_disassociate_allows_reassociation(self, client, registered_cfn, created_workspace):
+        """After disassociation the same pair can be re-associated."""
+        ce_id = _register(client, registered_cfn, "reassoc-ce")
+        mas_id = _create_mas(client, created_workspace, "reassoc-mas")
+
+        client.post(
+            f"/api/workspaces/{created_workspace}/multi-agentic-systems/{mas_id}/cognition-engines",
+            json={"ce_id": ce_id},
+        )
+        client.delete(
+            f"/api/workspaces/{created_workspace}/multi-agentic-systems/{mas_id}/cognition-engines/{ce_id}"
+        )
+
+        resp = client.post(
+            f"/api/workspaces/{created_workspace}/multi-agentic-systems/{mas_id}/cognition-engines",
+            json={"ce_id": ce_id},
+        )
+        assert resp.status_code == status.HTTP_201_CREATED
+
+
+class TestCognitionEngineAutoAttachTrigger:
+    """Tests for auto-attach trigger logic."""
+
+    def test_register_auto_attach_does_not_attach_to_existing_mas(self, client, registered_cfn, created_workspace):
+        """CE registration does not auto-attach to pre-existing MAS, even with auto_attach=True."""
+        mas_id = _create_mas(client, created_workspace, "pre-existing-mas")
+        ce_id = _register(client, registered_cfn, "auto-attach-ce", auto_attach=True)
+
+        # Manual association should succeed — registration does not trigger auto-attach
+        resp = client.post(
+            f"/api/workspaces/{created_workspace}/multi-agentic-systems/{mas_id}/cognition-engines",
+            json={"ce_id": ce_id},
+        )
+        assert resp.status_code == status.HTTP_201_CREATED
+
+    def test_new_mas_auto_attaches_existing_auto_attach_ce(self, client, registered_cfn):
+        """New MAS created in a CFN is auto-associated with all auto_attach=True CEs in that CFN."""
+        ce_id = _register(client, registered_cfn, "platform-ce", auto_attach=True)
+
+        # Create workspace linked to same CFN, then create a new MAS
+        ws_id = client.post(
+            "/api/workspaces/create",
+            json={"name": "New Workspace", "cfn_id": registered_cfn},
+        ).json()["id"]
+        mas_id = _create_mas(client, ws_id, "new-mas")
+
+        # Association should already exist from auto-attach
+        resp = client.post(
+            f"/api/workspaces/{ws_id}/multi-agentic-systems/{mas_id}/cognition-engines",
+            json={"ce_id": ce_id},
+        )
+        assert resp.status_code == status.HTTP_409_CONFLICT
+
+    def test_new_mas_does_not_attach_non_auto_attach_ce(self, client, registered_cfn):
+        """New MAS is NOT auto-associated with CEs that have auto_attach=False."""
+        ce_id = _register(client, registered_cfn, "non-platform-ce")  # auto_attach=False
+
+        ws_id = client.post(
+            "/api/workspaces/create",
+            json={"name": "WS No Attach", "cfn_id": registered_cfn},
+        ).json()["id"]
+        mas_id = _create_mas(client, ws_id, "mas-no-attach")
+
+        # Manual association should succeed — no auto-attach occurred
+        resp = client.post(
+            f"/api/workspaces/{ws_id}/multi-agentic-systems/{mas_id}/cognition-engines",
+            json={"ce_id": ce_id},
+        )
+        assert resp.status_code == status.HTTP_201_CREATED
+
+    def test_auto_attach_upsert_is_idempotent(self, client, registered_cfn, created_workspace):
+        """Re-registering a CE with the same (cfn_id, name, version) returns 200 (upsert)."""
+        _create_mas(client, created_workspace, "idempotent-mas")
+        payload = {
+            "cfn_id": registered_cfn,
+            "name": "idempotent-auto-ce",
+            "url": "http://ce:8080",
+            "version": "1.0.0",
+            "type": "custom",
+            "auto_attach": True,
+        }
+        client.post("/api/cognition-engines", json=payload)  # first registration: creates (201)
+        resp = client.post("/api/cognition-engines", json=payload)  # second registration: upsert (200)
+
+        assert resp.status_code == status.HTTP_200_OK
+
+    def test_mas_update_auto_attaches_existing_auto_attach_ce(self, client, registered_cfn):
+        """Updating a MAS triggers auto-attach for all enabled auto_attach CEs in the CFN."""
+        # Create MAS first so no auto_attach CE exists yet at creation time
+        ws_id = client.post(
+            "/api/workspaces/create",
+            json={"name": "WS Update Trigger", "cfn_id": registered_cfn},
+        ).json()["id"]
+        mas_id = _create_mas(client, ws_id, "mas-before-ce")
+
+        # Register CE after MAS exists — registration does not auto-attach
+        ce_id = _register(client, registered_cfn, "platform-ce-update", auto_attach=True)
+
+        # Confirm no auto-attach happened: manual association should succeed
+        assoc_resp = client.post(
+            f"/api/workspaces/{ws_id}/multi-agentic-systems/{mas_id}/cognition-engines",
+            json={"ce_id": ce_id},
+        )
+        assert assoc_resp.status_code == status.HTTP_201_CREATED
+
+        # Disassociate so we can verify that update re-attaches
+        client.delete(f"/api/workspaces/{ws_id}/multi-agentic-systems/{mas_id}/cognition-engines/{ce_id}")
+
+        # Update the MAS — auto-attach should fire
+        client.put(
+            f"/api/workspaces/{ws_id}/multi-agentic-systems/{mas_id}",
+            json={"name": "mas-before-ce-updated"},
+        )
+
+        # Attempting manual association should return 409 — already associated by update auto-attach
+        resp = client.post(
+            f"/api/workspaces/{ws_id}/multi-agentic-systems/{mas_id}/cognition-engines",
+            json={"ce_id": ce_id},
+        )
+        assert resp.status_code == status.HTTP_409_CONFLICT
+
+    def test_mas_update_does_not_attach_non_auto_attach_ce(self, client, registered_cfn):
+        """Updating a MAS does not auto-attach CEs with auto_attach=False."""
+        ws_id = client.post(
+            "/api/workspaces/create",
+            json={"name": "WS Update No Attach", "cfn_id": registered_cfn},
+        ).json()["id"]
+        mas_id = _create_mas(client, ws_id, "mas-no-auto-attach")
+        ce_id = _register(client, registered_cfn, "non-auto-attach-ce")  # auto_attach=False
+
+        # Update the MAS — should not trigger auto-attach
+        client.put(
+            f"/api/workspaces/{ws_id}/multi-agentic-systems/{mas_id}",
+            json={"name": "mas-no-auto-attach-updated"},
+        )
+
+        # Manual association should succeed — CE was not auto-attached
+        resp = client.post(
+            f"/api/workspaces/{ws_id}/multi-agentic-systems/{mas_id}/cognition-engines",
+            json={"ce_id": ce_id},
+        )
+        assert resp.status_code == status.HTTP_201_CREATED
+
+    def test_new_mas_does_not_attach_disabled_auto_attach_ce(self, client, registered_cfn):
+        """New MAS is not wired to a disabled CE even if auto_attach=True."""
+        ce_id = _register(client, registered_cfn, "disabled-platform-ce", auto_attach=True)
+
+        # Create a workspace+MAS so the CE auto-attaches, then disassociate and disable
+        ws_id = client.post(
+            "/api/workspaces/create",
+            json={"name": "WS Disable Trigger2", "cfn_id": registered_cfn},
+        ).json()["id"]
+        existing_mas_id = _create_mas(client, ws_id, "existing-mas")
+        client.delete(
+            f"/api/workspaces/{ws_id}/multi-agentic-systems/{existing_mas_id}/cognition-engines/{ce_id}"
+        )
+        client.patch(f"/api/cognition-engines/{ce_id}", json={"enabled": False})
+
+        # Create a new MAS — disabled CE should not be auto-attached
+        new_mas_id = _create_mas(client, ws_id, "new-mas-disabled-ce")
+
+        # Manual association should succeed — CE was not auto-attached
+        resp = client.post(
+            f"/api/workspaces/{ws_id}/multi-agentic-systems/{new_mas_id}/cognition-engines",
+            json={"ce_id": ce_id},
+        )
+        assert resp.status_code == status.HTTP_201_CREATED

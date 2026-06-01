@@ -213,21 +213,70 @@ ALTER TABLE "agent" ADD CONSTRAINT "fk_agent_memory_provider"
   FOREIGN KEY ("agentic_memory_provider_id") REFERENCES "memory_provider" ("id") ON DELETE SET NULL;
 
 -- ====================
--- Table: cognition_engine (Workspace-scoped)
+-- Table: cognition_engine (CFN-scoped)
 -- ====================
 CREATE TABLE "cognition_engine" (
-  "id" character varying(255) NOT NULL,
-  "workspace_id" character varying(36) NOT NULL,
+  "id" character varying(255) NOT NULL DEFAULT (gen_random_uuid())::text,
+  "cfn_id" character varying(255) NOT NULL,
   "name" character varying(255) NOT NULL,
-  "config" jsonb NULL,
-  "enabled" boolean NOT NULL DEFAULT true,
-  "created_at" timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  "updated_at" timestamp NULL,
-  "created_by" character varying(36) NOT NULL,
+
+  -- Connection info
+  "url" character varying(512) NOT NULL,
+
+  -- Authentication (optional - credentials for CFN to reach CE, encrypted)
+  "auth" jsonb NULL,                       -- e.g. {"type": "api_key", "credentials": {"api_key": "..."}}
+                                           -- type values: 'api_key', 'basic', 'bearer'
+
+  -- Type and capabilities
+  "type" character varying(50) NOT NULL DEFAULT 'custom', -- values: 'knowledge_management', 'semantic_negotiation', 'distillation', 'custom'
+  "capabilities" jsonb NOT NULL DEFAULT '[]'::jsonb,
+  "metrics" jsonb NOT NULL DEFAULT '[]'::jsonb,
+
+  -- Versioning
+  "version" character varying(50) NOT NULL,
+
+  -- Status (managed by system)
+  "status" character varying(20) NOT NULL DEFAULT 'offline', -- values: 'online', 'offline'
+  "last_seen" timestamptz NULL,
+
+  -- Lifecycle
+  "enabled" boolean NOT NULL DEFAULT true,    -- toggled via PATCH; server-set true on creation
+  "auto_attach" boolean NOT NULL DEFAULT false, -- if true, auto-associated with all MAS under the same CFN
+
+  -- Configuration
+  "config" jsonb NOT NULL DEFAULT '{}'::jsonb,
+  "mas_config" jsonb NOT NULL DEFAULT '{}'::jsonb,
+
+  -- Audit fields
+  "created_at" timestamptz NOT NULL DEFAULT NOW(),
+  "updated_at" timestamptz NULL,
+  "deleted_at" timestamptz NULL,
+  "created_by" character varying(36) NULL,
   "updated_by" character varying(36) NULL,
-  "deleted_at" timestamp NULL,
-  PRIMARY KEY ("id")
+
+  PRIMARY KEY ("id"),
+  CONSTRAINT "fk_ce_cfn" FOREIGN KEY ("cfn_id") REFERENCES "cognition_fabric_node" ("id")
 );
 
-CREATE INDEX "idx_ce_workspace_id" ON "cognition_engine" ("workspace_id");
+CREATE INDEX "idx_ce_cfn_id" ON "cognition_engine" ("cfn_id");
+CREATE INDEX "idx_ce_status" ON "cognition_engine" ("status");
+CREATE INDEX "idx_ce_enabled" ON "cognition_engine" ("enabled");
+CREATE INDEX "idx_ce_auto_attach" ON "cognition_engine" ("auto_attach");
+CREATE UNIQUE INDEX "uq_ce_cfn_name_version" ON "cognition_engine" ("cfn_id", "name", "version") WHERE "deleted_at" IS NULL;
+
+-- ====================
+-- Table: mas_cognition_engines (MAS <-> CE junction)
+-- ====================
+CREATE TABLE "mas_cognition_engines" (
+  "mas_id" character varying(36) NOT NULL,
+  "ce_id" character varying(255) NOT NULL,
+  "created_at" timestamptz NOT NULL DEFAULT NOW(),
+  "created_by" character varying(255) NULL,
+
+  CONSTRAINT "pk_mas_cognition_engines" PRIMARY KEY ("mas_id", "ce_id"),
+  CONSTRAINT "fk_mas_ce_mas" FOREIGN KEY ("mas_id") REFERENCES "multi_agentic_system" ("id") ON DELETE CASCADE,
+  CONSTRAINT "fk_mas_ce_ce" FOREIGN KEY ("ce_id") REFERENCES "cognition_engine" ("id") ON DELETE CASCADE
+);
+
+CREATE INDEX "idx_mas_ce_ce_id" ON "mas_cognition_engines" ("ce_id");
 

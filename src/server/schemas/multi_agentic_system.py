@@ -13,15 +13,15 @@ class AgentIdentity(BaseModel):
     """Schema for agent identity provider configuration"""
 
     type: str = Field(..., description="Identity provider type (e.g. openclaw, claude_code, or any custom type)")
-    identifiers: Dict[str, str] = Field(
-        ..., description="Provider-specific identifiers (varies by type)"
-    )
+    identifiers: Dict[str, str] = Field(..., description="Provider-specific identifiers (varies by type)")
 
 
 class AgentConfig(BaseModel):
     """Schema for individual agent configuration in MAS (input)"""
 
-    agent_id: Optional[str] = Field(None, description="Unique identifier for the agent (server-generated, ignored on input)")
+    agent_id: Optional[str] = Field(
+        None, description="Unique identifier for the agent (server-generated, ignored on input)"
+    )
     name: Optional[str] = Field(None, description="Human-readable agent name")
     url: Optional[str] = Field(None, description="Agent endpoint URL")
     identity: Optional[AgentIdentity] = Field(None, description="Identity provider configuration")
@@ -183,6 +183,12 @@ class MultiAgenticSystems(BaseModel):
     systems: List[MultiAgenticSystem] = Field(..., description="List of multi-agentic systems in the workspace")
 
 
+class MasCognitionEngineAssociateRequest(BaseModel):
+    """Schema for adding a Cognition Engine to a MAS"""
+
+    ce_id: str = Field(..., description="ID of the Cognition Engine to associate with this MAS")
+
+
 class MASQueryByIdentity(BaseModel):
     """Schema for querying MAS by agent identity type and/or identifiers"""
 
@@ -190,7 +196,7 @@ class MASQueryByIdentity(BaseModel):
         None, description="Identity provider type to filter by (e.g. 'claude', 'openclaw')"
     )
     identity_identifiers: Optional[Dict[str, str]] = Field(
-        None, description="Identity identifiers to match against agent identity_identifiers (e.g. {\"xyz\": \"pqr\"})"
+        None, description='Identity identifiers to match against agent identity_identifiers (e.g. {"xyz": "pqr"})'
     )
 
     @model_validator(mode="after")

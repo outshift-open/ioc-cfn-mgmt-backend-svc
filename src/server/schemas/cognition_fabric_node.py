@@ -197,5 +197,3 @@ class CognitionFabricNodeHeartbeatResponse(BaseModel):
     status: CognitionFabricNodeStatus = Field(..., description="Current node status")
     last_seen: datetime = Field(..., description="Last heartbeat timestamp")
     config_version: int = Field(..., description="Monotonic config version for change detection")
-
-
