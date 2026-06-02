@@ -93,12 +93,13 @@ class CognitionEnginePatchRequest(BaseModel):
     """Schema for PATCH /cognition-engines/{id}.
 
     Only the fields listed here can be updated.
-    Attempting to update immutable fields (url, cfn_id, version, name, type, auto_attach)
+    Attempting to update immutable fields (url, cfn_id, version, name, type)
     will be rejected with 400.
     """
 
     # Mutable fields — all optional, only provided fields are updated
     enabled: Optional[bool] = Field(None, description="Enable or disable the CE")
+    auto_attach: Optional[bool] = Field(None, description="Enable or disable auto-attach to new MAS")
     capabilities: Optional[List[str]] = Field(None, description="Capability names")
     metrics: Optional[List[str]] = Field(None, description="Metric names")
     config: Optional[dict] = Field(None, description="CE-level configuration")
@@ -111,7 +112,6 @@ class CognitionEnginePatchRequest(BaseModel):
     version: Optional[str] = Field(None, description="Immutable — cannot be updated via PATCH")
     name: Optional[str] = Field(None, description="Immutable — cannot be updated via PATCH")
     type: Optional[str] = Field(None, description="Immutable — cannot be updated via PATCH")
-    auto_attach: Optional[bool] = Field(None, description="Immutable — cannot be updated via PATCH")
 
 
 class CognitionEngineAssociateResponse(BaseModel):

@@ -2955,6 +2955,18 @@
             "title": "Enabled",
             "description": "Enable or disable the CE"
           },
+          "auto_attach": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Auto Attach",
+            "description": "Enable or disable auto-attach to new MAS"
+          },
           "capabilities": {
             "anyOf": [
               {
@@ -3083,23 +3095,11 @@
             ],
             "title": "Type",
             "description": "Immutable \u2014 cannot be updated via PATCH"
-          },
-          "auto_attach": {
-            "anyOf": [
-              {
-                "type": "boolean"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Auto Attach",
-            "description": "Immutable \u2014 cannot be updated via PATCH"
           }
         },
         "type": "object",
         "title": "CognitionEnginePatchRequest",
-        "description": "Schema for PATCH /cognition-engines/{id}.\n\nOnly the fields listed here can be updated.\nAttempting to update immutable fields (url, cfn_id, version, name, type, auto_attach)\nwill be rejected with 400."
+        "description": "Schema for PATCH /cognition-engines/{id}.\n\nOnly the fields listed here can be updated.\nAttempting to update immutable fields (url, cfn_id, version, name, type)\nwill be rejected with 400."
       },
       "CognitionEngineRegisterRequest": {
         "properties": {

@@ -27,7 +27,7 @@ from server.schemas.cognition_engine import (
 from server.utils import generate_uuid
 from server.utils.encryption import process_config_for_storage
 
-_IMMUTABLE_CE_FIELDS = {"url", "cfn_id", "version", "name", "type", "auto_attach"}
+_IMMUTABLE_CE_FIELDS = {"url", "cfn_id", "version", "name", "type"}
 
 
 class CognitionEngineService:
@@ -418,6 +418,8 @@ class CognitionEngineService:
                     engine.mas_config = provided["mas_config"]
                 if "auth" in provided:
                     engine.auth = _auth_for_storage(provided["auth"])
+                if "auto_attach" in provided:
+                    engine.auto_attach = provided["auto_attach"]
 
                 engine.updated_by = user_id
                 engine.updated_at = datetime.now(timezone.utc)
