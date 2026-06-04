@@ -1669,7 +1669,7 @@
           "cognition-engines"
         ],
         "summary": "Update Cognition Engine",
-        "description": "Partially update a Cognition Engine. Immutable fields (url, cfn_id, version, name, type, auto_attach) cannot be updated \u2014 returns 400 if attempted.",
+        "description": "Partially update a Cognition Engine. Immutable fields (cfn_id, version, name, kind, subkind) cannot be updated \u2014 returns 400 if attempted.",
         "operationId": "patch_cognition_engine_api_cognition_engines__ce_id__patch",
         "security": [
           {
@@ -2686,9 +2686,27 @@
             "type": "string",
             "title": "Version"
           },
-          "type": {
-            "type": "string",
-            "title": "Type"
+          "kind": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Kind"
+          },
+          "subkind": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Subkind"
           },
           "url": {
             "type": "string",
@@ -2698,14 +2716,16 @@
             "type": "boolean",
             "title": "Enabled"
           },
-          "auto_attach": {
+          "mas_auto_associate": {
             "type": "boolean",
-            "title": "Auto Attach"
+            "title": "Mas Auto Associate"
           },
           "capabilities": {
             "anyOf": [
               {
-                "items": {},
+                "items": {
+                  "type": "string"
+                },
                 "type": "array"
               },
               {
@@ -2717,7 +2737,9 @@
           "metrics": {
             "anyOf": [
               {
-                "items": {},
+                "items": {
+                  "type": "string"
+                },
                 "type": "array"
               },
               {
@@ -2790,10 +2812,11 @@
           "cfn_id",
           "name",
           "version",
-          "type",
+          "kind",
+          "subkind",
           "url",
           "enabled",
-          "auto_attach",
+          "mas_auto_associate",
           "capabilities",
           "metrics",
           "status",
@@ -2866,9 +2889,27 @@
             "type": "string",
             "title": "Version"
           },
-          "type": {
-            "type": "string",
-            "title": "Type"
+          "kind": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Kind"
+          },
+          "subkind": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Subkind"
           },
           "url": {
             "type": "string",
@@ -2878,9 +2919,9 @@
             "type": "boolean",
             "title": "Enabled"
           },
-          "auto_attach": {
+          "mas_auto_associate": {
             "type": "boolean",
-            "title": "Auto Attach"
+            "title": "Mas Auto Associate"
           },
           "status": {
             "type": "string",
@@ -2929,10 +2970,11 @@
           "cfn_id",
           "name",
           "version",
-          "type",
+          "kind",
+          "subkind",
           "url",
           "enabled",
-          "auto_attach",
+          "mas_auto_associate",
           "status",
           "last_seen",
           "config",
@@ -2943,6 +2985,18 @@
       },
       "CognitionEnginePatchRequest": {
         "properties": {
+          "url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Url",
+            "description": "URL for the CFN to reach this engine"
+          },
           "enabled": {
             "anyOf": [
               {
@@ -2955,7 +3009,7 @@
             "title": "Enabled",
             "description": "Enable or disable the CE"
           },
-          "auto_attach": {
+          "mas_auto_associate": {
             "anyOf": [
               {
                 "type": "boolean"
@@ -2964,8 +3018,8 @@
                 "type": "null"
               }
             ],
-            "title": "Auto Attach",
-            "description": "Enable or disable auto-attach to new MAS"
+            "title": "Mas Auto Associate",
+            "description": "Enable or disable auto-association to new MAS"
           },
           "capabilities": {
             "anyOf": [
@@ -3021,7 +3075,7 @@
               }
             ],
             "title": "Mas Config",
-            "description": "MAS-specific config keyed by mas_id"
+            "description": "Factory defaults for per-MAS configuration"
           },
           "auth": {
             "anyOf": [
@@ -3035,18 +3089,6 @@
             ],
             "title": "Auth",
             "description": "Auth credentials"
-          },
-          "url": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Url",
-            "description": "Immutable \u2014 cannot be updated via PATCH"
           },
           "cfn_id": {
             "anyOf": [
@@ -3084,7 +3126,7 @@
             "title": "Name",
             "description": "Immutable \u2014 cannot be updated via PATCH"
           },
-          "type": {
+          "kind": {
             "anyOf": [
               {
                 "type": "string"
@@ -3093,13 +3135,25 @@
                 "type": "null"
               }
             ],
-            "title": "Type",
+            "title": "Kind",
+            "description": "Immutable \u2014 cannot be updated via PATCH"
+          },
+          "subkind": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Subkind",
             "description": "Immutable \u2014 cannot be updated via PATCH"
           }
         },
         "type": "object",
         "title": "CognitionEnginePatchRequest",
-        "description": "Schema for PATCH /cognition-engines/{id}.\n\nOnly the fields listed here can be updated.\nAttempting to update immutable fields (url, cfn_id, version, name, type)\nwill be rejected with 400."
+        "description": "Schema for PATCH /cognition-engines/{id}.\n\nOnly the fields listed here can be updated.\nAttempting to update immutable fields (cfn_id, version, name, kind, subkind)\nwill be rejected with 400."
       },
       "CognitionEngineRegisterRequest": {
         "properties": {
@@ -3123,15 +3177,34 @@
             "title": "Version",
             "description": "CE software version, e.g. '1.2.3'"
           },
-          "type": {
-            "type": "string",
-            "title": "Type",
-            "description": "Engine type: 'knowledge_management', 'semantic_negotiation', 'distillation', 'custom'"
+          "kind": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Kind",
+            "description": "Engine kind, e.g. 'knowledge', 'contingency'"
           },
-          "auto_attach": {
+          "subkind": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Subkind",
+            "description": "Engine subkind, e.g. 'distillation', 'query', 'negotiation'"
+          },
+          "mas_auto_associate": {
             "type": "boolean",
-            "title": "Auto Attach",
-            "description": "If true, CE is auto-attached to all MAS under the same CFN's workspaces",
+            "title": "Mas Auto Associate",
+            "description": "If true, CE is auto-associated with all MAS under the same CFN's workspaces",
             "default": false
           },
           "auth": {
@@ -3201,7 +3274,7 @@
               }
             ],
             "title": "Mas Config",
-            "description": "MAS-specific config keyed by mas_id"
+            "description": "Factory defaults for per-MAS configuration (e.g. schedule). Copied to each MAS on association and overridable per MAS."
           }
         },
         "type": "object",
@@ -3209,8 +3282,7 @@
           "cfn_id",
           "name",
           "url",
-          "version",
-          "type"
+          "version"
         ],
         "title": "CognitionEngineRegisterRequest",
         "description": "Schema for CE self-registration (idempotent upsert)"
@@ -3233,17 +3305,35 @@
             "type": "string",
             "title": "Version"
           },
-          "type": {
-            "type": "string",
-            "title": "Type"
+          "kind": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Kind"
+          },
+          "subkind": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Subkind"
           },
           "enabled": {
             "type": "boolean",
             "title": "Enabled"
           },
-          "auto_attach": {
+          "mas_auto_associate": {
             "type": "boolean",
-            "title": "Auto Attach"
+            "title": "Mas Auto Associate"
           },
           "status": {
             "type": "string",
@@ -3261,9 +3351,10 @@
           "cfn_id",
           "name",
           "version",
-          "type",
+          "kind",
+          "subkind",
           "enabled",
-          "auto_attach",
+          "mas_auto_associate",
           "status",
           "created"
         ],
@@ -4155,18 +4246,6 @@
             ],
             "title": "Config"
           },
-          "task_schedule": {
-            "anyOf": [
-              {
-                "additionalProperties": true,
-                "type": "object"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Task Schedule"
-          },
           "created_at": {
             "type": "string",
             "format": "date-time",
@@ -4324,18 +4403,20 @@
             "title": "Config",
             "description": "Configuration object"
           },
-          "task_schedule": {
+          "cognition_engine_ids": {
             "anyOf": [
               {
-                "additionalProperties": true,
-                "type": "object"
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
               },
               {
                 "type": "null"
               }
             ],
-            "title": "Task Schedule",
-            "description": "Task schedule configuration (task_name, enabled, schedule)"
+            "title": "Cognition Engine Ids",
+            "description": "CE IDs to associate with this MAS on creation. Additive \u2014 auto-attach CEs are also attached."
           }
         },
         "type": "object",
@@ -4438,7 +4519,22 @@
             "title": "Config",
             "description": "Updated configuration object"
           },
-          "task_schedule": {
+          "cognition_engine_ids": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cognition Engine Ids",
+            "description": "CE IDs to sync with this MAS. Attaches new ones, detaches removed ones. Omit to leave unchanged."
+          },
+          "cognition_engine_configs": {
             "anyOf": [
               {
                 "additionalProperties": true,
@@ -4448,8 +4544,8 @@
                 "type": "null"
               }
             ],
-            "title": "Task Schedule",
-            "description": "Updated task schedule configuration (task_name, enabled, schedule)"
+            "title": "Cognition Engine Configs",
+            "description": "Per-CE mas_config overrides, keyed by ce_id. Overrides the CE factory defaults for this MAS only."
           }
         },
         "type": "object",

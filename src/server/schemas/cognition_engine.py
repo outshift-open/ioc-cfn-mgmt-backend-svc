@@ -5,7 +5,7 @@
 """Cognition Engine schemas"""
 
 from datetime import datetime
-from typing import Any, List, Optional
+from typing import List, Optional
 
 from pydantic import BaseModel, Field
 
@@ -17,17 +17,19 @@ class CognitionEngineRegisterRequest(BaseModel):
     name: str = Field(..., description="Engine name")
     url: str = Field(..., description="URL for the CFN to reach this engine")
     version: str = Field(..., description="CE software version, e.g. '1.2.3'")
-    type: str = Field(
-        ..., description="Engine type: 'knowledge_management', 'semantic_negotiation', 'distillation', 'custom'"
-    )
-    auto_attach: bool = Field(
-        False, description="If true, CE is auto-attached to all MAS under the same CFN's workspaces"
+    kind: Optional[str] = Field(None, description="Engine kind, e.g. 'knowledge', 'contingency'")
+    subkind: Optional[str] = Field(None, description="Engine subkind, e.g. 'distillation', 'query', 'negotiation'")
+    mas_auto_associate: bool = Field(
+        False, description="If true, CE is auto-associated with all MAS under the same CFN's workspaces"
     )
     auth: Optional[dict] = Field(None, description='Auth credentials, e.g. {"type": "api_key", "credentials": {...}}')
     capabilities: Optional[List[str]] = Field(default_factory=list, description="Capability names")
     metrics: Optional[List[str]] = Field(default_factory=list, description="Metric names the CE will publish")
     config: Optional[dict] = Field(default_factory=dict, description="CE-level configuration")
-    mas_config: Optional[dict] = Field(default_factory=dict, description="MAS-specific config keyed by mas_id")
+    mas_config: Optional[dict] = Field(
+        default_factory=dict,
+        description="Factory defaults for per-MAS configuration (e.g. schedule). Copied to each MAS on association and overridable per MAS.",  # noqa: E501
+    )
 
 
 class CognitionEngineResponse(BaseModel):
@@ -37,9 +39,10 @@ class CognitionEngineResponse(BaseModel):
     cfn_id: str
     name: str
     version: str
-    type: str
+    kind: Optional[str]
+    subkind: Optional[str]
     enabled: bool
-    auto_attach: bool
+    mas_auto_associate: bool
     status: str
     created: bool = Field(..., description="True if new registration, False if existing record was updated")
 
@@ -51,10 +54,11 @@ class CognitionEngineListItem(BaseModel):
     cfn_id: str
     name: str
     version: str
-    type: str
+    kind: Optional[str]
+    subkind: Optional[str]
     url: str
     enabled: bool
-    auto_attach: bool
+    mas_auto_associate: bool
     status: str
     last_seen: Optional[datetime]
     config: Optional[dict]
@@ -75,12 +79,13 @@ class CognitionEngineDetail(BaseModel):
     cfn_id: str
     name: str
     version: str
-    type: str
+    kind: Optional[str]
+    subkind: Optional[str]
     url: str
     enabled: bool
-    auto_attach: bool
-    capabilities: Optional[List[Any]]
-    metrics: Optional[List[Any]]
+    mas_auto_associate: bool
+    capabilities: Optional[List[str]]
+    metrics: Optional[List[str]]
     status: str
     last_seen: Optional[datetime]
     config: Optional[dict]
@@ -93,25 +98,26 @@ class CognitionEnginePatchRequest(BaseModel):
     """Schema for PATCH /cognition-engines/{id}.
 
     Only the fields listed here can be updated.
-    Attempting to update immutable fields (url, cfn_id, version, name, type)
+    Attempting to update immutable fields (cfn_id, version, name, kind, subkind)
     will be rejected with 400.
     """
 
     # Mutable fields — all optional, only provided fields are updated
+    url: Optional[str] = Field(None, description="URL for the CFN to reach this engine")
     enabled: Optional[bool] = Field(None, description="Enable or disable the CE")
-    auto_attach: Optional[bool] = Field(None, description="Enable or disable auto-attach to new MAS")
+    mas_auto_associate: Optional[bool] = Field(None, description="Enable or disable auto-association to new MAS")
     capabilities: Optional[List[str]] = Field(None, description="Capability names")
     metrics: Optional[List[str]] = Field(None, description="Metric names")
     config: Optional[dict] = Field(None, description="CE-level configuration")
-    mas_config: Optional[dict] = Field(None, description="MAS-specific config keyed by mas_id")
+    mas_config: Optional[dict] = Field(None, description="Factory defaults for per-MAS configuration")
     auth: Optional[dict] = Field(None, description="Auth credentials")
 
     # Immutable fields — declared so callers get a 400 with a clear message rather than silent ignore
-    url: Optional[str] = Field(None, description="Immutable — cannot be updated via PATCH")
     cfn_id: Optional[str] = Field(None, description="Immutable — cannot be updated via PATCH")
     version: Optional[str] = Field(None, description="Immutable — cannot be updated via PATCH")
     name: Optional[str] = Field(None, description="Immutable — cannot be updated via PATCH")
-    type: Optional[str] = Field(None, description="Immutable — cannot be updated via PATCH")
+    kind: Optional[str] = Field(None, description="Immutable — cannot be updated via PATCH")
+    subkind: Optional[str] = Field(None, description="Immutable — cannot be updated via PATCH")
 
 
 class CognitionEngineAssociateResponse(BaseModel):

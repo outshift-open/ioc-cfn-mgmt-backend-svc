@@ -6,8 +6,6 @@
 
 from datetime import datetime, timezone
 
-from croniter import croniter
-
 from fastapi import HTTPException, status
 from sqlalchemy.exc import IntegrityError
 
@@ -46,46 +44,6 @@ class MultiAgenticSystemService:
             updated_by=provider.updated_by,
         )
 
-    def _validate_task_schedule(self, task_schedule: dict) -> None:
-        """Validate task_schedule before persisting to ensure cfn can parse and schedule it.
-
-        Checks: task_name is a non-empty string, schedule is a valid 5-field cron expression,
-        and the schedule interval is at least 30 minutes (to avoid overlap with callback deadlines).
-        Raises HTTPException(400) on validation failure.
-        """
-        if not task_schedule:
-            return
-
-        task_name = task_schedule.get("task_name", "")
-        if not task_name or not isinstance(task_name, str):
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="task_schedule.task_name must be a non-empty string",
-            )
-
-        schedule = task_schedule.get("schedule", "")
-        if not schedule or not isinstance(schedule, str):
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="task_schedule.schedule must be a non-empty string",
-            )
-
-        try:
-            cron = croniter(schedule.strip())
-        except (ValueError, KeyError) as e:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail=f"task_schedule.schedule is not a valid cron expression: {e}",
-            )
-
-        first = cron.get_next(datetime)
-        second = cron.get_next(datetime)
-        if (second - first).total_seconds() < 1800:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="task_schedule.schedule interval must be at least 30 minutes",
-            )
-
     def _agent_row_to_schema(self, agent_row: AgentModel, provider_map: dict) -> AgentWithMemory:
         agentic_memory = None
         if agent_row.agentic_memory_provider_id and agent_row.agentic_memory_provider_id in provider_map:
@@ -122,7 +80,6 @@ class MultiAgenticSystemService:
             shared_memory=shared_memory,
             agents=enriched_agents,
             config=mas.config,
-            task_schedule=mas.task_schedule,
             created_at=mas.created_at,
             updated_at=mas.updated_at,
             created_by=mas.created_by,
@@ -253,7 +210,9 @@ class MultiAgenticSystemService:
             if agent_id not in incoming_ids:
                 session.delete(row)
 
-    def create(self, workspace_id: str, mas_data: MultiAgenticSystemRequest) -> MultiAgenticSystemResponse:
+    def create(
+        self, workspace_id: str, mas_data: MultiAgenticSystemRequest, user_id: str = "system"
+    ) -> MultiAgenticSystemResponse:
         if not workspace_service.exists(workspace_id):
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
@@ -280,9 +239,6 @@ class MultiAgenticSystemService:
                         detail=f"Multi-agentic system with name '{mas_data.name}' already exists in this workspace",
                     )
 
-                if mas_data.task_schedule:
-                    self._validate_task_schedule(mas_data.task_schedule)
-
                 new_mas = MultiAgenticSystemModel(
                     id=generate_uuid(),
                     workspace_id=workspace_id,
@@ -291,7 +247,6 @@ class MultiAgenticSystemService:
                     shared_memory_provider_id=mas_data.shared_memory_provider_id,
                     agents=None,
                     config=mas_data.config,
-                    task_schedule=mas_data.task_schedule,
                 )
 
                 session.add(new_mas)
@@ -323,6 +278,13 @@ class MultiAgenticSystemService:
                 from server.services.cognition_engine import cognition_engine_service
 
                 cognition_engine_service.auto_attach_for_new_mas(new_mas.id, workspace_cfn_id)
+
+                for ce_id in mas_data.cognition_engine_ids or []:
+                    try:
+                        cognition_engine_service.associate(new_mas.id, ce_id, user_id)
+                    except HTTPException as e:
+                        if e.status_code != status.HTTP_409_CONFLICT:
+                            raise
 
                 return response
 
@@ -485,7 +447,9 @@ class MultiAgenticSystemService:
                 detail=f"Failed to retrieve multi-agentic system: {str(e)}",
             )
 
-    def update(self, workspace_id: str, mas_id: str, mas_data: MultiAgenticSystemUpdate) -> MultiAgenticSystemSchema:
+    def update(
+        self, workspace_id: str, mas_id: str, mas_data: MultiAgenticSystemUpdate, user_id: str = "system"
+    ) -> MultiAgenticSystemSchema:
         """Update a multi-agentic system"""
         try:
             db = RelationalDB()
@@ -539,9 +503,20 @@ class MultiAgenticSystemService:
                 if mas_data.config is not None:
                     mas.config = mas_data.config
 
-                if mas_data.task_schedule is not None:
-                    self._validate_task_schedule(mas_data.task_schedule)
-                    mas.task_schedule = mas_data.task_schedule
+                if mas_data.cognition_engine_configs is not None:
+                    from server.database.relational_db.models.mas_cognition_engine import MasCognitionEngine
+
+                    for ce_id, ce_mas_config in mas_data.cognition_engine_configs.items():
+                        assoc = (
+                            session.query(MasCognitionEngine)
+                            .filter(
+                                MasCognitionEngine.mas_id == mas_id,
+                                MasCognitionEngine.ce_id == ce_id,
+                            )
+                            .first()
+                        )
+                        if assoc:
+                            assoc.mas_config = ce_mas_config
 
                 mas.updated_at = datetime.now(timezone.utc)
 
@@ -580,6 +555,19 @@ class MultiAgenticSystemService:
                 workspace_obj = session.query(Workspace).filter(Workspace.id == workspace_id).first()
                 workspace_cfn_id = workspace_obj.cfn_id if workspace_obj else None
                 cognition_engine_service.auto_attach_for_new_mas(mas.id, workspace_cfn_id)
+
+                if mas_data.cognition_engine_ids is not None:
+                    from server.database.relational_db.models.mas_cognition_engine import MasCognitionEngine
+
+                    incoming = set(mas_data.cognition_engine_ids)
+                    existing_ce_ids = {
+                        row.ce_id
+                        for row in session.query(MasCognitionEngine).filter(MasCognitionEngine.mas_id == mas.id)
+                    }
+                    for ce_id in incoming - existing_ce_ids:
+                        cognition_engine_service.associate(mas.id, ce_id, user_id)
+                    for ce_id in existing_ce_ids - incoming:
+                        cognition_engine_service.disassociate(ce_id, mas.id, user_id)
 
                 return self._enrich_mas(mas, agents, provider_map)
 

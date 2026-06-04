@@ -18,7 +18,6 @@ def _base_payload(cfn_id: str, name: str = "test-engine") -> dict:
         "name": name,
         "url": "http://ce.internal:8080",
         "version": "1.0.0",
-        "type": "custom",
     }
 
 
@@ -63,7 +62,8 @@ class TestCognitionEngineRegister:
         assert data["cfn_id"] == registered_cfn
         assert data["name"] == "test-engine"
         assert data["version"] == "1.0.0"
-        assert data["type"] == "custom"
+        assert data["kind"] is None
+        assert data["subkind"] is None
         assert data["status"] == "offline"
         assert data["created"] is True
 
@@ -111,7 +111,8 @@ class TestCognitionEngineRegister:
             "name": "knowledge-engine",
             "url": "https://ke.internal:9090",
             "version": "2.3.1",
-            "type": "knowledge_management",
+            "kind": "knowledge",
+            "subkind": "query",
             "capabilities": ["ingestion", "retrieval", "similarity_search"],
             "metrics": ["kb.documents.indexed", "kb.search.latency_ms"],
             "auth": {"type": "api_key", "credentials": {"api_key": "secret"}},
@@ -123,20 +124,15 @@ class TestCognitionEngineRegister:
 
         assert response.status_code == status.HTTP_201_CREATED
         data = response.json()
-        assert data["type"] == "knowledge_management"
+        assert data["kind"] == "knowledge"
+        assert data["subkind"] == "query"
         assert data["created"] is True
 
     def test_register_missing_required_fields(self, client, registered_cfn):
-        """Missing url, version, or type is rejected with 422"""
+        """Missing url or version is rejected with 422"""
         response = client.post(
             "/api/cognition-engines",
-            json={"cfn_id": registered_cfn, "name": "incomplete-engine", "type": "custom"},
-        )
-        assert response.status_code == status.HTTP_422_UNPROCESSABLE_CONTENT
-
-        response = client.post(
-            "/api/cognition-engines",
-            json={"cfn_id": registered_cfn, "name": "incomplete-engine", "url": "http://ce:8080", "version": "1.0.0"},
+            json={"cfn_id": registered_cfn, "name": "incomplete-engine"},
         )
         assert response.status_code == status.HTTP_422_UNPROCESSABLE_CONTENT
 
@@ -243,7 +239,7 @@ class TestCognitionEngineList:
 
         item = client.get(f"/api/cognition-engines?cfn_id={registered_cfn}").json()["cognition_engines"][0]
 
-        for field in ("id", "cfn_id", "name", "version", "type", "url", "enabled", "status", "config", "mas_config"):
+        for field in ("id", "cfn_id", "name", "version", "kind", "subkind", "url", "enabled", "status", "config", "mas_config"):
             assert field in item
         assert "auth" not in item
 
@@ -255,7 +251,8 @@ class TestCognitionEngineGet:
         """Returns full detail for a known engine"""
         ce_id = _register(
             client, registered_cfn, "get-test-engine",
-            type="distillation",
+            kind="knowledge",
+            subkind="distillation",
             capabilities=["summarize"],
             metrics=["latency_ms"],
         )
@@ -267,7 +264,8 @@ class TestCognitionEngineGet:
         assert data["id"] == ce_id
         assert data["cfn_id"] == registered_cfn
         assert data["name"] == "get-test-engine"
-        assert data["type"] == "distillation"
+        assert data["kind"] == "knowledge"
+        assert data["subkind"] == "distillation"
         assert data["capabilities"] == ["summarize"]
         assert data["metrics"] == ["latency_ms"]
         assert data["status"] == "offline"
@@ -391,6 +389,29 @@ class TestCognitionEngineHeartbeat:
         assert detail["status"] == "online"
         assert detail["last_seen"] is not None
 
+    def test_heartbeat_offline_to_online_increments_config_version(self, client, registered_cfn, created_workspace):
+        """First heartbeat (offline→online transition) triggers a CFN config update."""
+        ce_id = _register(client, registered_cfn, "hb-cfg-engine")
+
+        initial_version = client.put(f"/api/cognition-fabric-nodes/{registered_cfn}/heartbeat").json()["config_version"]
+
+        client.put(f"/api/cognition-engines/{ce_id}/heartbeat")
+
+        updated_version = client.put(f"/api/cognition-fabric-nodes/{registered_cfn}/heartbeat").json()["config_version"]
+        assert updated_version > initial_version
+
+    def test_heartbeat_already_online_does_not_increment_config_version(self, client, registered_cfn, created_workspace):
+        """Heartbeat on an already-online CE does not trigger a redundant config update."""
+        ce_id = _register(client, registered_cfn, "hb-no-cfg-engine")
+        client.put(f"/api/cognition-engines/{ce_id}/heartbeat")  # offline → online
+
+        stable_version = client.put(f"/api/cognition-fabric-nodes/{registered_cfn}/heartbeat").json()["config_version"]
+
+        client.put(f"/api/cognition-engines/{ce_id}/heartbeat")  # already online — no transition
+
+        after_version = client.put(f"/api/cognition-fabric-nodes/{registered_cfn}/heartbeat").json()["config_version"]
+        assert after_version == stable_version
+
 
 def _db_auth(ce_id: str) -> dict:
     """Read the raw auth JSONB column directly from the DB."""
@@ -487,41 +508,41 @@ class TestCognitionEngineEnabled:
 
 
 class TestCognitionEngineAutoAttach:
-    """auto_attach is caller-provided at registration — defaults to false."""
+    """mas_auto_associate is caller-provided at registration — defaults to false."""
 
-    def test_auto_attach_defaults_to_false(self, client, registered_cfn):
-        """CE registered without auto_attach has auto_attach=false."""
-        ce_id = _register(client, registered_cfn, "no-auto-attach")
+    def test_mas_auto_associate_defaults_to_false(self, client, registered_cfn):
+        """CE registered without mas_auto_associate has mas_auto_associate=false."""
+        ce_id = _register(client, registered_cfn, "no-auto-associate")
         detail = client.get(f"/api/cognition-engines/{ce_id}").json()
-        assert detail["auto_attach"] is False
+        assert detail["mas_auto_associate"] is False
 
-    def test_auto_attach_can_be_set_true_on_registration(self, client, registered_cfn):
-        """CE registered with auto_attach=true reflects that value."""
+    def test_mas_auto_associate_can_be_set_true_on_registration(self, client, registered_cfn):
+        """CE registered with mas_auto_associate=true reflects that value."""
         resp = client.post(
             "/api/cognition-engines",
-            json={**_base_payload(registered_cfn, "ootb-engine"), "auto_attach": True},
+            json={**_base_payload(registered_cfn, "ootb-engine"), "mas_auto_associate": True},
         )
         assert resp.status_code == status.HTTP_201_CREATED
-        assert resp.json()["auto_attach"] is True
+        assert resp.json()["mas_auto_associate"] is True
 
         detail = client.get(f"/api/cognition-engines/{resp.json()['ce_id']}").json()
-        assert detail["auto_attach"] is True
+        assert detail["mas_auto_associate"] is True
 
-    def test_auto_attach_present_in_list_response(self, client, registered_cfn):
-        """List items include auto_attach field."""
-        _register(client, registered_cfn, "auto-attach-list")
+    def test_mas_auto_associate_present_in_list_response(self, client, registered_cfn):
+        """List items include mas_auto_associate field."""
+        _register(client, registered_cfn, "auto-associate-list")
         item = client.get(f"/api/cognition-engines?cfn_id={registered_cfn}").json()["cognition_engines"][0]
-        assert "auto_attach" in item
+        assert "mas_auto_associate" in item
 
-    def test_auto_attach_preserved_on_upsert(self, client, registered_cfn):
-        """Re-registering same (cfn_id, name, version) with auto_attach=true updates the flag."""
-        payload = _base_payload(registered_cfn, "upsert-auto-attach")
+    def test_mas_auto_associate_preserved_on_upsert(self, client, registered_cfn):
+        """Re-registering same (cfn_id, name, version) with mas_auto_associate=true updates the flag."""
+        payload = _base_payload(registered_cfn, "upsert-auto-associate")
 
         client.post("/api/cognition-engines", json=payload)
 
-        resp = client.post("/api/cognition-engines", json={**payload, "auto_attach": True})
+        resp = client.post("/api/cognition-engines", json={**payload, "mas_auto_associate": True})
         assert resp.status_code == status.HTTP_200_OK
-        assert resp.json()["auto_attach"] is True
+        assert resp.json()["mas_auto_associate"] is True
 
 
 class TestCognitionEnginePatch:
@@ -583,10 +604,10 @@ class TestCognitionEnginePatch:
 
         for field, value in [
             ("name", "new-name"),
-            ("url", "http://new-url:8080"),
             ("cfn_id", "other-cfn"),
             ("version", "9.9.9"),
-            ("type", "distillation"),
+            ("kind", "contingency"),
+            ("subkind", "negotiation"),
         ]:
             resp = client.patch(f"/api/cognition-engines/{ce_id}", json={field: value})
             assert resp.status_code == status.HTTP_400_BAD_REQUEST, f"Expected 400 for field '{field}'"
@@ -596,6 +617,14 @@ class TestCognitionEnginePatch:
         """PATCH on unknown ce_id returns 404."""
         resp = client.patch("/api/cognition-engines/nonexistent-id", json={"enabled": False})
         assert resp.status_code == status.HTTP_404_NOT_FOUND
+
+    def test_patch_url(self, client, registered_cfn):
+        """PATCH can update the CE URL."""
+        ce_id = _register(client, registered_cfn, "patch-url")
+
+        resp = client.patch(f"/api/cognition-engines/{ce_id}", json={"url": "http://new-url:9090"})
+        assert resp.status_code == status.HTTP_200_OK
+        assert resp.json()["url"] == "http://new-url:9090"
 
     def test_patch_empty_body_is_no_op(self, client, registered_cfn):
         """Empty PATCH body leaves the CE unchanged."""
@@ -639,6 +668,64 @@ class TestCognitionEnginePatch:
 
         assert resp.status_code == status.HTTP_200_OK
         assert resp.json()["enabled"] is False
+
+    def test_patch_mas_config(self, client, registered_cfn):
+        """PATCH can update the CE factory mas_config."""
+        ce_id = _register(client, registered_cfn, "patch-mas-config")
+
+        resp = client.patch(
+            f"/api/cognition-engines/{ce_id}",
+            json={"mas_config": {"schedule": "0 0 * * *", "top_k": 10}},
+        )
+
+        assert resp.status_code == status.HTTP_200_OK
+        assert resp.json()["mas_config"] == {"schedule": "0 0 * * *", "top_k": 10}
+
+
+class TestCognitionEngineMasConfigPerMas:
+    """mas_config factory defaults are copied to junction on association and can be overridden per MAS."""
+
+    def test_association_copies_ce_mas_config_to_junction(self, client, registered_cfn, created_workspace):
+        """On association, CE's mas_config is copied into the junction for the MAS."""
+        ce_id = _register(
+            client, registered_cfn, "ce-mas-config-copy",
+            mas_config={"schedule": "0 0 * * *"},
+        )
+        mas_id = _create_mas(client, created_workspace, "mas-config-copy-mas")
+
+        resp = client.post(
+            f"/api/workspaces/{created_workspace}/multi-agentic-systems/{mas_id}/cognition-engines",
+            json={"ce_id": ce_id},
+        )
+        assert resp.status_code == status.HTTP_201_CREATED
+
+    def test_mas_update_overrides_per_mas_ce_config(self, client, registered_cfn, created_workspace):
+        """PUT MAS with cognition_engine_configs overrides the mas_config for that CE on this MAS only."""
+        ce_id = _register(
+            client, registered_cfn, "ce-mas-config-override",
+            mas_config={"schedule": "0 0 * * *"},
+        )
+        mas_id = _create_mas(client, created_workspace, "mas-config-override-mas")
+        client.post(
+            f"/api/workspaces/{created_workspace}/multi-agentic-systems/{mas_id}/cognition-engines",
+            json={"ce_id": ce_id},
+        )
+
+        resp = client.put(
+            f"/api/workspaces/{created_workspace}/multi-agentic-systems/{mas_id}",
+            json={"cognition_engine_configs": {ce_id: {"schedule": "0 */12 * * *"}}},
+        )
+        assert resp.status_code == status.HTTP_200_OK
+
+    def test_mas_update_ignores_config_for_unattached_ce(self, client, registered_cfn, created_workspace):
+        """Providing a ce_id in cognition_engine_configs that is not attached is silently ignored."""
+        mas_id = _create_mas(client, created_workspace, "mas-config-unattached")
+
+        resp = client.put(
+            f"/api/workspaces/{created_workspace}/multi-agentic-systems/{mas_id}",
+            json={"cognition_engine_configs": {"nonexistent-ce": {"schedule": "0 0 * * *"}}},
+        )
+        assert resp.status_code == status.HTTP_200_OK
 
 
 def _disable_cfn(client, cfn_id: str) -> None:
@@ -835,14 +922,47 @@ class TestCognitionEngineMasAssociation:
         )
         assert resp.status_code == status.HTTP_201_CREATED
 
+    def test_associate_increments_config_version(self, client, registered_cfn, created_workspace):
+        """Associating a CE with a MAS triggers a CFN config update (config_version increments)."""
+        ce_id = _register(client, registered_cfn, "assoc-cfg-ce")
+        mas_id = _create_mas(client, created_workspace, "assoc-cfg-mas")
+
+        initial_version = client.put(f"/api/cognition-fabric-nodes/{registered_cfn}/heartbeat").json()["config_version"]
+
+        client.post(
+            f"/api/workspaces/{created_workspace}/multi-agentic-systems/{mas_id}/cognition-engines",
+            json={"ce_id": ce_id},
+        )
+
+        updated_version = client.put(f"/api/cognition-fabric-nodes/{registered_cfn}/heartbeat").json()["config_version"]
+        assert updated_version > initial_version
+
+    def test_disassociate_increments_config_version(self, client, registered_cfn, created_workspace):
+        """Disassociating a CE from a MAS triggers a CFN config update (config_version increments)."""
+        ce_id = _register(client, registered_cfn, "disassoc-cfg-ce")
+        mas_id = _create_mas(client, created_workspace, "disassoc-cfg-mas")
+        client.post(
+            f"/api/workspaces/{created_workspace}/multi-agentic-systems/{mas_id}/cognition-engines",
+            json={"ce_id": ce_id},
+        )
+
+        initial_version = client.put(f"/api/cognition-fabric-nodes/{registered_cfn}/heartbeat").json()["config_version"]
+
+        client.delete(
+            f"/api/workspaces/{created_workspace}/multi-agentic-systems/{mas_id}/cognition-engines/{ce_id}"
+        )
+
+        updated_version = client.put(f"/api/cognition-fabric-nodes/{registered_cfn}/heartbeat").json()["config_version"]
+        assert updated_version > initial_version
+
 
 class TestCognitionEngineAutoAttachTrigger:
     """Tests for auto-attach trigger logic."""
 
-    def test_register_auto_attach_does_not_attach_to_existing_mas(self, client, registered_cfn, created_workspace):
-        """CE registration does not auto-attach to pre-existing MAS, even with auto_attach=True."""
+    def test_register_mas_auto_associate_does_not_attach_to_existing_mas(self, client, registered_cfn, created_workspace):
+        """CE registration does not auto-attach to pre-existing MAS, even with mas_auto_associate=True."""
         mas_id = _create_mas(client, created_workspace, "pre-existing-mas")
-        ce_id = _register(client, registered_cfn, "auto-attach-ce", auto_attach=True)
+        ce_id = _register(client, registered_cfn, "auto-attach-ce", mas_auto_associate=True)
 
         # Manual association should succeed — registration does not trigger auto-attach
         resp = client.post(
@@ -851,9 +971,9 @@ class TestCognitionEngineAutoAttachTrigger:
         )
         assert resp.status_code == status.HTTP_201_CREATED
 
-    def test_new_mas_auto_attaches_existing_auto_attach_ce(self, client, registered_cfn):
-        """New MAS created in a CFN is auto-associated with all auto_attach=True CEs in that CFN."""
-        ce_id = _register(client, registered_cfn, "platform-ce", auto_attach=True)
+    def test_new_mas_mas_auto_associatees_existing_mas_auto_associate_ce(self, client, registered_cfn):
+        """New MAS created in a CFN is auto-associated with all mas_auto_associate=True CEs in that CFN."""
+        ce_id = _register(client, registered_cfn, "platform-ce", mas_auto_associate=True)
 
         # Create workspace linked to same CFN, then create a new MAS
         ws_id = client.post(
@@ -869,9 +989,9 @@ class TestCognitionEngineAutoAttachTrigger:
         )
         assert resp.status_code == status.HTTP_409_CONFLICT
 
-    def test_new_mas_does_not_attach_non_auto_attach_ce(self, client, registered_cfn):
-        """New MAS is NOT auto-associated with CEs that have auto_attach=False."""
-        ce_id = _register(client, registered_cfn, "non-platform-ce")  # auto_attach=False
+    def test_new_mas_does_not_attach_non_mas_auto_associate_ce(self, client, registered_cfn):
+        """New MAS is NOT auto-associated with CEs that have mas_auto_associate=False."""
+        ce_id = _register(client, registered_cfn, "non-platform-ce")  # mas_auto_associate=False
 
         ws_id = client.post(
             "/api/workspaces/create",
@@ -886,7 +1006,7 @@ class TestCognitionEngineAutoAttachTrigger:
         )
         assert resp.status_code == status.HTTP_201_CREATED
 
-    def test_auto_attach_upsert_is_idempotent(self, client, registered_cfn, created_workspace):
+    def test_mas_auto_associate_upsert_is_idempotent(self, client, registered_cfn, created_workspace):
         """Re-registering a CE with the same (cfn_id, name, version) returns 200 (upsert)."""
         _create_mas(client, created_workspace, "idempotent-mas")
         payload = {
@@ -894,17 +1014,16 @@ class TestCognitionEngineAutoAttachTrigger:
             "name": "idempotent-auto-ce",
             "url": "http://ce:8080",
             "version": "1.0.0",
-            "type": "custom",
-            "auto_attach": True,
+            "mas_auto_associate": True,
         }
         client.post("/api/cognition-engines", json=payload)  # first registration: creates (201)
         resp = client.post("/api/cognition-engines", json=payload)  # second registration: upsert (200)
 
         assert resp.status_code == status.HTTP_200_OK
 
-    def test_mas_update_auto_attaches_existing_auto_attach_ce(self, client, registered_cfn):
-        """Updating a MAS triggers auto-attach for all enabled auto_attach CEs in the CFN."""
-        # Create MAS first so no auto_attach CE exists yet at creation time
+    def test_mas_update_mas_auto_associatees_existing_mas_auto_associate_ce(self, client, registered_cfn):
+        """Updating a MAS triggers auto-attach for all enabled mas_auto_associate CEs in the CFN."""
+        # Create MAS first so no mas_auto_associate CE exists yet at creation time
         ws_id = client.post(
             "/api/workspaces/create",
             json={"name": "WS Update Trigger", "cfn_id": registered_cfn},
@@ -912,7 +1031,7 @@ class TestCognitionEngineAutoAttachTrigger:
         mas_id = _create_mas(client, ws_id, "mas-before-ce")
 
         # Register CE after MAS exists — registration does not auto-attach
-        ce_id = _register(client, registered_cfn, "platform-ce-update", auto_attach=True)
+        ce_id = _register(client, registered_cfn, "platform-ce-update", mas_auto_associate=True)
 
         # Confirm no auto-attach happened: manual association should succeed
         assoc_resp = client.post(
@@ -937,14 +1056,14 @@ class TestCognitionEngineAutoAttachTrigger:
         )
         assert resp.status_code == status.HTTP_409_CONFLICT
 
-    def test_mas_update_does_not_attach_non_auto_attach_ce(self, client, registered_cfn):
-        """Updating a MAS does not auto-attach CEs with auto_attach=False."""
+    def test_mas_update_does_not_attach_non_mas_auto_associate_ce(self, client, registered_cfn):
+        """Updating a MAS does not auto-attach CEs with mas_auto_associate=False."""
         ws_id = client.post(
             "/api/workspaces/create",
             json={"name": "WS Update No Attach", "cfn_id": registered_cfn},
         ).json()["id"]
         mas_id = _create_mas(client, ws_id, "mas-no-auto-attach")
-        ce_id = _register(client, registered_cfn, "non-auto-attach-ce")  # auto_attach=False
+        ce_id = _register(client, registered_cfn, "non-auto-attach-ce")  # mas_auto_associate=False
 
         # Update the MAS — should not trigger auto-attach
         client.put(
@@ -959,9 +1078,9 @@ class TestCognitionEngineAutoAttachTrigger:
         )
         assert resp.status_code == status.HTTP_201_CREATED
 
-    def test_new_mas_does_not_attach_disabled_auto_attach_ce(self, client, registered_cfn):
-        """New MAS is not wired to a disabled CE even if auto_attach=True."""
-        ce_id = _register(client, registered_cfn, "disabled-platform-ce", auto_attach=True)
+    def test_new_mas_does_not_attach_disabled_mas_auto_associate_ce(self, client, registered_cfn):
+        """New MAS is not wired to a disabled CE even if mas_auto_associate=True."""
+        ce_id = _register(client, registered_cfn, "disabled-platform-ce", mas_auto_associate=True)
 
         # Create a workspace+MAS so the CE auto-attaches, then disassociate and disable
         ws_id = client.post(

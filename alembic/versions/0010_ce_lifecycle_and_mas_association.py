@@ -7,13 +7,14 @@ Create Date: 2026-05-27 00:00:00
 Changes:
   - Redesign cognition_engine as CFN-scoped resource:
     - Drop: workspace_id, old enabled column
-    - Add: cfn_id (FK -> cognition_fabric_node), url, version, type, status,
-            auth, capabilities, metrics, mas_config, last_seen
+    - Add: cfn_id (FK -> cognition_fabric_node), url, version, kind, subkind,
+            auth, capabilities, metrics, config, mas_config, last_seen,
+            enabled, mas_auto_associate, status
     - Update: config default -> '{}', created_by nullable, timestamps -> TIMESTAMPTZ
   - Unique key: (cfn_id, name, version) WHERE deleted_at IS NULL
     Same CE + same version upserts on re-registration; new version creates a new record
-  - Add enabled (boolean, server-set true on creation) and auto_attach (boolean, default false)
   - Add mas_cognition_engines junction table for MAS <-> CE many-to-many
+    with mas_config (JSONB) for per-MAS config overrides
 """
 
 from typing import Sequence, Union
@@ -67,10 +68,9 @@ def upgrade() -> None:
         sa.Column("status", sa.String(20), nullable=False, server_default="offline"),
     )
 
-    op.add_column(
-        "cognition_engine",
-        sa.Column("type", sa.String(50), nullable=False, server_default="custom"),
-    )
+    # --- cognition_engine: classification (optional) ---
+    op.add_column("cognition_engine", sa.Column("kind", sa.String(50), nullable=True))
+    op.add_column("cognition_engine", sa.Column("subkind", sa.String(50), nullable=True))
 
     # --- cognition_engine: add optional JSONB columns ---
     op.add_column("cognition_engine", sa.Column("auth", JSONB, nullable=True))
@@ -120,17 +120,17 @@ def upgrade() -> None:
     )
     op.create_index("idx_ce_status", "cognition_engine", ["status"])
 
-    # --- cognition_engine: add enabled and auto_attach ---
+    # --- cognition_engine: add enabled and mas_auto_associate ---
     op.add_column(
         "cognition_engine",
         sa.Column("enabled", sa.Boolean, nullable=False, server_default=sa.text("true")),
     )
     op.add_column(
         "cognition_engine",
-        sa.Column("auto_attach", sa.Boolean, nullable=False, server_default=sa.text("false")),
+        sa.Column("mas_auto_associate", sa.Boolean, nullable=False, server_default=sa.text("false")),
     )
     op.create_index("idx_ce_enabled", "cognition_engine", ["enabled"])
-    op.create_index("idx_ce_auto_attach", "cognition_engine", ["auto_attach"])
+    op.create_index("idx_ce_mas_auto_associate", "cognition_engine", ["mas_auto_associate"])
 
     # --- mas_cognition_engines: junction table for MAS <-> CE many-to-many ---
     op.create_table(
@@ -147,6 +147,7 @@ def upgrade() -> None:
             sa.ForeignKey("cognition_engine.id", ondelete="CASCADE"),
             nullable=False,
         ),
+        sa.Column("mas_config", JSONB, nullable=True),
         sa.Column(
             "created_at",
             sa.TIMESTAMP(timezone=True),
@@ -164,10 +165,10 @@ def downgrade() -> None:
     op.drop_index("idx_mas_ce_ce_id", table_name="mas_cognition_engines")
     op.drop_table("mas_cognition_engines")
 
-    # --- cognition_engine: enabled / auto_attach ---
-    op.drop_index("idx_ce_auto_attach", table_name="cognition_engine")
+    # --- cognition_engine: enabled / mas_auto_associate ---
+    op.drop_index("idx_ce_mas_auto_associate", table_name="cognition_engine")
     op.drop_index("idx_ce_enabled", table_name="cognition_engine")
-    op.drop_column("cognition_engine", "auto_attach")
+    op.drop_column("cognition_engine", "mas_auto_associate")
     op.drop_column("cognition_engine", "enabled")
 
     # --- cognition_engine: indexes and unique key ---
@@ -183,7 +184,8 @@ def downgrade() -> None:
     op.drop_column("cognition_engine", "auth")
     op.drop_column("cognition_engine", "last_seen")
     op.drop_column("cognition_engine", "status")
-    op.drop_column("cognition_engine", "type")
+    op.drop_column("cognition_engine", "subkind")
+    op.drop_column("cognition_engine", "kind")
     op.drop_column("cognition_engine", "version")
     op.drop_column("cognition_engine", "url")
     op.drop_column("cognition_engine", "cfn_id")

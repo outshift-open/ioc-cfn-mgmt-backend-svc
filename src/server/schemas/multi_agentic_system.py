@@ -67,9 +67,9 @@ class MultiAgenticSystemRequest(BaseModel):
         None,
         description="Configuration object",
     )
-    task_schedule: Optional[Dict[str, Any]] = Field(
+    cognition_engine_ids: Optional[List[str]] = Field(
         None,
-        description="Task schedule configuration (task_name, enabled, schedule)",
+        description="CE IDs to associate with this MAS on creation. Additive — auto-attach CEs are also attached.",
     )
 
 
@@ -98,9 +98,13 @@ class MultiAgenticSystemUpdate(BaseModel):
         None,
         description="Updated configuration object",
     )
-    task_schedule: Optional[Dict[str, Any]] = Field(
+    cognition_engine_ids: Optional[List[str]] = Field(
         None,
-        description="Updated task schedule configuration (task_name, enabled, schedule)",
+        description="CE IDs to sync with this MAS. Attaches new ones, detaches removed ones. Omit to leave unchanged.",
+    )
+    cognition_engine_configs: Optional[Dict[str, Any]] = Field(
+        None,
+        description="Per-CE mas_config overrides, keyed by ce_id. Overrides the CE factory defaults for this MAS only.",
     )
 
 
@@ -170,7 +174,6 @@ class MultiAgenticSystem(BaseModel):
         None, description="List of agents with their memory provider configurations"
     )
     config: Optional[Dict[str, Any]] = None
-    task_schedule: Optional[Dict[str, Any]] = None
     created_at: datetime
     updated_at: Optional[datetime] = None
     created_by: Optional[str] = None

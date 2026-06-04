@@ -5,11 +5,11 @@
 """Cognition Engine service - Business logic for Cognition Engine operations"""
 
 import copy
+import logging
 from datetime import datetime, timedelta, timezone
 from typing import Optional
 
 from fastapi import HTTPException, status
-from sqlalchemy import and_
 
 from server.database.relational_db.db import RelationalDB
 from server.database.relational_db.models.cognition_engine import CognitionEngine as CognitionEngineModel
@@ -27,7 +27,7 @@ from server.schemas.cognition_engine import (
 from server.utils import generate_uuid
 from server.utils.encryption import process_config_for_storage
 
-_IMMUTABLE_CE_FIELDS = {"url", "cfn_id", "version", "name", "type"}
+_IMMUTABLE_CE_FIELDS = {"cfn_id", "version", "name", "kind", "subkind"}
 
 
 class CognitionEngineService:
@@ -76,11 +76,12 @@ class CognitionEngineService:
 
                 if existing:
                     existing.url = engine_data.url
-                    existing.type = engine_data.type
+                    existing.kind = engine_data.kind
+                    existing.subkind = engine_data.subkind
                     existing.auth = _auth_for_storage(engine_data.auth)
                     existing.capabilities = engine_data.capabilities or []
                     existing.metrics = engine_data.metrics or []
-                    existing.auto_attach = engine_data.auto_attach
+                    existing.mas_auto_associate = engine_data.mas_auto_associate
                     existing.config = engine_data.config or {}
                     existing.mas_config = engine_data.mas_config or {}
                     existing.updated_by = user_id
@@ -95,12 +96,13 @@ class CognitionEngineService:
                         name=engine_data.name,
                         url=engine_data.url,
                         version=engine_data.version,
-                        type=engine_data.type,
+                        kind=engine_data.kind,
+                        subkind=engine_data.subkind,
                         auth=_auth_for_storage(engine_data.auth),
                         capabilities=engine_data.capabilities or [],
                         metrics=engine_data.metrics or [],
                         enabled=True,
-                        auto_attach=engine_data.auto_attach,
+                        mas_auto_associate=engine_data.mas_auto_associate,
                         status="offline",
                         config=engine_data.config or {},
                         mas_config=engine_data.mas_config or {},
@@ -117,9 +119,10 @@ class CognitionEngineService:
                         cfn_id=engine.cfn_id,
                         name=engine.name,
                         version=engine.version,
-                        type=engine.type,
+                        kind=engine.kind,
+                        subkind=engine.subkind,
                         enabled=engine.enabled,
-                        auto_attach=engine.auto_attach,
+                        mas_auto_associate=engine.mas_auto_associate,
                         status=engine.status,
                         created=created,
                     ),
@@ -212,10 +215,11 @@ class CognitionEngineService:
                             cfn_id=e.cfn_id,
                             name=e.name,
                             version=e.version,
-                            type=e.type,
+                            kind=e.kind,
+                            subkind=e.subkind,
                             url=e.url,
                             enabled=e.enabled,
-                            auto_attach=e.auto_attach,
+                            mas_auto_associate=e.mas_auto_associate,
                             status=e.status,
                             last_seen=e.last_seen,
                             config=e.config,
@@ -271,6 +275,15 @@ class CognitionEngineService:
                         detail="CE must be disabled before it can be deleted",
                     )
 
+                from server.database.relational_db.models.mas_cognition_engine import MasCognitionEngine
+
+                attached = session.query(MasCognitionEngine).filter(MasCognitionEngine.ce_id == ce_id).count()
+                if attached:
+                    raise HTTPException(
+                        status_code=status.HTTP_409_CONFLICT,
+                        detail="CE cannot be deleted while it is associated with one or more MAS",
+                    )
+
                 cfn_id = engine.cfn_id
                 engine.deleted_at = datetime.now(timezone.utc)
                 engine.updated_by = user_id
@@ -322,34 +335,28 @@ class CognitionEngineService:
                 _validate_cfn_active(session, engine.cfn_id)
 
                 engine.last_seen = datetime.now(timezone.utc)
-                if engine.status == "offline":
+                transitioned = engine.status == "offline"
+                if transitioned:
                     engine.status = "online"
 
                 session.commit()
                 session.refresh(engine)
 
-                last_seen = (
-                    engine.last_seen.replace(tzinfo=timezone.utc)
-                    if engine.last_seen and engine.last_seen.tzinfo is None
-                    else engine.last_seen
-                )
-
-                return CognitionEngineHeartbeatResponse(
+                cfn_id = engine.cfn_id
+                response = CognitionEngineHeartbeatResponse(
                     status=engine.status,
-                    last_seen=last_seen,
+                    last_seen=engine.last_seen,
                 )
 
-            except HTTPException:
-                session.rollback()
-                raise
-            except Exception as e:
-                session.rollback()
-                raise HTTPException(
-                    status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                    detail=f"Failed to process heartbeat: {str(e)}",
-                )
             finally:
                 session.close()
+
+            if transitioned:
+                from server.services.cognition_fabric_node import cognition_fabric_node_service
+
+                cognition_fabric_node_service.update_config_for_cfn(cfn_id)
+
+            return response
 
         except HTTPException:
             raise
@@ -397,6 +404,8 @@ class CognitionEngineService:
 
                 _validate_cfn_active(session, engine.cfn_id)
 
+                if "url" in provided:
+                    engine.url = provided["url"]
                 if "enabled" in provided:
                     if not provided["enabled"]:
                         from server.database.relational_db.models.mas_cognition_engine import MasCognitionEngine
@@ -418,8 +427,8 @@ class CognitionEngineService:
                     engine.mas_config = provided["mas_config"]
                 if "auth" in provided:
                     engine.auth = _auth_for_storage(provided["auth"])
-                if "auto_attach" in provided:
-                    engine.auto_attach = provided["auto_attach"]
+                if "mas_auto_associate" in provided:
+                    engine.mas_auto_associate = provided["mas_auto_associate"]
 
                 engine.updated_by = user_id
                 engine.updated_at = datetime.now(timezone.utc)
@@ -494,6 +503,8 @@ class CognitionEngineService:
                         detail="MAS belongs to a workspace on a different CFN than the CE",
                     )
 
+                workspace_id = mas.workspace_id  # Capture before commit expires attributes
+
                 existing = (
                     session.query(MasCognitionEngine)
                     .filter(
@@ -511,13 +522,14 @@ class CognitionEngineService:
                 association = MasCognitionEngine(
                     mas_id=mas_id,
                     ce_id=ce_id,
+                    mas_config=copy.deepcopy(engine.mas_config) if engine.mas_config else None,
                     created_by=user_id,
                 )
                 session.add(association)
                 session.commit()
                 session.refresh(association)
 
-                return CognitionEngineAssociateResponse(
+                response = CognitionEngineAssociateResponse(
                     ce_id=ce_id,
                     mas_id=mas_id,
                     created_at=association.created_at,
@@ -525,6 +537,12 @@ class CognitionEngineService:
 
             finally:
                 session.close()
+
+            from server.services.cognition_fabric_node import cognition_fabric_node_service
+
+            cognition_fabric_node_service.update_config_for_workspace(workspace_id)
+
+            return response
 
         except HTTPException:
             raise
@@ -534,7 +552,7 @@ class CognitionEngineService:
                 detail=f"Failed to associate cognition engine: {str(e)}",
             )
 
-    def disassociate(self, ce_id: str, mas_id: str, user_id: str) -> None:
+    def disassociate(self, ce_id: str, mas_id: str, user_id: str, workspace_id: Optional[str] = None) -> None:
         """
         Remove the association between a CE and a MAS.
 
@@ -580,6 +598,11 @@ class CognitionEngineService:
             finally:
                 session.close()
 
+            if workspace_id:
+                from server.services.cognition_fabric_node import cognition_fabric_node_service
+
+                cognition_fabric_node_service.update_config_for_workspace(workspace_id)
+
         except HTTPException:
             raise
         except Exception as e:
@@ -613,13 +636,16 @@ class CognitionEngineService:
                         "id": e.id,
                         "name": e.name,
                         "url": e.url,
-                        "type": e.type,
+                        "kind": e.kind,
+                        "subkind": e.subkind,
                         "enabled": e.enabled,
                         "status": e.status,
+                        "last_seen": e.last_seen.isoformat() if e.last_seen else None,
                         "capabilities": e.capabilities or [],
                         "metrics": e.metrics or [],
                         "config": e.config or {},
                         "mas_config": e.mas_config or {},
+                        "mas_auto_associate": e.mas_auto_associate,
                         "auth": e.auth,
                     }
                     for e in engines
@@ -629,8 +655,6 @@ class CognitionEngineService:
                 session.close()
 
         except Exception as e:
-            import logging
-
             logging.getLogger(__name__).error(f"Failed to list cognition engines for CFN: {str(e)}")
             return []
 
@@ -650,20 +674,17 @@ class CognitionEngineService:
                 stale_engines = (
                     session.query(CognitionEngineModel)
                     .filter(
-                        and_(
-                            CognitionEngineModel.status == "online",
-                            CognitionEngineModel.last_seen < threshold_time,
-                            CognitionEngineModel.deleted_at.is_(None),
-                        )
+                        CognitionEngineModel.status == "online",
+                        CognitionEngineModel.last_seen < threshold_time,
+                        CognitionEngineModel.deleted_at.is_(None),
                     )
                     .all()
                 )
 
-                count = 0
                 for engine in stale_engines:
                     engine.status = "offline"
-                    count += 1
 
+                count = len(stale_engines)
                 if count > 0:
                     session.commit()
 
@@ -673,13 +694,11 @@ class CognitionEngineService:
                 session.close()
 
         except Exception as e:
-            import logging
-
             logging.getLogger(__name__).error(f"Error marking stale cognition engines offline: {str(e)}")
             return 0
 
     def auto_attach_for_new_mas(self, mas_id: str, cfn_id: str) -> None:
-        """Auto-attach: on MAS create/update, associate all enabled auto_attach=True CEs in the CFN."""
+        """Auto-associate: on MAS create/update, associate all enabled mas_auto_associate=True CEs in the CFN."""
         if not cfn_id:
             return
 
@@ -695,7 +714,7 @@ class CognitionEngineService:
                     for row in session.query(CognitionEngineModel.id)
                     .filter(
                         CognitionEngineModel.cfn_id == cfn_id,
-                        CognitionEngineModel.auto_attach.is_(True),
+                        CognitionEngineModel.mas_auto_associate.is_(True),
                         CognitionEngineModel.enabled.is_(True),
                         CognitionEngineModel.deleted_at.is_(None),
                     )
@@ -721,8 +740,6 @@ class CognitionEngineService:
                 session.close()
 
         except Exception as e:
-            import logging
-
             logging.getLogger(__name__).error(f"Auto-attach MAS {mas_id} to CEs failed: {e}")
 
 
@@ -752,10 +769,11 @@ def _to_detail(engine: CognitionEngineModel) -> CognitionEngineDetail:
         cfn_id=engine.cfn_id,
         name=engine.name,
         version=engine.version,
-        type=engine.type,
+        kind=engine.kind,
+        subkind=engine.subkind,
         url=engine.url,
         enabled=engine.enabled,
-        auto_attach=engine.auto_attach,
+        mas_auto_associate=engine.mas_auto_associate,
         capabilities=engine.capabilities,
         metrics=engine.metrics,
         status=engine.status,

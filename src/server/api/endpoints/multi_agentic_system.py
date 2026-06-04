@@ -55,7 +55,7 @@ def create_multi_agentic_system(
     """
     check_workspace_exists(workspace_id)
     authz_service.require_permission(auth_user, "create", "multi_agentic_system")
-    return multi_agentic_system_service.create(workspace_id, mas_data)
+    return multi_agentic_system_service.create(workspace_id, mas_data, auth_user["id"])
 
 
 @router.get(
@@ -146,7 +146,7 @@ def update_multi_agentic_system(
     """
     check_workspace_exists(workspace_id)
     authz_service.require_permission(auth_user, "update", "multi_agentic_system")
-    return multi_agentic_system_service.update(workspace_id, mas_id, mas_data)
+    return multi_agentic_system_service.update(workspace_id, mas_id, mas_data, auth_user["id"])
 
 
 @router.delete(
@@ -210,4 +210,4 @@ def disassociate_cognition_engine(
 
     check_workspace_exists(workspace_id)
     authz_service.require_permission(auth_user, "disassociate", "multi_agentic_system")
-    cognition_engine_service.disassociate(ce_id, mas_id, auth_user.get("id", "unknown"))
+    cognition_engine_service.disassociate(ce_id, mas_id, auth_user.get("id", "unknown"), workspace_id)

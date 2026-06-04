@@ -1108,9 +1108,18 @@ class CognitionFabricNodeService:
             if workspace_ids is None:
                 workspace_ids = self._get_workspace_ids(session, cfn_id)
 
+            # Fetch Cognition Engines (CFN-scoped) up front so they can be embedded in MAS objects
+            try:
+                engines_payload = [
+                    {**e, "auth": process_config_for_cfn({"auth": e["auth"]}).get("auth") if e["auth"] else None}
+                    for e in cognition_engine_service.list_for_cfn(cfn_id)
+                ]
+            except Exception:
+                engines_payload = []
+            ce_by_id = {e["id"]: e for e in engines_payload}
+
             workspaces_payload = []
             for ws_id in workspace_ids:
-                # Fetch workspace directly from DB to avoid permission checks
                 workspace = (
                     session.query(WorkspaceModel)
                     .filter(
@@ -1134,6 +1143,8 @@ class CognitionFabricNodeService:
 
                 # Get Multi-Agentic Systems for this workspace
                 try:
+                    from server.database.relational_db.models.mas_cognition_engine import MasCognitionEngine
+
                     mas_systems = multi_agentic_system_service.list(ws_id).systems
                     mas_systems_data = []
                     for system in mas_systems:
@@ -1152,6 +1163,20 @@ class CognitionFabricNodeService:
                                     agent["agentic_memory"]["config"] = process_config_for_cfn(
                                         agent["agentic_memory"]["config"]
                                     )
+
+                        # Embed minimal CE info per MAS: id, name, and effective mas_config
+                        # (junction override if set, otherwise CE factory default)
+                        system_data["cognition_engines"] = [
+                            {
+                                "id": row.ce_id,
+                                "name": ce_by_id[row.ce_id]["name"],
+                                "mas_config": (
+                                    row.mas_config if row.mas_config is not None else ce_by_id[row.ce_id]["mas_config"]
+                                ),
+                            }
+                            for row in session.query(MasCognitionEngine).filter(MasCognitionEngine.mas_id == system.id)
+                            if row.ce_id in ce_by_id
+                        ]
 
                         mas_systems_data.append(system_data)
 
@@ -1176,15 +1201,6 @@ class CognitionFabricNodeService:
                 ]
             except Exception:
                 providers_payload = []
-
-            # Fetch Cognition Engines (CFN-scoped, not workspace-scoped)
-            try:
-                engines_payload = [
-                    {**e, "auth": process_config_for_cfn({"auth": e["auth"]}).get("auth") if e["auth"] else None}
-                    for e in cognition_engine_service.list_for_cfn(cfn_id)
-                ]
-            except Exception:
-                engines_payload = []
 
             return {
                 "config_version": config_version,

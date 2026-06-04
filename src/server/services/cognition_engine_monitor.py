@@ -55,4 +55,4 @@ class CognitionEngineMonitor:
 
 
 # Global instance
-cognition_engine_monitor = CognitionEngineMonitor(check_interval_seconds=60, offline_threshold_minutes=2)
+cognition_engine_monitor = CognitionEngineMonitor()

@@ -80,7 +80,7 @@ def get_cognition_engine(
     summary="Update Cognition Engine",
     description=(
         "Partially update a Cognition Engine. "
-        "Immutable fields (url, cfn_id, version, name, type, auto_attach) cannot be updated — returns 400 if attempted."
+        "Immutable fields (cfn_id, version, name, kind, subkind) cannot be updated — returns 400 if attempted."
     ),
 )
 def patch_cognition_engine(

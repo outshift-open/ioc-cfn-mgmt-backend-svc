@@ -611,3 +611,121 @@ class TestMASQueryByIdentity:
         assert len(systems) == 1
         agents = systems[0]["agents"]
         assert len(agents) == 2
+
+
+class TestMASInlineCEAssociation:
+    """Tests for cognition_engine_ids in MAS create and update payloads."""
+
+    def _register_ce(self, client, cfn_id: str, name: str) -> str:
+        resp = client.post(
+            "/api/cognition-engines",
+            json={"cfn_id": cfn_id, "name": name, "url": "http://ce:8080", "version": "1.0.0"},
+        )
+        assert resp.status_code == 201
+        return resp.json()["ce_id"]
+
+    def test_create_with_cognition_engine_ids_associates_ces(self, client, registered_cfn, created_workspace):
+        """CEs listed in cognition_engine_ids are associated with the MAS on creation."""
+        ce_id = self._register_ce(client, registered_cfn, "inline-create-ce")
+
+        resp = client.post(
+            f"/api/workspaces/{created_workspace}/multi-agentic-systems",
+            json={"name": "inline-create-mas", "cognition_engine_ids": [ce_id]},
+        )
+        assert resp.status_code == 201
+        mas_id = resp.json()["id"]
+
+        # Verify the association exists — a duplicate associate returns 409
+        assoc = client.post(
+            f"/api/workspaces/{created_workspace}/multi-agentic-systems/{mas_id}/cognition-engines",
+            json={"ce_id": ce_id},
+        )
+        assert assoc.status_code == 409
+
+    def test_create_with_cognition_engine_ids_is_additive_with_auto_attach(
+        self, client, registered_cfn, created_workspace
+    ):
+        """auto_attach CE + explicit CE in cognition_engine_ids both get associated; no error on overlap."""
+        auto_ce_id = self._register_ce(client, registered_cfn, "inline-auto-ce")
+        # Set mas_auto_associate so it attaches on MAS create
+        client.patch(f"/api/cognition-engines/{auto_ce_id}", json={"mas_auto_associate": True})
+
+        explicit_ce_id = self._register_ce(client, registered_cfn, "inline-explicit-ce")
+
+        resp = client.post(
+            f"/api/workspaces/{created_workspace}/multi-agentic-systems",
+            json={"name": "inline-additive-mas", "cognition_engine_ids": [auto_ce_id, explicit_ce_id]},
+        )
+        assert resp.status_code == 201
+
+    def test_create_omitting_cognition_engine_ids_leaves_associations_unchanged(
+        self, client, created_workspace
+    ):
+        """Omitting cognition_engine_ids on create results in no CE associations (beyond auto-attach)."""
+        resp = client.post(
+            f"/api/workspaces/{created_workspace}/multi-agentic-systems",
+            json={"name": "inline-omit-mas"},
+        )
+        assert resp.status_code == 201
+
+    def test_update_cognition_engine_ids_attaches_new_and_detaches_removed(
+        self, client, registered_cfn, created_workspace
+    ):
+        """Update with cognition_engine_ids syncs associations: attaches new, detaches removed."""
+        ce1_id = self._register_ce(client, registered_cfn, "inline-update-ce1")
+        ce2_id = self._register_ce(client, registered_cfn, "inline-update-ce2")
+
+        mas_id = client.post(
+            f"/api/workspaces/{created_workspace}/multi-agentic-systems",
+            json={"name": "inline-update-mas", "cognition_engine_ids": [ce1_id]},
+        ).json()["id"]
+
+        # Update: swap ce1 for ce2
+        resp = client.put(
+            f"/api/workspaces/{created_workspace}/multi-agentic-systems/{mas_id}",
+            json={"cognition_engine_ids": [ce2_id]},
+        )
+        assert resp.status_code == 200
+
+        # ce2 is now attached (duplicate → 409)
+        assert client.post(
+            f"/api/workspaces/{created_workspace}/multi-agentic-systems/{mas_id}/cognition-engines",
+            json={"ce_id": ce2_id},
+        ).status_code == 409
+
+        # ce1 is now detached (can be re-attached → 201)
+        assert client.post(
+            f"/api/workspaces/{created_workspace}/multi-agentic-systems/{mas_id}/cognition-engines",
+            json={"ce_id": ce1_id},
+        ).status_code == 201
+
+    def test_update_omitting_cognition_engine_ids_leaves_associations_unchanged(
+        self, client, registered_cfn, created_workspace
+    ):
+        """Omitting cognition_engine_ids on update does not touch existing associations."""
+        ce_id = self._register_ce(client, registered_cfn, "inline-omit-update-ce")
+
+        mas_id = client.post(
+            f"/api/workspaces/{created_workspace}/multi-agentic-systems",
+            json={"name": "inline-omit-update-mas", "cognition_engine_ids": [ce_id]},
+        ).json()["id"]
+
+        # Update without cognition_engine_ids — association must still be there
+        client.put(
+            f"/api/workspaces/{created_workspace}/multi-agentic-systems/{mas_id}",
+            json={"name": "inline-omit-update-mas-renamed"},
+        )
+
+        # Association still present → duplicate returns 409
+        assert client.post(
+            f"/api/workspaces/{created_workspace}/multi-agentic-systems/{mas_id}/cognition-engines",
+            json={"ce_id": ce_id},
+        ).status_code == 409
+
+    def test_create_with_invalid_ce_id_returns_error(self, client, created_workspace):
+        """Including a non-existent CE ID in cognition_engine_ids propagates the error."""
+        resp = client.post(
+            f"/api/workspaces/{created_workspace}/multi-agentic-systems",
+            json={"name": "inline-bad-ce-mas", "cognition_engine_ids": ["nonexistent-ce"]},
+        )
+        assert resp.status_code != 201

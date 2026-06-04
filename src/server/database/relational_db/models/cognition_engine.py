@@ -28,7 +28,8 @@ class CognitionEngine(Base):
     auth = Column(JSONB, nullable=True)
 
     # Type and capabilities
-    type = Column(String(50), nullable=False, default="custom")
+    kind = Column(String(50), nullable=True)
+    subkind = Column(String(50), nullable=True)
     capabilities = Column(JSONB, nullable=True, default=list)
     metrics = Column(JSONB, nullable=True, default=list)
 
@@ -37,7 +38,7 @@ class CognitionEngine(Base):
 
     # Lifecycle
     enabled = Column(Boolean, nullable=False, default=True)
-    auto_attach = Column(Boolean, nullable=False, default=False)
+    mas_auto_associate = Column(Boolean, nullable=False, default=False)
 
     # Status
     status = Column(String(20), nullable=False, default="offline")

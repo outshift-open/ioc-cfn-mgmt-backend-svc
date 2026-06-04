@@ -7,6 +7,7 @@
 from datetime import datetime, timezone
 
 from sqlalchemy import TIMESTAMP, Column, ForeignKey, Index, String
+from sqlalchemy.dialects.postgresql import JSONB
 
 from server.database.relational_db.models import Base
 
@@ -28,6 +29,7 @@ class MasCognitionEngine(Base):
         primary_key=True,
         nullable=False,
     )
+    mas_config = Column(JSONB, nullable=True)
     created_at = Column(
         TIMESTAMP(timezone=True),
         nullable=False,
