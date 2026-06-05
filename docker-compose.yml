@@ -65,7 +65,7 @@ services:
       context: .
       dockerfile: Dockerfile
     # Image Link: https://github.com/orgs/cisco-eti/packages/container/package/ioc-cfn-mgmt-plane-svc
-    image: ghcr.io/cisco-eti/ioc-cfn-mgmt-plane-svc:2026-06-04-3383e20
+    image: ghcr.io/cisco-eti/ioc-cfn-mgmt-plane-svc:2026-06-05-8c80bbb
     platform: ${DOCKER_DEFAULT_PLATFORM}
     profiles:
       - full-stack
@@ -218,7 +218,7 @@ services:
       - LLM_MODEL=${LLM_MODEL}
       - ENABLE_DEDUP=true
       # Auto-register with management plane on startup
-      - MGMT_PLANE_URL=http://ioc-cfn-mgmt-plane-svc:9000
+      - MGMT_PLANE_URL=http://ioc-cfn-mgmt-plane-svc:9000 # TODO: remove this after CE/CFN auto-registration changes merged in
       - COGNITION_ENGINE_HOST=ioc-cfn-cognition-engine
       - COGNITION_ENGINE_PORT=9004
       - CFN_URL=http://ioc-cfn-svc:9002
