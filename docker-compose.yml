@@ -171,7 +171,7 @@ services:
   # Port Mapping(MCP): 9009:9001 (different port inside and outside container)
   ioc-cfn-svc:
     # Image Link: https://github.com/orgs/cisco-eti/packages/container/package/ioc-cfn-svc
-    image: ghcr.io/cisco-eti/ioc-cfn-svc:2026-06-05-b520f71
+    image: ghcr.io/cisco-eti/ioc-cfn-svc:2026-06-05-1720fbc
     container_name: ioc-cfn-svc
     platform: ${DOCKER_DEFAULT_PLATFORM}
     profiles:
@@ -217,7 +217,7 @@ services:
 
   ioc-cfn-cognition-engine:
     # Image Link: https://github.com/orgs/cisco-eti/packages/container/package/ioc-cfn-cognition-engine
-    image: ghcr.io/cisco-eti/ioc-cfn-cognition-engine:2026-05-22-cfb858c
+    image: ghcr.io/cisco-eti/ioc-cfn-cognition-engine:2026-06-05-fb52361
     ports:
       - "9004:9004"
     platform: ${DOCKER_DEFAULT_PLATFORM}
@@ -229,11 +229,10 @@ services:
       - LLM_API_KEY=${LLM_API_KEY}
       - LLM_MODEL=${LLM_MODEL}
       - ENABLE_DEDUP=true
-      # Auto-register with management plane on startup
-      - MGMT_PLANE_URL=http://ioc-cfn-mgmt-plane-svc:9000 # TODO: remove this after CE/CFN auto-registration changes merged in
+      # CE lifecycle management - auto-registration and heartbeat
+      - CFN_URL=http://ioc-cfn-svc:9002
       - COGNITION_ENGINE_HOST=ioc-cfn-cognition-engine
       - COGNITION_ENGINE_PORT=9004
-      - CFN_URL=http://ioc-cfn-svc:9002
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:9004/health"]
       interval: 30s
