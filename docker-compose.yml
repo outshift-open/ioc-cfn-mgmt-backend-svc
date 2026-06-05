@@ -202,6 +202,18 @@ services:
         condition: service_healthy
       ioc-knowledge-memory-svc:
         condition: service_healthy
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "curl",
+          "-f",
+          "http://localhost:9002/api/internal/diagnostics/health",
+        ]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
 
   ioc-cfn-cognition-engine:
     # Image Link: https://github.com/orgs/cisco-eti/packages/container/package/ioc-cfn-cognition-engine
@@ -230,6 +242,8 @@ services:
       start_period: 40s
     depends_on:
       ioc-cfn-mgmt-plane-svc:
+        condition: service_healthy
+      ioc-cfn-svc:
         condition: service_healthy
 
 volumes:
