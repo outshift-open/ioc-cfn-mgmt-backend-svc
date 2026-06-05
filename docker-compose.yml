@@ -171,7 +171,7 @@ services:
   # Port Mapping(MCP): 9009:9001 (different port inside and outside container)
   ioc-cfn-svc:
     # Image Link: https://github.com/orgs/cisco-eti/packages/container/package/ioc-cfn-svc
-    image: ghcr.io/cisco-eti/ioc-cfn-svc:2026-06-05-1720fbc
+    image: ghcr.io/cisco-eti/ioc-cfn-svc:2026-06-05-337825d
     container_name: ioc-cfn-svc
     platform: ${DOCKER_DEFAULT_PLATFORM}
     profiles:
@@ -217,7 +217,7 @@ services:
 
   ioc-cfn-cognition-engine:
     # Image Link: https://github.com/orgs/cisco-eti/packages/container/package/ioc-cfn-cognition-engine
-    image: ghcr.io/cisco-eti/ioc-cfn-cognition-engine:2026-06-05-fb52361
+    image: ghcr.io/cisco-eti/ioc-cfn-cognition-engine:2026-06-05-e1e8618
     ports:
       - "9004:9004"
     platform: ${DOCKER_DEFAULT_PLATFORM}
