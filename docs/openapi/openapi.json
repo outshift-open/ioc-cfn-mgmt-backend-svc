@@ -2962,6 +2962,11 @@
               }
             ],
             "title": "Mas Config"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
           }
         },
         "type": "object",
@@ -2978,7 +2983,8 @@
           "status",
           "last_seen",
           "config",
-          "mas_config"
+          "mas_config",
+          "created_at"
         ],
         "title": "CognitionEngineListItem",
         "description": "Schema for a cognition engine in the list response"
@@ -3846,6 +3852,77 @@
         "title": "MasCognitionEngineAssociateRequest",
         "description": "Schema for adding a Cognition Engine to a MAS"
       },
+      "MasCognitionEngineItem": {
+        "properties": {
+          "ce_id": {
+            "type": "string",
+            "title": "Ce Id"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "kind": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Kind"
+          },
+          "subkind": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Subkind"
+          },
+          "url": {
+            "type": "string",
+            "title": "Url"
+          },
+          "enabled": {
+            "type": "boolean",
+            "title": "Enabled"
+          },
+          "status": {
+            "type": "string",
+            "title": "Status"
+          },
+          "mas_config": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Mas Config"
+          }
+        },
+        "type": "object",
+        "required": [
+          "ce_id",
+          "name",
+          "kind",
+          "subkind",
+          "url",
+          "enabled",
+          "status",
+          "mas_config"
+        ],
+        "title": "MasCognitionEngineItem",
+        "description": "Schema for a cognition engine associated with a MAS"
+      },
       "MemoryProviderAuthConfig": {
         "properties": {
           "type": {
@@ -4245,6 +4322,20 @@
               }
             ],
             "title": "Config"
+          },
+          "cognition_engines": {
+            "anyOf": [
+              {
+                "items": {
+                  "$ref": "#/components/schemas/MasCognitionEngineItem"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cognition Engines"
           },
           "created_at": {
             "type": "string",

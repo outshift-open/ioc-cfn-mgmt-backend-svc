@@ -224,6 +224,7 @@ class CognitionEngineService:
                             last_seen=e.last_seen,
                             config=e.config,
                             mas_config=e.mas_config,
+                            created_at=e.created_at,
                         )
                         for e in engines
                     ],

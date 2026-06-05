@@ -124,6 +124,19 @@ class MultiAgenticSystemResponse(BaseModel):
     name: str = Field(..., description="Name of the multi-agentic system")
 
 
+class MasCognitionEngineItem(BaseModel):
+    """Schema for a cognition engine associated with a MAS"""
+
+    ce_id: str
+    name: str
+    kind: Optional[str]
+    subkind: Optional[str]
+    url: str
+    enabled: bool
+    status: str
+    mas_config: Optional[dict]
+
+
 class MultiAgenticSystem(BaseModel):
     """Schema for detailed multi-agentic system information"""
 
@@ -174,6 +187,7 @@ class MultiAgenticSystem(BaseModel):
         None, description="List of agents with their memory provider configurations"
     )
     config: Optional[Dict[str, Any]] = None
+    cognition_engines: Optional[List[MasCognitionEngineItem]] = None
     created_at: datetime
     updated_at: Optional[datetime] = None
     created_by: Optional[str] = None

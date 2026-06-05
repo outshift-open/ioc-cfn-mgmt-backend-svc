@@ -18,6 +18,7 @@ from server.schemas.multi_agentic_system import (
     AgentWithMemory,
     AgentIdentity,
     MASQueryByIdentity,
+    MasCognitionEngineItem,
 )
 from server.database.relational_db.models.multi_agentic_system import MultiAgenticSystem as MultiAgenticSystemModel
 from server.database.relational_db.models.agent import Agent as AgentModel
@@ -65,7 +66,13 @@ class MultiAgenticSystemService:
             config=agent_row.config,
         )
 
-    def _enrich_mas(self, mas: MultiAgenticSystemModel, agents: list, provider_map: dict) -> MultiAgenticSystemSchema:
+    def _enrich_mas(
+        self,
+        mas: MultiAgenticSystemModel,
+        agents: list,
+        provider_map: dict,
+        ce_associations: list = None,
+    ) -> MultiAgenticSystemSchema:
         shared_memory = None
         if mas.shared_memory_provider_id and mas.shared_memory_provider_id in provider_map:
             shared_memory = self._build_memory_detail(provider_map[mas.shared_memory_provider_id])
@@ -80,6 +87,7 @@ class MultiAgenticSystemService:
             shared_memory=shared_memory,
             agents=enriched_agents,
             config=mas.config,
+            cognition_engines=ce_associations or [],
             created_at=mas.created_at,
             updated_at=mas.updated_at,
             created_by=mas.created_by,
@@ -373,8 +381,36 @@ class MultiAgenticSystemService:
                     )
                     provider_map = {p.id: p for p in providers}
 
+                from server.database.relational_db.models.mas_cognition_engine import MasCognitionEngine
+                from server.database.relational_db.models.cognition_engine import (
+                    CognitionEngine as CognitionEngineModel,
+                )
+
+                ce_by_mas = {}
+                if mas_ids:
+                    ce_rows = (
+                        session.query(MasCognitionEngine, CognitionEngineModel)
+                        .join(CognitionEngineModel, MasCognitionEngine.ce_id == CognitionEngineModel.id)
+                        .filter(MasCognitionEngine.mas_id.in_(mas_ids))
+                        .all()
+                    )
+                    for junc, ce in ce_rows:
+                        ce_by_mas.setdefault(junc.mas_id, []).append(
+                            MasCognitionEngineItem(
+                                ce_id=junc.ce_id,
+                                name=ce.name,
+                                kind=ce.kind,
+                                subkind=ce.subkind,
+                                url=ce.url,
+                                enabled=ce.enabled,
+                                status=ce.status,
+                                mas_config=junc.mas_config,
+                            )
+                        )
+
                 system_responses = [
-                    self._enrich_mas(mas, agents_by_mas.get(mas.id, []), provider_map) for mas in systems
+                    self._enrich_mas(mas, agents_by_mas.get(mas.id, []), provider_map, ce_by_mas.get(mas.id, []))
+                    for mas in systems
                 ]
 
                 return MultiAgenticSystems(systems=system_responses)
@@ -434,7 +470,32 @@ class MultiAgenticSystemService:
                     )
                     provider_map = {p.id: p for p in providers}
 
-                return self._enrich_mas(mas, agents, provider_map)
+                from server.database.relational_db.models.mas_cognition_engine import MasCognitionEngine
+                from server.database.relational_db.models.cognition_engine import (
+                    CognitionEngine as CognitionEngineModel,
+                )
+
+                ce_rows = (
+                    session.query(MasCognitionEngine, CognitionEngineModel)
+                    .join(CognitionEngineModel, MasCognitionEngine.ce_id == CognitionEngineModel.id)
+                    .filter(MasCognitionEngine.mas_id == mas_id)
+                    .all()
+                )
+                ce_associations = [
+                    MasCognitionEngineItem(
+                        ce_id=junc.ce_id,
+                        name=ce.name,
+                        kind=ce.kind,
+                        subkind=ce.subkind,
+                        url=ce.url,
+                        enabled=ce.enabled,
+                        status=ce.status,
+                        mas_config=junc.mas_config,
+                    )
+                    for junc, ce in ce_rows
+                ]
+
+                return self._enrich_mas(mas, agents, provider_map, ce_associations)
 
             finally:
                 session.close()
@@ -556,9 +617,12 @@ class MultiAgenticSystemService:
                 workspace_cfn_id = workspace_obj.cfn_id if workspace_obj else None
                 cognition_engine_service.auto_attach_for_new_mas(mas.id, workspace_cfn_id)
 
-                if mas_data.cognition_engine_ids is not None:
-                    from server.database.relational_db.models.mas_cognition_engine import MasCognitionEngine
+                from server.database.relational_db.models.mas_cognition_engine import MasCognitionEngine
+                from server.database.relational_db.models.cognition_engine import (
+                    CognitionEngine as CognitionEngineModel,
+                )
 
+                if mas_data.cognition_engine_ids is not None:
                     incoming = set(mas_data.cognition_engine_ids)
                     existing_ce_ids = {
                         row.ce_id
@@ -569,7 +633,27 @@ class MultiAgenticSystemService:
                     for ce_id in existing_ce_ids - incoming:
                         cognition_engine_service.disassociate(ce_id, mas.id, user_id)
 
-                return self._enrich_mas(mas, agents, provider_map)
+                ce_rows = (
+                    session.query(MasCognitionEngine, CognitionEngineModel)
+                    .join(CognitionEngineModel, MasCognitionEngine.ce_id == CognitionEngineModel.id)
+                    .filter(MasCognitionEngine.mas_id == mas.id)
+                    .all()
+                )
+                ce_associations = [
+                    MasCognitionEngineItem(
+                        ce_id=junc.ce_id,
+                        name=ce.name,
+                        kind=ce.kind,
+                        subkind=ce.subkind,
+                        url=ce.url,
+                        enabled=ce.enabled,
+                        status=ce.status,
+                        mas_config=junc.mas_config,
+                    )
+                    for junc, ce in ce_rows
+                ]
+
+                return self._enrich_mas(mas, agents, provider_map, ce_associations)
 
             except IntegrityError as e:
                 session.rollback()
@@ -664,8 +748,35 @@ class MultiAgenticSystemService:
                     )
                     provider_map = {p.id: p for p in providers}
 
+                from server.database.relational_db.models.mas_cognition_engine import MasCognitionEngine
+                from server.database.relational_db.models.cognition_engine import (
+                    CognitionEngine as CognitionEngineModel,
+                )
+
+                ce_by_mas = {}
+                ce_rows = (
+                    session.query(MasCognitionEngine, CognitionEngineModel)
+                    .join(CognitionEngineModel, MasCognitionEngine.ce_id == CognitionEngineModel.id)
+                    .filter(MasCognitionEngine.mas_id.in_(mas_ids))
+                    .all()
+                )
+                for junc, ce in ce_rows:
+                    ce_by_mas.setdefault(junc.mas_id, []).append(
+                        MasCognitionEngineItem(
+                            ce_id=junc.ce_id,
+                            name=ce.name,
+                            kind=ce.kind,
+                            subkind=ce.subkind,
+                            url=ce.url,
+                            enabled=ce.enabled,
+                            status=ce.status,
+                            mas_config=junc.mas_config,
+                        )
+                    )
+
                 system_responses = [
-                    self._enrich_mas(mas, agents_by_mas.get(mas.id, []), provider_map) for mas in systems
+                    self._enrich_mas(mas, agents_by_mas.get(mas.id, []), provider_map, ce_by_mas.get(mas.id, []))
+                    for mas in systems
                 ]
 
                 return MultiAgenticSystems(systems=system_responses)

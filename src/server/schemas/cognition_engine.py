@@ -63,6 +63,7 @@ class CognitionEngineListItem(BaseModel):
     last_seen: Optional[datetime]
     config: Optional[dict]
     mas_config: Optional[dict]
+    created_at: datetime
 
 
 class CognitionEngineList(BaseModel):

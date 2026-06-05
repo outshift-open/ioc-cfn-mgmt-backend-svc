@@ -112,6 +112,7 @@ class TestMASEndpoints:
         assert mas["config"] == {"param1": "value1"}
         assert "created_at" in mas
         assert "updated_at" in mas
+        assert isinstance(mas["cognition_engines"], list)
 
     def test_list_mas_workspace_not_found(self, client):
         """Test listing MAS in non-existent workspace."""
@@ -199,13 +200,16 @@ class TestMASEndpoints:
 
         get_response = client.get(f"/api/workspaces/{created_workspace}/multi-agentic-systems/{mas_id}")
         assert get_response.status_code == 200
-        agent = get_response.json()["agents"][0]
+        body = get_response.json()
+        agent = body["agents"][0]
 
         assert agent["agent_id"] == "agent-1"
         assert agent["name"] is None
         assert agent["url"] is None
         assert agent["identity"] is None
         assert agent["config"] == {"type": "reasoning"}
+        assert isinstance(body["cognition_engines"], list)
+        assert body["cognition_engines"] == []
 
     def test_create_mas_mixed_agents_with_and_without_identity(self, client, created_workspace):
         """Test MAS with a mix of identity-enabled and legacy agents."""
@@ -729,3 +733,71 @@ class TestMASInlineCEAssociation:
             json={"name": "inline-bad-ce-mas", "cognition_engine_ids": ["nonexistent-ce"]},
         )
         assert resp.status_code != 201
+
+    def test_mas_response_includes_cognition_engines_field(self, client, created_workspace):
+        """MAS detail and list responses always include cognition_engines (empty when none associated)."""
+        mas_id = client.post(
+            f"/api/workspaces/{created_workspace}/multi-agentic-systems",
+            json={"name": "ce-field-mas"},
+        ).json()["id"]
+
+        get_resp = client.get(f"/api/workspaces/{created_workspace}/multi-agentic-systems/{mas_id}")
+        assert get_resp.status_code == 200
+        body = get_resp.json()
+        assert "cognition_engines" in body
+        assert body["cognition_engines"] == []
+
+        list_resp = client.get(f"/api/workspaces/{created_workspace}/multi-agentic-systems")
+        assert list_resp.status_code == 200
+        mas = next(s for s in list_resp.json()["systems"] if s["id"] == mas_id)
+        assert "cognition_engines" in mas
+        assert mas["cognition_engines"] == []
+
+    def test_associated_ces_appear_in_mas_response(self, client, registered_cfn, created_workspace):
+        """CEs associated via cognition_engine_ids show up in the MAS detail and list responses."""
+        ce_id = self._register_ce(client, registered_cfn, "response-ce")
+
+        mas_id = client.post(
+            f"/api/workspaces/{created_workspace}/multi-agentic-systems",
+            json={"name": "response-ce-mas", "cognition_engine_ids": [ce_id]},
+        ).json()["id"]
+
+        # GET detail
+        get_resp = client.get(f"/api/workspaces/{created_workspace}/multi-agentic-systems/{mas_id}")
+        assert get_resp.status_code == 200
+        ces = get_resp.json()["cognition_engines"]
+        assert len(ces) == 1
+        assert ces[0]["ce_id"] == ce_id
+        assert ces[0]["name"] == "response-ce"
+        assert ces[0]["url"] == "http://ce:8080"
+        assert isinstance(ces[0]["enabled"], bool)
+        assert "status" in ces[0]
+        assert "mas_config" in ces[0]
+
+        # List
+        list_resp = client.get(f"/api/workspaces/{created_workspace}/multi-agentic-systems")
+        assert list_resp.status_code == 200
+        mas = next(s for s in list_resp.json()["systems"] if s["id"] == mas_id)
+        assert len(mas["cognition_engines"]) == 1
+        assert mas["cognition_engines"][0]["ce_id"] == ce_id
+
+    def test_detached_ce_removed_from_mas_response(self, client, registered_cfn, created_workspace):
+        """After syncing cognition_engine_ids to remove a CE, it no longer appears in the response."""
+        ce1_id = self._register_ce(client, registered_cfn, "detach-ce1")
+        ce2_id = self._register_ce(client, registered_cfn, "detach-ce2")
+
+        mas_id = client.post(
+            f"/api/workspaces/{created_workspace}/multi-agentic-systems",
+            json={"name": "detach-ce-mas", "cognition_engine_ids": [ce1_id, ce2_id]},
+        ).json()["id"]
+
+        # Remove ce1, keep ce2
+        update_resp = client.put(
+            f"/api/workspaces/{created_workspace}/multi-agentic-systems/{mas_id}",
+            json={"cognition_engine_ids": [ce2_id]},
+        )
+        assert update_resp.status_code == 200
+        ces = update_resp.json()["cognition_engines"]
+        ce_ids_in_resp = {c["ce_id"] for c in ces}
+        assert ce2_id in ce_ids_in_resp
+        assert ce1_id not in ce_ids_in_resp
