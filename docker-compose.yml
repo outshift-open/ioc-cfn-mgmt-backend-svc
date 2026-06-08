@@ -65,7 +65,7 @@ services:
       context: .
       dockerfile: Dockerfile
     # Image Link: https://github.com/orgs/cisco-eti/packages/container/package/ioc-cfn-mgmt-plane-svc
-    image: ghcr.io/cisco-eti/ioc-cfn-mgmt-plane-svc:2026-06-05-eda9333
+    image: ghcr.io/cisco-eti/ioc-cfn-mgmt-plane-svc:2026-06-08-bc87bcb
     platform: ${DOCKER_DEFAULT_PLATFORM}
     profiles:
       - full-stack
