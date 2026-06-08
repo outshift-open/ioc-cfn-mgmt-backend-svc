@@ -277,8 +277,22 @@ class CognitionEngineService:
                     )
 
                 from server.database.relational_db.models.mas_cognition_engine import MasCognitionEngine
+                from server.database.relational_db.models.multi_agentic_system import (
+                    MultiAgenticSystem as MultiAgenticSystemModel,
+                )
 
-                attached = session.query(MasCognitionEngine).filter(MasCognitionEngine.ce_id == ce_id).count()
+                attached = (
+                    session.query(MasCognitionEngine)
+                    .join(
+                        MultiAgenticSystemModel,
+                        MasCognitionEngine.mas_id == MultiAgenticSystemModel.id,
+                    )
+                    .filter(
+                        MasCognitionEngine.ce_id == ce_id,
+                        MultiAgenticSystemModel.deleted_at.is_(None),
+                    )
+                    .count()
+                )
                 if attached:
                     raise HTTPException(
                         status_code=status.HTTP_409_CONFLICT,
@@ -410,8 +424,22 @@ class CognitionEngineService:
                 if "enabled" in provided:
                     if not provided["enabled"]:
                         from server.database.relational_db.models.mas_cognition_engine import MasCognitionEngine
+                        from server.database.relational_db.models.multi_agentic_system import (
+                            MultiAgenticSystem as MultiAgenticSystemModel,
+                        )
 
-                        attached = session.query(MasCognitionEngine).filter(MasCognitionEngine.ce_id == ce_id).count()
+                        attached = (
+                            session.query(MasCognitionEngine)
+                            .join(
+                                MultiAgenticSystemModel,
+                                MasCognitionEngine.mas_id == MultiAgenticSystemModel.id,
+                            )
+                            .filter(
+                                MasCognitionEngine.ce_id == ce_id,
+                                MultiAgenticSystemModel.deleted_at.is_(None),
+                            )
+                            .count()
+                        )
                         if attached:
                             raise HTTPException(
                                 status_code=status.HTTP_409_CONFLICT,

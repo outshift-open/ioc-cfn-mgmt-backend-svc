@@ -334,6 +334,44 @@ class TestCognitionEngineDelete:
         assert new.status_code == status.HTTP_201_CREATED
         assert new.json()["ce_id"] != ce_id
 
+    def test_delete_with_attached_mas_returns_409(self, client, registered_cfn, created_workspace):
+        """Cannot delete a CE while it is associated with an active MAS.
+
+        To reach this guard: disable the CE first (no MAS attached), then
+        associate a MAS — now the CE is disabled but still has an active MAS.
+        """
+        ce_id = _register(client, registered_cfn, "delete-mas-guard")
+        # Disable first so we can bypass the "must disable" guard
+        client.patch(f"/api/cognition-engines/{ce_id}", json={"enabled": False})
+        # Associate a MAS after disabling
+        mas_id = _create_mas(client, created_workspace, "delete-guard-mas")
+        client.post(
+            f"/api/workspaces/{created_workspace}/multi-agentic-systems/{mas_id}/cognition-engines",
+            json={"ce_id": ce_id},
+        )
+
+        resp = client.delete(f"/api/cognition-engines/{ce_id}")
+
+        assert resp.status_code == status.HTTP_409_CONFLICT
+        assert "mas" in resp.json()["detail"].lower()
+
+    def test_delete_ignores_soft_deleted_mas(self, client, registered_cfn, created_workspace):
+        """Soft-deleted MAS associations do not block CE deletion."""
+        ce_id = _register(client, registered_cfn, "delete-soft-mas-guard")
+        # Disable first, then associate a MAS
+        client.patch(f"/api/cognition-engines/{ce_id}", json={"enabled": False})
+        mas_id = _create_mas(client, created_workspace, "delete-soft-mas")
+        client.post(
+            f"/api/workspaces/{created_workspace}/multi-agentic-systems/{mas_id}/cognition-engines",
+            json={"ce_id": ce_id},
+        )
+        # Soft-delete the MAS — junction row remains but MAS is gone
+        client.delete(f"/api/workspaces/{created_workspace}/multi-agentic-systems/{mas_id}")
+
+        resp = client.delete(f"/api/cognition-engines/{ce_id}")
+
+        assert resp.status_code == status.HTTP_204_NO_CONTENT
+
 
 class TestCognitionEngineHeartbeat:
     def test_heartbeat_sets_status_online(self, client, registered_cfn):
@@ -651,6 +689,22 @@ class TestCognitionEnginePatch:
 
         assert resp.status_code == status.HTTP_409_CONFLICT
         assert "mas" in resp.json()["detail"].lower()
+
+    def test_patch_disable_ignores_soft_deleted_mas(self, client, registered_cfn, created_workspace):
+        """Soft-deleted MAS associations do not block CE disable."""
+        ce_id = _register(client, registered_cfn, "patch-disable-soft-mas")
+        mas_id = _create_mas(client, created_workspace, "soft-deleted-mas")
+        client.post(
+            f"/api/workspaces/{created_workspace}/multi-agentic-systems/{mas_id}/cognition-engines",
+            json={"ce_id": ce_id},
+        )
+        # Soft-delete the MAS — junction row remains but MAS is gone
+        client.delete(f"/api/workspaces/{created_workspace}/multi-agentic-systems/{mas_id}")
+
+        resp = client.patch(f"/api/cognition-engines/{ce_id}", json={"enabled": False})
+
+        assert resp.status_code == status.HTTP_200_OK
+        assert resp.json()["enabled"] is False
 
     def test_patch_disable_allowed_after_disassociation(self, client, registered_cfn, created_workspace):
         """Disable succeeds once all MAS are disassociated."""
