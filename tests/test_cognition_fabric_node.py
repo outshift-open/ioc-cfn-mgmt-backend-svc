@@ -1067,6 +1067,35 @@ class TestCFNConfigCognitionEngines:
         assert "cognition_engines" in detail["config"]
         assert len(detail["config"]["cognition_engines"]) == 1
 
+    def test_mas_config_includes_attached_cognition_engines(self, client, created_cfn):
+        """CEs auto-attached to a MAS appear inside the MAS object in the CFN config."""
+        workspace_id, cfn_id = created_cfn
+
+        # Register CE with auto-associate so it attaches to any new MAS
+        ce_id = client.post(
+            "/api/cognition-engines",
+            json={
+                "cfn_id": cfn_id,
+                "name": "auto-ce",
+                "url": "http://ce.internal:9004",
+                "version": "1.0.0",
+                "mas_auto_associate": True,
+            },
+        ).json()["ce_id"]
+
+        # Create MAS — auto-attach should associate the CE
+        mas_id = client.post(
+            f"/api/workspaces/{workspace_id}/multi-agentic-systems",
+            json={"name": "test-mas"},
+        ).json()["id"]
+
+        config = client.get(f"/api/cognition-fabric-nodes/{cfn_id}").json()["config"]
+        mas_list = config["workspaces"][0]["multi_agentic_systems"]
+        mas = next(m for m in mas_list if m["id"] == mas_id)
+
+        assert len(mas["cognition_engines"]) == 1
+        assert mas["cognition_engines"][0]["id"] == ce_id
+
 
 # Pytest fixtures
 

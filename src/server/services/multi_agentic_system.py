@@ -275,10 +275,6 @@ class MultiAgenticSystemService:
                 workspace = session.query(Workspace).filter(Workspace.id == workspace_id).first()
                 workspace_cfn_id = workspace.cfn_id if workspace else None
 
-                from server.services.cognition_fabric_node import cognition_fabric_node_service
-
-                cognition_fabric_node_service.update_config_for_workspace(workspace_id)
-
                 from server.services.vector_store_cfn import vector_store_cfn_service
 
                 vector_store_cfn_service.onboard_vector_store(workspace_id, new_mas.id)
@@ -293,6 +289,11 @@ class MultiAgenticSystemService:
                     except HTTPException as e:
                         if e.status_code != status.HTTP_409_CONFLICT:
                             raise
+
+                # Regenerate config after all CE associations are committed
+                from server.services.cognition_fabric_node import cognition_fabric_node_service
+
+                cognition_fabric_node_service.update_config_for_workspace(workspace_id)
 
                 return response
 

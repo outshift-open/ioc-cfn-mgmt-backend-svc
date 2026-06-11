@@ -14,6 +14,7 @@ from sqlalchemy import and_
 from sqlalchemy.exc import IntegrityError
 
 from server.database.relational_db.db import RelationalDB
+from server.database.relational_db.models.cognition_engine import CognitionEngine as CognitionEngineModel
 from server.database.relational_db.models.cognition_fabric_node import (
     CognitionFabricNode as CognitionFabricNodeModel,
 )
@@ -27,7 +28,6 @@ from server.schemas.cognition_fabric_node import (
     CognitionFabricNodeStatus,
     CognitionFabricNodeUpdateRequest,
 )
-from server.services.cognition_engine import cognition_engine_service
 from server.services.memory_provider import memory_provider_service
 from server.services.multi_agentic_system import multi_agentic_system_service
 from server.services.workspace import workspace_service
@@ -1110,9 +1110,30 @@ class CognitionFabricNodeService:
 
             # Fetch Cognition Engines (CFN-scoped) up front so they can be embedded in MAS objects
             try:
+                ce_rows = (
+                    session.query(CognitionEngineModel)
+                    .filter(
+                        CognitionEngineModel.cfn_id == cfn_id,
+                        CognitionEngineModel.deleted_at.is_(None),
+                    )
+                    .all()
+                )
                 engines_payload = [
-                    {**e, "auth": process_config_for_cfn({"auth": e["auth"]}).get("auth") if e["auth"] else None}
-                    for e in cognition_engine_service.list_for_cfn(cfn_id)
+                    {
+                        "id": e.id,
+                        "name": e.name,
+                        "url": e.url,
+                        "kind": e.kind,
+                        "subkind": e.subkind,
+                        "enabled": e.enabled,
+                        "status": e.status,
+                        "capabilities": e.capabilities or [],
+                        "metrics": e.metrics or [],
+                        "config": e.config or {},
+                        "mas_config": e.mas_config or {},
+                        "auth": process_config_for_cfn({"auth": e.auth}).get("auth") if e.auth else None,
+                    }
+                    for e in ce_rows
                 ]
             except Exception:
                 engines_payload = []

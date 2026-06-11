@@ -2301,6 +2301,131 @@
           }
         }
       }
+    },
+    "/api/workspaces/{workspaceId}/multi-agentic-systems/{masId}/metrics": {
+      "get": {
+        "tags": [
+          "mas-metrics"
+        ],
+        "summary": "Query MAS token usage metrics",
+        "description": "Returns LLM token usage metrics (prompt tokens, completion tokens, total tokens, latency, cost) for a Multi-Agentic System across all attached Cognition Engines. Optionally filter by CE, agent, or metric name.",
+        "operationId": "fetch_mas_metrics_api_workspaces__workspaceId__multi_agentic_systems__masId__metrics_get",
+        "parameters": [
+          {
+            "name": "workspaceId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Workspaceid"
+            }
+          },
+          {
+            "name": "masId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Masid"
+            }
+          },
+          {
+            "name": "start_time",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Start Time"
+            }
+          },
+          {
+            "name": "end_time",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "End Time"
+            }
+          },
+          {
+            "name": "ce_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Ce Id"
+            }
+          },
+          {
+            "name": "agent_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Agent Id"
+            }
+          },
+          {
+            "name": "metric_name",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Metric Name"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Metrics returned successfully",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid request parameters"
+          },
+          "413": {
+            "description": "Too many datapoints \u2014 narrow time range or add filters"
+          },
+          "500": {
+            "description": "Internal server error"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   "components": {

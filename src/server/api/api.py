@@ -6,6 +6,7 @@ from fastapi import APIRouter
 
 from server.api.endpoints.audit_cfn_event import router as audit_cfn_events_router
 from server.api.endpoints.knowledge_graph_cfn import router as knowledge_graph_cfn_router
+from server.api.endpoints.mas_metrics_cfn import router as mas_metrics_cfn_router
 from server.api.endpoints.auth import router as auth_router
 from server.api.endpoints.cognition_engine import router as cognition_engine_router
 from server.api.endpoints.cognition_fabric_node import router as cognition_fabric_node_router
@@ -33,6 +34,11 @@ api_router.include_router(
     knowledge_graph_cfn_router,
     prefix="/workspaces/{workspaceId}/multi-agentic-systems/{masId}/knowledge-graph",
     tags=["knowledge-graph"],
+)
+api_router.include_router(
+    mas_metrics_cfn_router,
+    prefix="/workspaces/{workspaceId}/multi-agentic-systems/{masId}/metrics",
+    tags=["mas-metrics"],
 )
 
 api_router.include_router(
