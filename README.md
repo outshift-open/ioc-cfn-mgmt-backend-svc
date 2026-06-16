@@ -128,7 +128,7 @@ Once all services are running (full-stack deployment), access them at:
 - **AgensGraph Database**: localhost:5456
 - **AgensGraph Viewer**: http://localhost:5457
 - **Cognition Engine - Reasoning and Evidence Gathering**: Port 9004
-- **Cognition Engine - Semantic Negotiation**: Port 9004
+- **Cognition Engine - Semantic Alignment**: Port 9004
 
 To enable these services, uncomment their definitions in docker-compose.yml.
 

@@ -18,7 +18,7 @@ class CognitionEngineRegisterRequest(BaseModel):
     url: str = Field(..., description="URL for the CFN to reach this engine")
     version: str = Field(..., description="CE software version, e.g. '1.2.3'")
     kind: Optional[str] = Field(None, description="Engine kind, e.g. 'knowledge', 'contingency'")
-    subkind: Optional[str] = Field(None, description="Engine subkind, e.g. 'distillation', 'query', 'negotiation'")
+    subkind: Optional[str] = Field(None, description="Engine subkind, e.g. 'distillation', 'query', 'alignment'")
     mas_auto_associate: bool = Field(
         False, description="If true, CE is auto-associated with all MAS under the same CFN's workspaces"
     )

@@ -645,7 +645,7 @@ class TestCognitionEnginePatch:
             ("cfn_id", "other-cfn"),
             ("version", "9.9.9"),
             ("kind", "contingency"),
-            ("subkind", "negotiation"),
+            ("subkind", "alignment"),
         ]:
             resp = client.patch(f"/api/cognition-engines/{ce_id}", json={field: value})
             assert resp.status_code == status.HTTP_400_BAD_REQUEST, f"Expected 400 for field '{field}'"
