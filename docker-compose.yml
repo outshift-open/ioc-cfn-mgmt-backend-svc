@@ -6,7 +6,8 @@ services:
   #   - Container Port: 5432 (PostgreSQL default, cannot be changed without config)
   #   - it will have cfn_mgmt_db and ioc_knowledge_db both
   ioc-knowledge-db:
-    image: ghcr.io/outshift-open/ioc-knowledge-memory-svc-db:2.2
+    # TODO: Switch to OSS image once published
+    image: ghcr.io/cisco-eti/ioc-knowledge-memory-svc-db:2.2
     platform: linux/amd64
     profiles:
       - db-only
@@ -170,8 +171,9 @@ services:
   # Port Mapping(HTTP): 9002:9002 (same port inside and outside container)
   # Port Mapping(MCP): 9009:9001 (different port inside and outside container)
   ioc-cfn-svc:
+    # TODO: Switch to OSS image once published
     # Image Link: https://github.com/orgs/outshift-open/packages/container/package/ioc-cfn-svc
-    image: ghcr.io/outshift-open/ioc-cfn-svc:latest
+    image: ghcr.io/cisco-eti/ioc-cfn-svc:2026-06-15-43e8f28
     container_name: ioc-cfn-svc
     platform: ${DOCKER_DEFAULT_PLATFORM}
     profiles:
