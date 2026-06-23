@@ -65,7 +65,7 @@ services:
       context: .
       dockerfile: Dockerfile
     # Image Link: https://github.com/orgs/outshift-open/packages/container/package/ioc-cfn-mgmt-plane-svc
-    image: ghcr.io/outshift-open/ioc-cfn-mgmt-plane-svc:latest
+    image: ghcr.io/outshift-open/ioc-cfn-mgmt-plane-svc:2026-06-23-40056a5
     platform: ${DOCKER_DEFAULT_PLATFORM}
     profiles:
       - full-stack
@@ -107,7 +107,7 @@ services:
   # Port Mapping: 9001:9001 (same port inside and outside container)
   ioc-cfn-mgmt-plane-ui:
     # Image Link: https://github.com/orgs/outshift-open/packages/container/package/ioc-cfn-mgmt-plane-ui
-    image: ghcr.io/outshift-open/ioc-cfn-mgmt-plane-ui:latest
+    image: ghcr.io/outshift-open/ioc-cfn-mgmt-plane-ui:2026-06-23-4b9d768
     platform: ${DOCKER_DEFAULT_PLATFORM}
     profiles:
       - full-stack
@@ -129,7 +129,7 @@ services:
   # Port Mapping: 9003:9003 (same port inside and outside container)
   ioc-knowledge-memory-svc:
     # Image Link: https://github.com/orgs/outshift-open/packages/container/package/ioc-knowledge-memory-svc
-    image: ghcr.io/outshift-open/ioc-knowledge-memory-svc:latest
+    image: ghcr.io/outshift-open/ioc-knowledge-memory-svc:2026-06-23-ee8f699
     platform: linux/amd64
     profiles:
       - full-stack
@@ -171,7 +171,7 @@ services:
   # Port Mapping(MCP): 9009:9001 (different port inside and outside container)
   ioc-cfn-svc:
     # Image Link: https://github.com/orgs/outshift-open/packages/container/package/ioc-cfn-svc
-    image: ghcr.io/outshift-open/ioc-cfn-svc/ioc-cfn-svc:latest
+    image: ghcr.io/outshift-open/ioc-cfn-svc/ioc-cfn-svc:2026-06-23-41e11a6
     container_name: ioc-cfn-svc
     platform: ${DOCKER_DEFAULT_PLATFORM}
     profiles:
@@ -217,7 +217,7 @@ services:
 
   ioc-cfn-cognition-engine:
     # Image Link: https://github.com/orgs/outshift-open/packages/container/package/ioc-cfn-cognition-engines
-    image: ghcr.io/outshift-open/ioc-cfn-cognition-engines:latest
+    image: ghcr.io/outshift-open/ioc-cfn-cognition-engines:2026-06-23-9e295b5
     ports:
       - "9004:9004"
     platform: ${DOCKER_DEFAULT_PLATFORM}
