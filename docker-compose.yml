@@ -6,7 +6,7 @@ services:
   #   - Container Port: 5432 (PostgreSQL default, cannot be changed without config)
   #   - it will have cfn_mgmt_db and ioc_knowledge_db both
   ioc-knowledge-db:
-    image: ghcr.io/cisco-eti/ioc-knowledge-memory-svc-db:2.2
+    image: ghcr.io/outshift-open/ioc-knowledge-memory-svc-db:0.2.0
     platform: linux/amd64
     profiles:
       - db-only
@@ -64,8 +64,8 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
-    # Image Link: https://github.com/orgs/cisco-eti/packages/container/package/ioc-cfn-mgmt-plane-svc
-    image: ghcr.io/cisco-eti/ioc-cfn-mgmt-plane-svc:2026-06-15-eb13be4
+    # Image Link: https://github.com/orgs/outshift-open/packages/container/package/ioc-cfn-mgmt-plane-svc
+    image: ghcr.io/outshift-open/ioc-cfn-mgmt-plane-svc:2026-06-23-40056a5
     platform: ${DOCKER_DEFAULT_PLATFORM}
     profiles:
       - full-stack
@@ -106,8 +106,8 @@ services:
   # Mgmt. Plane UI - Next.js frontend for management plane
   # Port Mapping: 9001:9001 (same port inside and outside container)
   ioc-cfn-mgmt-plane-ui:
-    # Image Link: https://github.com/cisco-eti/ioc-cfn-mgmt-ui-svc/pkgs/container/ioc-cfn-mgmt-plane-ui
-    image: ghcr.io/cisco-eti/ioc-cfn-mgmt-plane-ui:2026-06-15-4fb52e3
+    # Image Link: https://github.com/orgs/outshift-open/packages/container/package/ioc-cfn-mgmt-plane-ui
+    image: ghcr.io/outshift-open/ioc-cfn-mgmt-plane-ui:2026-06-22-d1c3df2
     platform: ${DOCKER_DEFAULT_PLATFORM}
     profiles:
       - full-stack
@@ -128,8 +128,8 @@ services:
   # Knowledge Memory Service - Graph + Vector Memory Storage
   # Port Mapping: 9003:9003 (same port inside and outside container)
   ioc-knowledge-memory-svc:
-    # Image Link: https://github.com/orgs/cisco-eti/packages/container/package/ioc-knowledge-memory-svc
-    image: ghcr.io/cisco-eti/ioc-knowledge-memory-svc:2026-05-22-a668d2e
+    # Image Link: https://github.com/orgs/outshift-open/packages/container/package/ioc-knowledge-memory-svc
+    image: ghcr.io/outshift-open/ioc-knowledge-memory-svc:2026-06-23-ee8f699
     platform: linux/amd64
     profiles:
       - full-stack
@@ -170,8 +170,8 @@ services:
   # Port Mapping(HTTP): 9002:9002 (same port inside and outside container)
   # Port Mapping(MCP): 9009:9001 (different port inside and outside container)
   ioc-cfn-svc:
-    # Image Link: https://github.com/orgs/cisco-eti/packages/container/package/ioc-cfn-svc
-    image: ghcr.io/cisco-eti/ioc-cfn-svc:2026-06-15-43e8f28
+    # Image Link: https://github.com/orgs/outshift-open/packages/container/package/ioc-cfn-svc
+    image: ghcr.io/outshift-open/ioc-cfn-svc/ioc-cfn-svc:2026-06-23-41e11a6
     container_name: ioc-cfn-svc
     platform: ${DOCKER_DEFAULT_PLATFORM}
     profiles:
@@ -216,8 +216,8 @@ services:
       start_period: 40s
 
   ioc-cfn-cognition-engine:
-    # Image Link: https://github.com/orgs/cisco-eti/packages/container/package/ioc-cfn-cognition-engine
-    image: ghcr.io/cisco-eti/ioc-cfn-cognition-engine:2026-06-15-fad5e98
+    # Image Link: https://github.com/orgs/outshift-open/packages/container/package/ioc-cfn-cognition-engines
+    image: ghcr.io/outshift-open/ioc-cfn-cognition-engines:2026-06-23-9e295b5
     ports:
       - "9004:9004"
     platform: ${DOCKER_DEFAULT_PLATFORM}
