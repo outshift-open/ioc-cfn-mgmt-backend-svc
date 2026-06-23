@@ -8,6 +8,7 @@ services:
   ioc-knowledge-db:
     image: ghcr.io/outshift-open/ioc-knowledge-memory-svc-db:0.2.0
     platform: linux/amd64
+    container_name: ioc-knowledge-db
     profiles:
       - db-only
       - full-stack
@@ -36,7 +37,8 @@ services:
   # Port Mapping: 5457:3000
   ioc-graph-db-viewer:
     image: skaiworldwide/agviewer:latest
-    platform: ${DOCKER_DEFAULT_PLATFORM}
+    platform: ${DOCKER_DEFAULT_PLATFORM:-linux/arm64}
+    container_name: ioc-graph-db-viewer
     profiles:
       - db-only
       - full-stack
@@ -66,7 +68,8 @@ services:
       dockerfile: Dockerfile
     # Image Link: https://github.com/orgs/outshift-open/packages/container/package/ioc-cfn-mgmt-plane-svc
     image: ghcr.io/outshift-open/ioc-cfn-mgmt-plane-svc:2026-06-23-40056a5
-    platform: ${DOCKER_DEFAULT_PLATFORM}
+    platform: ${DOCKER_DEFAULT_PLATFORM:-linux/arm64}
+    container_name: ioc-cfn-mgmt-plane-svc
     profiles:
       - full-stack
     ports:
@@ -108,7 +111,8 @@ services:
   ioc-cfn-mgmt-plane-ui:
     # Image Link: https://github.com/orgs/outshift-open/packages/container/package/ioc-cfn-mgmt-plane-ui
     image: ghcr.io/outshift-open/ioc-cfn-mgmt-plane-ui:2026-06-22-d1c3df2
-    platform: ${DOCKER_DEFAULT_PLATFORM}
+    platform: ${DOCKER_DEFAULT_PLATFORM:-linux/arm64}
+    container_name: ioc-cfn-mgmt-plane-ui
     profiles:
       - full-stack
     ports:
@@ -130,7 +134,8 @@ services:
   ioc-knowledge-memory-svc:
     # Image Link: https://github.com/orgs/outshift-open/packages/container/package/ioc-knowledge-memory-svc
     image: ghcr.io/outshift-open/ioc-knowledge-memory-svc:2026-06-23-ee8f699
-    platform: linux/amd64
+    platform: ${DOCKER_DEFAULT_PLATFORM:-linux/arm64}
+    container_name: ioc-knowledge-memory-svc
     profiles:
       - full-stack
     ports:
@@ -172,8 +177,8 @@ services:
   ioc-cfn-svc:
     # Image Link: https://github.com/orgs/outshift-open/packages/container/package/ioc-cfn-svc
     image: ghcr.io/outshift-open/ioc-cfn-svc/ioc-cfn-svc:2026-06-23-41e11a6
+    platform: ${DOCKER_DEFAULT_PLATFORM:-linux/arm64}
     container_name: ioc-cfn-svc
-    platform: ${DOCKER_DEFAULT_PLATFORM}
     profiles:
       - full-stack
     restart: unless-stopped
@@ -218,9 +223,10 @@ services:
   ioc-cfn-cognition-engine:
     # Image Link: https://github.com/orgs/outshift-open/packages/container/package/ioc-cfn-cognition-engines
     image: ghcr.io/outshift-open/ioc-cfn-cognition-engines:2026-06-23-9e295b5
+    platform: ${DOCKER_DEFAULT_PLATFORM:-linux/arm64}
+    container_name: ioc-cfn-cognition-engine
     ports:
       - "9004:9004"
-    platform: ${DOCKER_DEFAULT_PLATFORM}
     profiles:
       - full-stack
     restart: unless-stopped
