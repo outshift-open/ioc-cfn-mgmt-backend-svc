@@ -1,6 +1,6 @@
 # Internet of Cognition (IOC) - Cognition Fabric Node (CFN) Management Backend Service
 
-[![Docker](https://img.shields.io/badge/docker-ghcr.io-blue?logo=docker)](https://github.com/orgs/cisco-eti/packages/container/package/ioc-cfn-mgmt-plane-svc)
+[![Docker](https://img.shields.io/badge/docker-ghcr.io-blue?logo=docker)](https://github.com/orgs/outshift-open/packages/container/package/ioc-cfn-mgmt-plane-svc)
 [![GitHub Pages Site](https://img.shields.io/badge/GitHub%20Pages-Visit-green?logo=github)](https://scaling-potato-qm8j7n7.pages.github.io/)
 
 IoC CFN Management Backend Service - FastAPI backend for workspaces, users, API keys, Cognitive Fabric Nodes, and Multi-Agentic Systems
@@ -15,21 +15,6 @@ IoC CFN Management Backend Service - FastAPI backend for workspaces, users, API 
   - **Cross-platform**: `npm install -g @go-task/cli`
   - **Go users**: `go install github.com/go-task/task/v3/cmd/task@latest`
   - **Manual install**: `sh -c "$(curl --location https://taskfile.dev/install.sh)" -- -d -b ~/.local/bin`
-
-### GitHub Container Registry Authentication (for Full Stack deployment)
-
-To pull Docker images from GitHub Container Registry (GHCR):
-
-1. Go to https://github.com/settings/tokens
-2. Create a new token with `read:packages` scope (or ensure existing token has this scope)
-3. Click "Configure SSO" beside delete button
-4. Authorize the token for cisco-eti organization
-5. Login to Docker:
-
-```bash
-export GITHUB_TOKEN="xxxxxxxxxxxxx"  # replace with your token
-echo "$GITHUB_TOKEN" | docker login ghcr.io -u "YOUR_GITHUB_USERNAME" --password-stdin
-```
 
 ### Environment Configuration
 
