@@ -1,4 +1,4 @@
-# ioc-cfn-mgmt-plane
+# Internet of Cognition (IOC) - Cognition Fabric Node (CFN) Management Backend Service
 
 [![Docker](https://img.shields.io/badge/docker-ghcr.io-blue?logo=docker)](https://github.com/orgs/cisco-eti/packages/container/package/ioc-cfn-mgmt-plane-svc)
 [![GitHub Pages Site](https://img.shields.io/badge/GitHub%20Pages-Visit-green?logo=github)](https://scaling-potato-qm8j7n7.pages.github.io/)
@@ -197,3 +197,7 @@ curl http://localhost:9000/api/audit-events/5bda66e6-1608-4f83-b7e4-aadbddce312c
 **Other:**
 
 - Audit Logs: `GET /api/audits`
+
+## License
+
+This project is licensed under the Apache License 2.0 - see the [LICENSE.md](LICENSE.md) file for details.
