@@ -24,7 +24,7 @@ RUN pip3 install --no-cache-dir poetry \
 FROM python:3.11-slim AS runtime
 
 # Link this container image to the GitHub repository
-LABEL org.opencontainers.image.source=https://github.com/cisco-eti/ioc-cfn-mgmt-plane-svc
+LABEL org.opencontainers.image.source=https://github.com/outshift-open/ioc-cfn-mgmt-plane-svc
 
 # Install only runtime dependencies
 RUN apt-get update && apt-get install -y --no-install-recommends \
