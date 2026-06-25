@@ -110,7 +110,7 @@ services:
   # Port Mapping: 9001:9001 (same port inside and outside container)
   ioc-cfn-mgmt-plane-ui:
     # Image Link: https://github.com/orgs/outshift-open/packages/container/package/ioc-cfn-mgmt-plane-ui
-    image: ghcr.io/outshift-open/ioc-cfn-mgmt-plane-ui:2026-06-25-42bb84c
+    image: ghcr.io/outshift-open/ioc-cfn-mgmt-plane-ui:2026-06-22-d1c3df2
     platform: ${DOCKER_DEFAULT_PLATFORM:-linux/arm64}
     container_name: ioc-cfn-mgmt-plane-ui
     profiles:
@@ -224,7 +224,7 @@ services:
   # Port Mapping: 9004:9004 (same port inside and outside container)
   ioc-cfn-cognition-engine:
     # Image Link: https://github.com/orgs/outshift-open/packages/container/package/ioc-cfn-cognition-engines
-    image: ghcr.io/outshift-open/ioc-cfn-cognition-engines:2026-06-25-9b9d699
+    image: ghcr.io/outshift-open/ioc-cfn-cognition-engines:2026-06-23-9e295b5
     platform: ${DOCKER_DEFAULT_PLATFORM:-linux/arm64}
     container_name: ioc-cfn-cognition-engine
     ports:
