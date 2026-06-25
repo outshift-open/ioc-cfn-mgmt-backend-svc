@@ -176,7 +176,7 @@ services:
   # Port Mapping(MCP): 9009:9001 (different port inside and outside container)
   ioc-cfn-svc:
     # Image Link: https://github.com/orgs/outshift-open/packages/container/package/ioc-cfn-svc
-    image: ghcr.io/outshift-open/ioc-cfn-svc/ioc-cfn-svc:2026-06-25-bc23e42
+    image: ghcr.io/outshift-open/ioc-cfn-svc:2026-06-25-bc23e42
     platform: ${DOCKER_DEFAULT_PLATFORM:-linux/arm64}
     container_name: ioc-cfn-svc
     profiles:
