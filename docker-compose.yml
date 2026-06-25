@@ -67,7 +67,7 @@ services:
       context: .
       dockerfile: Dockerfile
     # Image Link: https://github.com/orgs/outshift-open/packages/container/package/ioc-cfn-mgmt-plane-svc
-    image: ghcr.io/outshift-open/ioc-cfn-mgmt-plane-svc:2026-06-23-40056a5
+    image: ghcr.io/outshift-open/ioc-cfn-mgmt-plane-svc:2026-06-25-6a7edde
     platform: ${DOCKER_DEFAULT_PLATFORM:-linux/arm64}
     container_name: ioc-cfn-mgmt-plane-svc
     profiles:
@@ -110,7 +110,7 @@ services:
   # Port Mapping: 9001:9001 (same port inside and outside container)
   ioc-cfn-mgmt-plane-ui:
     # Image Link: https://github.com/orgs/outshift-open/packages/container/package/ioc-cfn-mgmt-plane-ui
-    image: ghcr.io/outshift-open/ioc-cfn-mgmt-plane-ui:2026-06-22-d1c3df2
+    image: ghcr.io/outshift-open/ioc-cfn-mgmt-plane-ui:2026-06-25-42bb84c
     platform: ${DOCKER_DEFAULT_PLATFORM:-linux/arm64}
     container_name: ioc-cfn-mgmt-plane-ui
     profiles:
@@ -133,7 +133,7 @@ services:
   # Port Mapping: 9003:9003 (same port inside and outside container)
   ioc-knowledge-memory-svc:
     # Image Link: https://github.com/orgs/outshift-open/packages/container/package/ioc-knowledge-memory-svc
-    image: ghcr.io/outshift-open/ioc-knowledge-memory-svc:2026-06-23-ee8f699
+    image: ghcr.io/outshift-open/ioc-knowledge-memory-svc:2026-06-25-ee8f699
     platform: ${DOCKER_DEFAULT_PLATFORM:-linux/arm64}
     container_name: ioc-knowledge-memory-svc
     profiles:
@@ -176,7 +176,7 @@ services:
   # Port Mapping(MCP): 9009:9001 (different port inside and outside container)
   ioc-cfn-svc:
     # Image Link: https://github.com/orgs/outshift-open/packages/container/package/ioc-cfn-svc
-    image: ghcr.io/outshift-open/ioc-cfn-svc/ioc-cfn-svc:2026-06-23-41e11a6
+    image: ghcr.io/outshift-open/ioc-cfn-svc/ioc-cfn-svc:2026-06-25-bc23e42
     platform: ${DOCKER_DEFAULT_PLATFORM:-linux/arm64}
     container_name: ioc-cfn-svc
     profiles:
@@ -220,9 +220,11 @@ services:
       retries: 3
       start_period: 40s
 
+  # Cognition Engine - LLM-backed engines
+  # Port Mapping: 9004:9004 (same port inside and outside container)
   ioc-cfn-cognition-engine:
     # Image Link: https://github.com/orgs/outshift-open/packages/container/package/ioc-cfn-cognition-engines
-    image: ghcr.io/outshift-open/ioc-cfn-cognition-engines:2026-06-23-9e295b5
+    image: ghcr.io/outshift-open/ioc-cfn-cognition-engines:2026-06-25-9b9d699
     platform: ${DOCKER_DEFAULT_PLATFORM:-linux/arm64}
     container_name: ioc-cfn-cognition-engine
     ports:
