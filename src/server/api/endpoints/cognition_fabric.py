@@ -14,6 +14,7 @@ from server.schemas.cognition_fabric import (
     CognitionFabricNodeTopology,
     CognitionFabricTopologyResponse,
 )
+from server.schemas.memory_provider import MemoryProviderListItem
 from server.services import cognition_fabric_node_service
 from server.services.cognition_engine import cognition_engine_service
 from server.services.memory_provider import memory_provider_service
@@ -35,8 +36,20 @@ def get_cognition_fabric_topology(auth_user: dict = Depends(get_auth_user)):
     for ce in ce_list.cognition_engines:
         ce_by_cfn[ce.cfn_id].append(ce)
 
-    # All enabled memory providers are global (broadcast to every CFN)
-    enabled_providers = [p for p in mp_list.providers if p.enabled]
+    # All enabled memory providers are global (broadcast to every CFN).
+    # Project MemoryProviderDetail down to the slim list-item shape.
+    enabled_providers = [
+        MemoryProviderListItem(
+            id=p.id,
+            name=p.name,
+            description=p.description,
+            config=p.config,
+            enabled=p.enabled,
+            created_at=p.created_at,
+        )
+        for p in mp_list.providers
+        if p.enabled
+    ]
 
     cfn_nodes = [
         CognitionFabricNodeTopology(
