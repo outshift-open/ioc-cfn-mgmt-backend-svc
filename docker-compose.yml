@@ -220,7 +220,7 @@ services:
       retries: 3
       start_period: 40s
 
-  # Cognition Engine - LLM-backed engines
+  # Cognition Engines
   # Port Mapping: 9004:9004 (same port inside and outside container)
   ioc-cfn-cognition-engine:
     # Image Link: https://github.com/orgs/outshift-open/packages/container/package/ioc-cfn-cognition-engines
