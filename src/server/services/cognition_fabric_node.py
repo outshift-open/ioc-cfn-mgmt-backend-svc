@@ -1004,6 +1004,9 @@ class CognitionFabricNodeService:
                             status=CognitionFabricNodeStatus(cfn.status),
                             last_seen=cfn.last_seen,
                             enabled=cfn.enabled,
+                            ip_address=cfn.ip_address,
+                            port=int(cfn.port) if cfn.port else None,
+                            workspace_ids=self._get_workspace_ids(session, cfn.id),
                             created_at=cfn.created_at,
                         )
                     )
