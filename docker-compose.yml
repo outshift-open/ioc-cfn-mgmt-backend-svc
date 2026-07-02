@@ -12,6 +12,7 @@ services:
     profiles:
       - db-only
       - full-stack
+      - mgmt-plane
       - data-plane
     environment:
       POSTGRES_DB: ${IOC_KNOWLEDGE_DB:-ioc-knowledge-db}
@@ -74,6 +75,7 @@ services:
     container_name: ioc-cfn-mgmt-plane-svc
     profiles:
       - full-stack
+      - mgmt-plane
     ports:
       - "9000:9000"
     environment:
@@ -117,6 +119,7 @@ services:
     container_name: ioc-cfn-mgmt-plane-ui
     profiles:
       - full-stack
+      - mgmt-plane
     ports:
       - "9001:9001"
     environment:
@@ -139,7 +142,6 @@ services:
     platform: ${DOCKER_DEFAULT_PLATFORM:-linux/arm64}
     container_name: ioc-knowledge-memory-svc
     profiles:
-      - db-only
       - full-stack
       - data-plane
     ports:
