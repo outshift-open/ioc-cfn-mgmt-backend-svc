@@ -139,6 +139,7 @@ services:
     platform: ${DOCKER_DEFAULT_PLATFORM:-linux/arm64}
     container_name: ioc-knowledge-memory-svc
     profiles:
+      - db-only
       - full-stack
       - data-plane
     ports:
@@ -204,8 +205,6 @@ services:
       - COGNITION_ENGINE_SVC_URL=http://ioc-cfn-cognition-engines:9004
       - MCP_PORT=9001
     depends_on:
-      ioc-knowledge-memory-svc-db:
-        condition: service_healthy
       ioc-knowledge-memory-svc:
         condition: service_healthy
     healthcheck:
@@ -250,7 +249,7 @@ services:
       retries: 3
       start_period: 40s
     depends_on:
-      ioc-cfn-svc:
+      ioc-knowledge-memory-svc:
         condition: service_healthy
 
 volumes:
