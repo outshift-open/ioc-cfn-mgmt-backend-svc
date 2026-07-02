@@ -249,7 +249,7 @@ services:
       retries: 3
       start_period: 40s
     depends_on:
-      ioc-knowledge-memory-svc:
+      ioc-cfn-svc:
         condition: service_healthy
 
 volumes:
