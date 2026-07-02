@@ -5,13 +5,14 @@ services:
   #   - Host Port: 5456 (to avoid conflicts with local PostgreSQL on 5432)
   #   - Container Port: 5432 (PostgreSQL default, cannot be changed without config)
   #   - it will have cfn_mgmt_db and ioc_knowledge_db both
-  ioc-knowledge-db:
+  ioc-knowledge-memory-svc-db:
     image: ghcr.io/outshift-open/ioc-knowledge-memory-svc-db:0.2.1
     platform: ${DOCKER_DEFAULT_PLATFORM:-linux/arm64}
-    container_name: ioc-knowledge-db
+    container_name: ioc-knowledge-memory-svc-db
     profiles:
       - db-only
       - full-stack
+      - data-plane
     environment:
       POSTGRES_DB: ${IOC_KNOWLEDGE_DB:-ioc-knowledge-db}
       POSTGRES_USER: ${IOC_KNOWLEDGE_DB_USER}
@@ -46,7 +47,7 @@ services:
 #    ports:
 #      - "5457:3000"
 #    environment:
-#      - DB_HOST=ioc-knowledge-db
+#      - DB_HOST=ioc-knowledge-memory-svc-db
 #      - DB_PORT=5432
 #      - DB_USER=${IOC_KNOWLEDGE_DB_USER}
 #      - DB_PASSWORD=${IOC_KNOWLEDGE_DB_PASSWORD}
@@ -80,7 +81,7 @@ services:
       - APPLICATION_VERSION=dev
       - LOG_LEVEL=${LOG_LEVEL:-INFO}
       - ADMIN_USER_PASSWORD=${ADMIN_USER_PASSWORD}
-      - POSTGRES_HOST=ioc-knowledge-db
+      - POSTGRES_HOST=ioc-knowledge-memory-svc-db
       - POSTGRES_PORT=5432
       - POSTGRES_DB=cfn_mgmt
       - POSTGRES_USER=${IOC_KNOWLEDGE_DB_USER}
@@ -92,7 +93,7 @@ services:
       - ./.secrets:/home/app/.secrets:ro
     restart: unless-stopped
     depends_on:
-      ioc-knowledge-db:
+      ioc-knowledge-memory-svc-db:
         condition: service_healthy
     healthcheck:
       test:
@@ -138,7 +139,9 @@ services:
     platform: ${DOCKER_DEFAULT_PLATFORM:-linux/arm64}
     container_name: ioc-knowledge-memory-svc
     profiles:
+      - db-only
       - full-stack
+      - data-plane
     ports:
       - "9003:9003"
     environment:
@@ -147,7 +150,7 @@ services:
       - LOG_LEVEL=${LOG_LEVEL:-INFO}
       - MEMORY_PROVIDER_REGISTRATION_URL=http://ioc-cfn-mgmt-plane-svc:9000
       - MEMORY_PROVIDER_ID=${MEMORY_PROVIDER_ID:-de54dacb-60ab-476a-9e83-64e09f867358}
-      - IOC_KNOWLEDGE_DB_HOST=ioc-knowledge-db
+      - IOC_KNOWLEDGE_DB_HOST=ioc-knowledge-memory-svc-db
       - IOC_KNOWLEDGE_DB=${IOC_KNOWLEDGE_DB:-ioc-knowledge-db}
       - IOC_KNOWLEDGE_DB_USER=${IOC_KNOWLEDGE_DB_USER}
       - IOC_KNOWLEDGE_DB_PASSWORD=${IOC_KNOWLEDGE_DB_PASSWORD}
@@ -155,9 +158,7 @@ services:
       - EMBEDDING_VECTOR_SIZE=${EMBEDDING_VECTOR_SIZE:-384}
     restart: unless-stopped
     depends_on:
-      ioc-knowledge-db:
-        condition: service_healthy
-      ioc-cfn-mgmt-plane-svc:
+      ioc-knowledge-memory-svc-db:
         condition: service_healthy
     healthcheck:
       test:
@@ -182,30 +183,28 @@ services:
     container_name: ioc-cfn-svc
     profiles:
       - full-stack
+      - data-plane
     restart: unless-stopped
     ports:
       - "9002:9002"
       - "9009:9001"
     environment:
       - LOG_LEVEL=${LOG_LEVEL:-INFO}
-      - MGMT_URL=http://ioc-cfn-mgmt-plane-svc:9000
+      - MGMT_URL=${MGMT_URL:-http://ioc-cfn-mgmt-plane-svc:9000}
       - CFN_NAME=${CFN_NAME:-cfn-new}
+      - CFN_IP=${CFN_IP:-"Not Set"}
       - HEARTBEAT_INTERVAL_SECONDS=${HEARTBEAT_INTERVAL_SECONDS:-10}
       - SERVICE_NAME=${SERVICE_NAME:-ioc-cfn-svc}
       - DB_NAME=${DB_NAME:-cfn_cp}
       - DB_USER=${POSTGRES_USER}
       - DB_PASSWORD=${POSTGRES_PASSWORD}
-      - DB_HOST=ioc-knowledge-db
+      - DB_HOST=ioc-knowledge-memory-svc-db
       - DB_PORT=5432
       - KNOWLEDGE_MEMORY_SVC_URL=http://ioc-knowledge-memory-svc:9003
       - LLM_PROVIDER=${LLM_PROVIDER:-azure-openai}
-      - COGNITION_ENGINE_SVC_URL=http://ioc-cfn-cognition-engine:9004
+      - COGNITION_ENGINE_SVC_URL=http://ioc-cfn-cognition-engines:9004
       - MCP_PORT=9001
     depends_on:
-      ioc-knowledge-db:
-        condition: service_healthy
-      ioc-cfn-mgmt-plane-svc:
-        condition: service_healthy
       ioc-knowledge-memory-svc:
         condition: service_healthy
     healthcheck:
@@ -223,15 +222,16 @@ services:
 
   # Cognition Engines
   # Port Mapping: 9004:9004 (same port inside and outside container)
-  ioc-cfn-cognition-engine:
+  ioc-cfn-cognition-engines:
     # Image Link: https://github.com/orgs/outshift-open/packages/container/package/ioc-cfn-cognition-engines
     image: ghcr.io/outshift-open/ioc-cfn-cognition-engines:v0.2.0
     platform: ${DOCKER_DEFAULT_PLATFORM:-linux/arm64}
-    container_name: ioc-cfn-cognition-engine
+    container_name: ioc-cfn-cognition-engines
     ports:
       - "9004:9004"
     profiles:
       - full-stack
+      - data-plane
     restart: unless-stopped
     environment:
       - LLM_BASE_URL=${LLM_BASE_URL}
@@ -240,7 +240,7 @@ services:
       - ENABLE_DEDUP=true
       # CE lifecycle management - auto-registration and heartbeat
       - CFN_URL=http://ioc-cfn-svc:9002
-      - COGNITION_ENGINE_HOST=ioc-cfn-cognition-engine
+      - COGNITION_ENGINE_HOST=ioc-cfn-cognition-engines
       - COGNITION_ENGINE_PORT=9004
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:9004/health"]
@@ -249,8 +249,6 @@ services:
       retries: 3
       start_period: 40s
     depends_on:
-      ioc-cfn-mgmt-plane-svc:
-        condition: service_healthy
       ioc-cfn-svc:
         condition: service_healthy
 
