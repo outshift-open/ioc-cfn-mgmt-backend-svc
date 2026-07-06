@@ -452,23 +452,38 @@ class CognitionEngineService:
                     engine.metrics = provided["metrics"]
                 if "config" in provided:
                     engine.config = provided["config"]
+                mas_config_updated = False
                 if "mas_config" in provided:
+                    from server.database.relational_db.models.mas_cognition_engine import MasCognitionEngine
+
                     engine.mas_config = provided["mas_config"]
+                    session.query(MasCognitionEngine).filter(
+                        MasCognitionEngine.ce_id == ce_id
+                    ).update({"mas_config": provided["mas_config"]}, synchronize_session="fetch")
+                    mas_config_updated = True
                 if "auth" in provided:
                     engine.auth = _auth_for_storage(provided["auth"])
                 if "mas_auto_associate" in provided:
                     engine.mas_auto_associate = provided["mas_auto_associate"]
 
+                cfn_id = engine.cfn_id
                 engine.updated_by = user_id
                 engine.updated_at = datetime.now(timezone.utc)
 
                 session.commit()
                 session.refresh(engine)
 
-                return _to_detail(engine)
+                detail = _to_detail(engine)
 
             finally:
                 session.close()
+
+            if mas_config_updated:
+                from server.services.cognition_fabric_node import cognition_fabric_node_service
+
+                cognition_fabric_node_service.update_config_for_cfn(cfn_id)
+
+            return detail
 
         except HTTPException:
             raise
