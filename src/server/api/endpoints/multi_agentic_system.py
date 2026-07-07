@@ -10,6 +10,7 @@ from server.schemas.cognition_engine import CognitionEngineAssociateResponse
 from server.schemas.multi_agentic_system import (
     MASQueryByIdentity,
     MasCognitionEngineAssociateRequest,
+    MasCognitionEnginePatchRequest,
     MultiAgenticSystem,
     MultiAgenticSystemRequest,
     MultiAgenticSystemResponse,
@@ -192,6 +193,27 @@ def associate_cognition_engine(
     check_workspace_exists(workspace_id)
     authz_service.require_permission(auth_user, "associate", "multi_agentic_system")
     return cognition_engine_service.associate(mas_id, request.ce_id, auth_user.get("id", "unknown"))
+
+
+@router.patch(
+    "/{workspace_id}/multi-agentic-systems/{mas_id}/cognition-engines/{ce_id}",
+    status_code=status.HTTP_204_NO_CONTENT,
+    summary="Update CE mas_config for a specific MAS",
+    description="Override the mas_config for a single CE-MAS association.",
+)
+def patch_mas_cognition_engine(
+    workspace_id: str,
+    mas_id: str,
+    ce_id: str,
+    request: MasCognitionEnginePatchRequest,
+    auth_user: dict = Depends(get_auth_user),
+):
+    from server.services.cognition_engine import cognition_engine_service
+
+    check_workspace_exists(workspace_id)
+    authz_service.require_permission(auth_user, "update", "multi_agentic_system")
+    cognition_engine_service.patch_mas_config(mas_id, ce_id, request.mas_config)
+    return None
 
 
 @router.delete(
