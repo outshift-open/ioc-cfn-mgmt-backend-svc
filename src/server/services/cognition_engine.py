@@ -456,9 +456,9 @@ class CognitionEngineService:
                 if "mas_config" in provided:
                     from server.database.relational_db.models.mas_cognition_engine import MasCognitionEngine
 
-                    session.query(MasCognitionEngine).filter(
-                        MasCognitionEngine.ce_id == ce_id
-                    ).update({"mas_config": provided["mas_config"]}, synchronize_session="fetch")
+                    session.query(MasCognitionEngine).filter(MasCognitionEngine.ce_id == ce_id).update(
+                        {"mas_config": provided["mas_config"]}, synchronize_session="fetch"
+                    )
                     mas_config_updated = True
                 if "auth" in provided:
                     engine.auth = _auth_for_storage(provided["auth"])
@@ -773,12 +773,14 @@ class CognitionEngineService:
                         .first()
                     )
                     if not exists:
-                        session.add(MasCognitionEngine(
-                            mas_id=mas_id,
-                            ce_id=ce_engine.id,
-                            mas_config=copy.deepcopy(ce_engine.mas_config) if ce_engine.mas_config else None,
-                            created_by="system",
-                        ))
+                        session.add(
+                            MasCognitionEngine(
+                                mas_id=mas_id,
+                                ce_id=ce_engine.id,
+                                mas_config=copy.deepcopy(ce_engine.mas_config) if ce_engine.mas_config else None,
+                                created_by="system",
+                            )
+                        )
 
                 auto_ce_ids = [e.id for e in auto_ces]
 
