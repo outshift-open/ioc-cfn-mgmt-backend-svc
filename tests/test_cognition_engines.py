@@ -624,7 +624,8 @@ class TestCognitionEnginePatch:
         assert data["capabilities"] == ["ingestion", "retrieval"]
         assert data["metrics"] == ["latency_ms"]
         assert data["config"] == {"timeout": 60}
-        assert data["mas_config"] == {"mas-1": {"max_requests": 100}}
+        # mas_config in the response is the CE factory default, not the per-MAS override
+        assert data["mas_config"] == {}
 
     def test_patch_only_provided_fields_updated(self, client, registered_cfn):
         """Unprovided fields are not changed."""
@@ -724,7 +725,7 @@ class TestCognitionEnginePatch:
         assert resp.json()["enabled"] is False
 
     def test_patch_mas_config(self, client, registered_cfn):
-        """PATCH can update the CE factory mas_config."""
+        """PATCH mas_config updates per-MAS junction rows; CE factory default is unchanged in response."""
         ce_id = _register(client, registered_cfn, "patch-mas-config")
 
         resp = client.patch(
@@ -733,7 +734,8 @@ class TestCognitionEnginePatch:
         )
 
         assert resp.status_code == status.HTTP_200_OK
-        assert resp.json()["mas_config"] == {"schedule": "0 0 * * *", "top_k": 10}
+        # Response reflects CE factory default (unchanged), not the junction override
+        assert resp.json()["mas_config"] == {}
 
 
 class TestCognitionEngineMasConfigPerMas:
@@ -800,7 +802,8 @@ class TestCognitionEngineMasConfigPerMas:
         new_config = {"schedule": "0 2 * * *"}
         resp = client.patch(f"/api/cognition-engines/{ce_id}", json={"mas_config": new_config})
         assert resp.status_code == status.HTTP_200_OK
-        assert resp.json()["mas_config"] == new_config
+        # Response reflects CE factory default (unchanged), not the junction override
+        assert resp.json()["mas_config"] == {"schedule": "0 0 * * *"}
 
         db = RelationalDB()
         session = db.get_session()

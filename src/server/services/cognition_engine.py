@@ -456,7 +456,6 @@ class CognitionEngineService:
                 if "mas_config" in provided:
                     from server.database.relational_db.models.mas_cognition_engine import MasCognitionEngine
 
-                    engine.mas_config = provided["mas_config"]
                     session.query(MasCognitionEngine).filter(
                         MasCognitionEngine.ce_id == ce_id
                     ).update({"mas_config": provided["mas_config"]}, synchronize_session="fetch")
@@ -753,9 +752,8 @@ class CognitionEngineService:
             session = db.get_session()
 
             try:
-                auto_ce_ids = [
-                    row[0]
-                    for row in session.query(CognitionEngineModel.id)
+                auto_ces = (
+                    session.query(CognitionEngineModel)
                     .filter(
                         CognitionEngineModel.cfn_id == cfn_id,
                         CognitionEngineModel.mas_auto_associate.is_(True),
@@ -763,19 +761,26 @@ class CognitionEngineService:
                         CognitionEngineModel.deleted_at.is_(None),
                     )
                     .all()
-                ]
+                )
 
-                for ce_id in auto_ce_ids:
+                for engine in auto_ces:
                     exists = (
                         session.query(MasCognitionEngine)
                         .filter(
-                            MasCognitionEngine.ce_id == ce_id,
+                            MasCognitionEngine.ce_id == engine.id,
                             MasCognitionEngine.mas_id == mas_id,
                         )
                         .first()
                     )
                     if not exists:
-                        session.add(MasCognitionEngine(mas_id=mas_id, ce_id=ce_id, created_by="system"))
+                        session.add(MasCognitionEngine(
+                            mas_id=mas_id,
+                            ce_id=engine.id,
+                            mas_config=copy.deepcopy(engine.mas_config) if engine.mas_config else None,
+                            created_by="system",
+                        ))
+
+                auto_ce_ids = [e.id for e in auto_ces]
 
                 if auto_ce_ids:
                     session.commit()
