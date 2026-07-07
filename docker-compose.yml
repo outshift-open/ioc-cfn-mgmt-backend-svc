@@ -134,7 +134,7 @@ services:
   # Port Mapping: 9003:9003 (same port inside and outside container)
   ioc-knowledge-memory-svc:
     # Image Link: https://github.com/orgs/outshift-open/packages/container/package/ioc-knowledge-memory-svc
-    image: ghcr.io/outshift-open/ioc-knowledge-memory-svc:v0.2.4
+    image: ghcr.io/outshift-open/ioc-knowledge-memory-svc:2026-07-01-67e6854
     platform: ${DOCKER_DEFAULT_PLATFORM:-linux/arm64}
     container_name: ioc-knowledge-memory-svc
     profiles:
@@ -176,8 +176,10 @@ services:
   # Port Mapping(HTTP): 9002:9002 (same port inside and outside container)
   # Port Mapping(MCP): 9009:9001 (different port inside and outside container)
   ioc-cfn-svc:
-    # Image Link: https://github.com/orgs/outshift-open/packages/container/package/ioc-cfn-svc
-    image: ghcr.io/outshift-open/ioc-cfn-svc:v0.2.0
+    build:
+      context: ../ioc-cfn-svc
+      dockerfile: build/Dockerfile
+    image: ioc-cfn-svc:debug-distill
     platform: ${DOCKER_DEFAULT_PLATFORM:-linux/arm64}
     container_name: ioc-cfn-svc
     profiles:
@@ -197,6 +199,7 @@ services:
       - DB_PASSWORD=${POSTGRES_PASSWORD}
       - DB_HOST=ioc-knowledge-db
       - DB_PORT=5432
+      - CALLBACK_URL=http://ioc-cfn-svc:9002
       - KNOWLEDGE_MEMORY_SVC_URL=http://ioc-knowledge-memory-svc:9003
       - LLM_PROVIDER=${LLM_PROVIDER:-azure-openai}
       - COGNITION_ENGINE_SVC_URL=http://ioc-cfn-cognition-engine:9004
@@ -224,8 +227,10 @@ services:
   # Cognition Engines
   # Port Mapping: 9004:9004 (same port inside and outside container)
   ioc-cfn-cognition-engine:
-    # Image Link: https://github.com/orgs/outshift-open/packages/container/package/ioc-cfn-cognition-engines
-    image: ghcr.io/outshift-open/ioc-cfn-cognition-engines:v0.2.0
+    build:
+      context: ../ioc-cfn-cognition-engines
+      dockerfile: Dockerfile
+    image: ioc-cfn-cognition-engines:debug-distill
     platform: ${DOCKER_DEFAULT_PLATFORM:-linux/arm64}
     container_name: ioc-cfn-cognition-engine
     ports:
