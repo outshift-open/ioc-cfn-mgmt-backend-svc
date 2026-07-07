@@ -227,10 +227,8 @@ services:
   # Cognition Engines
   # Port Mapping: 9004:9004 (same port inside and outside container)
   ioc-cfn-cognition-engine:
-    build:
-      context: ../ioc-cfn-cognition-engines
-      dockerfile: Dockerfile
-    image: ioc-cfn-cognition-engines:debug-distill
+    # Image Link: https://github.com/orgs/outshift-open/packages/container/package/ioc-cfn-cognition-engines
+    image: ghcr.io/outshift-open/ioc-cfn-cognition-engines:2026-07-06-4315b45
     platform: ${DOCKER_DEFAULT_PLATFORM:-linux/arm64}
     container_name: ioc-cfn-cognition-engine
     ports:
