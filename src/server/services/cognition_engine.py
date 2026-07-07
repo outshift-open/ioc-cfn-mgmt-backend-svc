@@ -763,11 +763,11 @@ class CognitionEngineService:
                     .all()
                 )
 
-                for engine in auto_ces:
+                for ce_engine in auto_ces:
                     exists = (
                         session.query(MasCognitionEngine)
                         .filter(
-                            MasCognitionEngine.ce_id == engine.id,
+                            MasCognitionEngine.ce_id == ce_engine.id,
                             MasCognitionEngine.mas_id == mas_id,
                         )
                         .first()
@@ -775,8 +775,8 @@ class CognitionEngineService:
                     if not exists:
                         session.add(MasCognitionEngine(
                             mas_id=mas_id,
-                            ce_id=engine.id,
-                            mas_config=copy.deepcopy(engine.mas_config) if engine.mas_config else None,
+                            ce_id=ce_engine.id,
+                            mas_config=copy.deepcopy(ce_engine.mas_config) if ce_engine.mas_config else None,
                             created_by="system",
                         ))
 
