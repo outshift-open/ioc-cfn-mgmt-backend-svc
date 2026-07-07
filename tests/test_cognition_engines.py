@@ -781,6 +781,37 @@ class TestCognitionEngineMasConfigPerMas:
         )
         assert resp.status_code == status.HTTP_200_OK
 
+    def test_patch_mas_config_propagates_to_junction(self, client, registered_cfn, created_workspace):
+        """Patching CE mas_config propagates the new value to all associated MAS junction rows."""
+        from server.database.relational_db.models.mas_cognition_engine import MasCognitionEngine
+
+        ce_id = _register(
+            client, registered_cfn, "ce-patch-propagate",
+            mas_config={"schedule": "0 0 * * *"},
+        )
+        mas_id_1 = _create_mas(client, created_workspace, "propagate-mas-1")
+        mas_id_2 = _create_mas(client, created_workspace, "propagate-mas-2")
+        for mas_id in (mas_id_1, mas_id_2):
+            client.post(
+                f"/api/workspaces/{created_workspace}/multi-agentic-systems/{mas_id}/cognition-engines",
+                json={"ce_id": ce_id},
+            )
+
+        new_config = {"schedule": "0 2 * * *"}
+        resp = client.patch(f"/api/cognition-engines/{ce_id}", json={"mas_config": new_config})
+        assert resp.status_code == status.HTTP_200_OK
+        assert resp.json()["mas_config"] == new_config
+
+        db = RelationalDB()
+        session = db.get_session()
+        try:
+            rows = session.query(MasCognitionEngine).filter(MasCognitionEngine.ce_id == ce_id).all()
+            assert len(rows) == 2
+            for row in rows:
+                assert row.mas_config == new_config
+        finally:
+            session.close()
+
 
 def _disable_cfn(client, cfn_id: str) -> None:
     resp = client.patch(f"/api/cognition-fabric-nodes/{cfn_id}/disable")
