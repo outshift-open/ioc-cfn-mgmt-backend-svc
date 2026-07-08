@@ -122,21 +122,6 @@ tasks:
     cmds:
       - docker compose --env-file .env --profile full-stack down -v
 
-  docker-compose-db-up:
-    desc: Start only databases (PostgreSQL) with db-only profile
-    cmds:
-      - docker compose --env-file .env --profile db-only up -d --pull always
-
-  docker-compose-db-down:
-    desc: Stop only databases with db-only profile
-    cmds:
-      - docker compose --env-file .env --profile db-only down
-
-  docker-compose-db-down-with-volumes:
-    desc: Stop databases and remove volumes with db-only profile
-    cmds:
-      - docker compose --env-file .env --profile db-only down -v
-
   # Database migration tasks (Alembic)
   db-migrate-apply:
     desc: Apply pending database migrations (alembic upgrade head)
