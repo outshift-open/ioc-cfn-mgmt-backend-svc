@@ -80,7 +80,7 @@ class CognitionFabricNodeService:
                 session.close()
 
         except Exception:
-            pass
+            logger.exception("update_config_for_cfn failed for cfn_id=%s", cfn_id)
 
     def update_config_for_workspace(self, workspace_id: str) -> None:
         """

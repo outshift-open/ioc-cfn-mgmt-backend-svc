@@ -110,7 +110,6 @@ class CognitionEnginePatchRequest(BaseModel):
     capabilities: Optional[List[str]] = Field(None, description="Capability names")
     metrics: Optional[List[str]] = Field(None, description="Metric names")
     config: Optional[dict] = Field(None, description="CE-level configuration")
-    mas_config: Optional[dict] = Field(None, description="Factory defaults for per-MAS configuration")
     auth: Optional[dict] = Field(None, description="Auth credentials")
 
     # Immutable fields — declared so callers get a 400 with a clear message rather than silent ignore

@@ -206,6 +206,12 @@ class MasCognitionEngineAssociateRequest(BaseModel):
     ce_id: str = Field(..., description="ID of the Cognition Engine to associate with this MAS")
 
 
+class MasCognitionEnginePatchRequest(BaseModel):
+    """Schema for PATCH /workspaces/{ws}/mas/{mas_id}/cognition-engines/{ce_id}"""
+
+    mas_config: dict = Field(..., description="Per-MAS config override for this CE")
+
+
 class MASQueryByIdentity(BaseModel):
     """Schema for querying MAS by agent identity type and/or identifiers"""
 

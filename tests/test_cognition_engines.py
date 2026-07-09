@@ -615,7 +615,6 @@ class TestCognitionEnginePatch:
                 "capabilities": ["ingestion", "retrieval"],
                 "metrics": ["latency_ms"],
                 "config": {"timeout": 60},
-                "mas_config": {"mas-1": {"max_requests": 100}},
             },
         )
 
@@ -624,7 +623,6 @@ class TestCognitionEnginePatch:
         assert data["capabilities"] == ["ingestion", "retrieval"]
         assert data["metrics"] == ["latency_ms"]
         assert data["config"] == {"timeout": 60}
-        assert data["mas_config"] == {"mas-1": {"max_requests": 100}}
 
     def test_patch_only_provided_fields_updated(self, client, registered_cfn):
         """Unprovided fields are not changed."""
@@ -723,17 +721,20 @@ class TestCognitionEnginePatch:
         assert resp.status_code == status.HTTP_200_OK
         assert resp.json()["enabled"] is False
 
-    def test_patch_mas_config(self, client, registered_cfn):
-        """PATCH can update the CE factory mas_config."""
-        ce_id = _register(client, registered_cfn, "patch-mas-config")
+    def test_patch_ce_mas_config_field_not_accepted(self, client, registered_cfn):
+        """CE PATCH does not accept mas_config — it is silently ignored and factory default is unchanged."""
+        factory_default = {"schedule": "0 0 * * *"}
+        ce_id = _register(client, registered_cfn, "patch-ce-mas-config-ignored", mas_config=factory_default)
 
         resp = client.patch(
             f"/api/cognition-engines/{ce_id}",
-            json={"mas_config": {"schedule": "0 0 * * *", "top_k": 10}},
+            json={"mas_config": {"schedule": "0 12 * * *", "top_k": 99}},
         )
 
+        # The request is not rejected — mas_config is simply not in CognitionEnginePatchRequest
         assert resp.status_code == status.HTTP_200_OK
-        assert resp.json()["mas_config"] == {"schedule": "0 0 * * *", "top_k": 10}
+        # Factory default must be unchanged
+        assert resp.json()["mas_config"] == factory_default
 
 
 class TestCognitionEngineMasConfigPerMas:
@@ -780,6 +781,34 @@ class TestCognitionEngineMasConfigPerMas:
             json={"cognition_engine_configs": {"nonexistent-ce": {"schedule": "0 0 * * *"}}},
         )
         assert resp.status_code == status.HTTP_200_OK
+
+    def test_association_seeds_factory_default_into_junction(self, client, registered_cfn, created_workspace):
+        """On association, the CE factory mas_config is seeded into the junction row."""
+        from server.database.relational_db.models.mas_cognition_engine import MasCognitionEngine
+
+        factory_default = {"schedule": "0 0 * * *"}
+        ce_id = _register(
+            client, registered_cfn, "ce-seed-junction",
+            mas_config=factory_default,
+        )
+        mas_id = _create_mas(client, created_workspace, "seed-junction-mas")
+        client.post(
+            f"/api/workspaces/{created_workspace}/multi-agentic-systems/{mas_id}/cognition-engines",
+            json={"ce_id": ce_id},
+        )
+
+        db = RelationalDB()
+        session = db.get_session()
+        try:
+            row = (
+                session.query(MasCognitionEngine)
+                .filter(MasCognitionEngine.mas_id == mas_id, MasCognitionEngine.ce_id == ce_id)
+                .first()
+            )
+            assert row is not None
+            assert row.mas_config == factory_default
+        finally:
+            session.close()
 
 
 def _disable_cfn(client, cfn_id: str) -> None:
@@ -1156,3 +1185,185 @@ class TestCognitionEngineAutoAttachTrigger:
             json={"ce_id": ce_id},
         )
         assert resp.status_code == status.HTTP_201_CREATED
+
+
+class TestMasCognitionEnginePatch:
+    """Tests for PATCH /workspaces/{ws}/multi-agentic-systems/{mas_id}/cognition-engines/{ce_id}
+
+    This endpoint updates the per-MAS mas_config override for a single CE-MAS association.
+    It exists because the correct scope for overriding a CE's config for a specific MAS is
+    the MAS resource, not the CE resource.
+    """
+
+    def test_patch_returns_204(self, client, registered_cfn, created_workspace):
+        """PATCH with valid mas_config returns 204 No Content."""
+        ce_id = _register(client, registered_cfn, "mas-patch-ce")
+        mas_id = _create_mas(client, created_workspace, "mas-patch-mas")
+        client.post(
+            f"/api/workspaces/{created_workspace}/multi-agentic-systems/{mas_id}/cognition-engines",
+            json={"ce_id": ce_id},
+        )
+
+        resp = client.patch(
+            f"/api/workspaces/{created_workspace}/multi-agentic-systems/{mas_id}/cognition-engines/{ce_id}",
+            json={"mas_config": {"schedule": "0 2 * * *", "top_k": 5}},
+        )
+
+        assert resp.status_code == status.HTTP_204_NO_CONTENT
+
+    def test_patch_updates_junction_row(self, client, registered_cfn, created_workspace):
+        """PATCH stores the new mas_config in the CE-MAS junction row."""
+        from server.database.relational_db.models.mas_cognition_engine import MasCognitionEngine
+
+        ce_id = _register(client, registered_cfn, "mas-patch-db-ce")
+        mas_id = _create_mas(client, created_workspace, "mas-patch-db-mas")
+        client.post(
+            f"/api/workspaces/{created_workspace}/multi-agentic-systems/{mas_id}/cognition-engines",
+            json={"ce_id": ce_id},
+        )
+
+        new_config = {"schedule": "0 6 * * *", "top_k": 20}
+        client.patch(
+            f"/api/workspaces/{created_workspace}/multi-agentic-systems/{mas_id}/cognition-engines/{ce_id}",
+            json={"mas_config": new_config},
+        )
+
+        db = RelationalDB()
+        session = db.get_session()
+        try:
+            row = (
+                session.query(MasCognitionEngine)
+                .filter(MasCognitionEngine.mas_id == mas_id, MasCognitionEngine.ce_id == ce_id)
+                .first()
+            )
+            assert row is not None
+            assert row.mas_config == new_config
+        finally:
+            session.close()
+
+    def test_patch_does_not_modify_ce_factory_default(self, client, registered_cfn, created_workspace):
+        """PATCH MAS-scoped config does not modify the CE factory default mas_config."""
+        factory_default = {"schedule": "0 0 * * *"}
+        ce_id = _register(client, registered_cfn, "mas-patch-factory-ce", mas_config=factory_default)
+        mas_id = _create_mas(client, created_workspace, "mas-patch-factory-mas")
+        client.post(
+            f"/api/workspaces/{created_workspace}/multi-agentic-systems/{mas_id}/cognition-engines",
+            json={"ce_id": ce_id},
+        )
+
+        client.patch(
+            f"/api/workspaces/{created_workspace}/multi-agentic-systems/{mas_id}/cognition-engines/{ce_id}",
+            json={"mas_config": {"schedule": "0 12 * * *"}},
+        )
+
+        ce_detail = client.get(f"/api/cognition-engines/{ce_id}").json()
+        assert ce_detail["mas_config"] == factory_default
+
+    def test_patch_unknown_keys_returns_422(self, client, registered_cfn, created_workspace):
+        """PATCH with keys not in the CE factory default is rejected with 422."""
+        ce_id = _register(
+            client, registered_cfn, "mas-patch-unknown-keys-ce",
+            mas_config={"schedule": "0 0 * * *", "top_k": 10},
+        )
+        mas_id = _create_mas(client, created_workspace, "mas-patch-unknown-keys-mas")
+        client.post(
+            f"/api/workspaces/{created_workspace}/multi-agentic-systems/{mas_id}/cognition-engines",
+            json={"ce_id": ce_id},
+        )
+
+        resp = client.patch(
+            f"/api/workspaces/{created_workspace}/multi-agentic-systems/{mas_id}/cognition-engines/{ce_id}",
+            json={"mas_config": {"schedule": "0 6 * * *", "top_k": 5, "foo": "bar"}},
+        )
+
+        assert resp.status_code == status.HTTP_422_UNPROCESSABLE_CONTENT
+        assert "foo" in resp.json()["detail"]
+
+    def test_patch_subset_of_keys_allowed(self, client, registered_cfn, created_workspace):
+        """PATCH with a subset of factory default keys is valid — not all keys need to be provided."""
+        ce_id = _register(
+            client, registered_cfn, "mas-patch-subset-ce",
+            mas_config={"schedule": "0 0 * * *", "top_k": 10},
+        )
+        mas_id = _create_mas(client, created_workspace, "mas-patch-subset-mas")
+        client.post(
+            f"/api/workspaces/{created_workspace}/multi-agentic-systems/{mas_id}/cognition-engines",
+            json={"ce_id": ce_id},
+        )
+
+        resp = client.patch(
+            f"/api/workspaces/{created_workspace}/multi-agentic-systems/{mas_id}/cognition-engines/{ce_id}",
+            json={"mas_config": {"schedule": "0 6 * * *"}},
+        )
+
+        assert resp.status_code == status.HTTP_204_NO_CONTENT
+
+    def test_patch_not_associated_returns_404(self, client, registered_cfn, created_workspace):
+        """PATCH when CE is not associated with the MAS returns 404."""
+        ce_id = _register(client, registered_cfn, "mas-patch-404-ce")
+        mas_id = _create_mas(client, created_workspace, "mas-patch-404-mas")
+        # CE is intentionally not associated with this MAS
+
+        resp = client.patch(
+            f"/api/workspaces/{created_workspace}/multi-agentic-systems/{mas_id}/cognition-engines/{ce_id}",
+            json={"mas_config": {"schedule": "0 0 * * *"}},
+        )
+
+        assert resp.status_code == status.HTTP_404_NOT_FOUND
+
+    def test_patch_increments_config_version(self, client, registered_cfn, created_workspace):
+        """PATCH mas_config triggers a CFN config update (config_version increments)."""
+        ce_id = _register(client, registered_cfn, "mas-patch-cfgv-ce")
+        mas_id = _create_mas(client, created_workspace, "mas-patch-cfgv-mas")
+        client.post(
+            f"/api/workspaces/{created_workspace}/multi-agentic-systems/{mas_id}/cognition-engines",
+            json={"ce_id": ce_id},
+        )
+
+        initial_version = client.put(f"/api/cognition-fabric-nodes/{registered_cfn}/heartbeat").json()["config_version"]
+
+        client.patch(
+            f"/api/workspaces/{created_workspace}/multi-agentic-systems/{mas_id}/cognition-engines/{ce_id}",
+            json={"mas_config": {"schedule": "0 3 * * *"}},
+        )
+
+        updated_version = client.put(f"/api/cognition-fabric-nodes/{registered_cfn}/heartbeat").json()["config_version"]
+        assert updated_version > initial_version
+
+    def test_patch_only_affects_target_mas_junction(self, client, registered_cfn, created_workspace):
+        """PATCH for one MAS does not affect other MAS junction rows for the same CE."""
+        from server.database.relational_db.models.mas_cognition_engine import MasCognitionEngine
+
+        original_config = {"schedule": "0 0 * * *"}
+        ce_id = _register(client, registered_cfn, "mas-patch-iso-ce", mas_config=original_config)
+        mas_id_1 = _create_mas(client, created_workspace, "mas-patch-iso-1")
+        mas_id_2 = _create_mas(client, created_workspace, "mas-patch-iso-2")
+        for mas_id in (mas_id_1, mas_id_2):
+            client.post(
+                f"/api/workspaces/{created_workspace}/multi-agentic-systems/{mas_id}/cognition-engines",
+                json={"ce_id": ce_id},
+            )
+
+        # Override config for MAS 1 only
+        client.patch(
+            f"/api/workspaces/{created_workspace}/multi-agentic-systems/{mas_id_1}/cognition-engines/{ce_id}",
+            json={"mas_config": {"schedule": "0 6 * * *"}},
+        )
+
+        db = RelationalDB()
+        session = db.get_session()
+        try:
+            row1 = (
+                session.query(MasCognitionEngine)
+                .filter(MasCognitionEngine.mas_id == mas_id_1, MasCognitionEngine.ce_id == ce_id)
+                .first()
+            )
+            row2 = (
+                session.query(MasCognitionEngine)
+                .filter(MasCognitionEngine.mas_id == mas_id_2, MasCognitionEngine.ce_id == ce_id)
+                .first()
+            )
+            assert row1.mas_config == {"schedule": "0 6 * * *"}
+            assert row2.mas_config == original_config
+        finally:
+            session.close()
