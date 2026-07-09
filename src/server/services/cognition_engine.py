@@ -486,6 +486,24 @@ class CognitionEngineService:
             db = RelationalDB()
             session = db.get_session()
             try:
+                engine = session.query(CognitionEngineModel).filter(CognitionEngineModel.id == ce_id).first()
+                if not engine:
+                    raise HTTPException(
+                        status_code=status.HTTP_404_NOT_FOUND,
+                        detail="Cognition Engine not found",
+                    )
+
+                # Validate keys against the CE factory default
+                factory_default = engine.mas_config or {}
+                if factory_default:
+                    unknown_keys = set(mas_config.keys()) - set(factory_default.keys())
+                    if unknown_keys:
+                        raise HTTPException(
+                            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
+                            detail=f"Unknown mas_config keys: {sorted(unknown_keys)}. "
+                                   f"Allowed keys: {sorted(factory_default.keys())}",
+                        )
+
                 assoc = (
                     session.query(MasCognitionEngine)
                     .filter(
@@ -502,8 +520,7 @@ class CognitionEngineService:
                 assoc.mas_config = mas_config
                 session.commit()
 
-                engine = session.query(CognitionEngineModel).filter(CognitionEngineModel.id == ce_id).first()
-                cfn_id = engine.cfn_id if engine else None
+                cfn_id = engine.cfn_id
             finally:
                 session.close()
 

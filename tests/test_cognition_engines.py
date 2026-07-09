@@ -1259,6 +1259,45 @@ class TestMasCognitionEnginePatch:
         ce_detail = client.get(f"/api/cognition-engines/{ce_id}").json()
         assert ce_detail["mas_config"] == factory_default
 
+    def test_patch_unknown_keys_returns_422(self, client, registered_cfn, created_workspace):
+        """PATCH with keys not in the CE factory default is rejected with 422."""
+        ce_id = _register(
+            client, registered_cfn, "mas-patch-unknown-keys-ce",
+            mas_config={"schedule": "0 0 * * *", "top_k": 10},
+        )
+        mas_id = _create_mas(client, created_workspace, "mas-patch-unknown-keys-mas")
+        client.post(
+            f"/api/workspaces/{created_workspace}/multi-agentic-systems/{mas_id}/cognition-engines",
+            json={"ce_id": ce_id},
+        )
+
+        resp = client.patch(
+            f"/api/workspaces/{created_workspace}/multi-agentic-systems/{mas_id}/cognition-engines/{ce_id}",
+            json={"mas_config": {"schedule": "0 6 * * *", "top_k": 5, "foo": "bar"}},
+        )
+
+        assert resp.status_code == status.HTTP_422_UNPROCESSABLE_CONTENT
+        assert "foo" in resp.json()["detail"]
+
+    def test_patch_subset_of_keys_allowed(self, client, registered_cfn, created_workspace):
+        """PATCH with a subset of factory default keys is valid — not all keys need to be provided."""
+        ce_id = _register(
+            client, registered_cfn, "mas-patch-subset-ce",
+            mas_config={"schedule": "0 0 * * *", "top_k": 10},
+        )
+        mas_id = _create_mas(client, created_workspace, "mas-patch-subset-mas")
+        client.post(
+            f"/api/workspaces/{created_workspace}/multi-agentic-systems/{mas_id}/cognition-engines",
+            json={"ce_id": ce_id},
+        )
+
+        resp = client.patch(
+            f"/api/workspaces/{created_workspace}/multi-agentic-systems/{mas_id}/cognition-engines/{ce_id}",
+            json={"mas_config": {"schedule": "0 6 * * *"}},
+        )
+
+        assert resp.status_code == status.HTTP_204_NO_CONTENT
+
     def test_patch_not_associated_returns_404(self, client, registered_cfn, created_workspace):
         """PATCH when CE is not associated with the MAS returns 404."""
         ce_id = _register(client, registered_cfn, "mas-patch-404-ce")
