@@ -152,6 +152,8 @@ class CognitionFabricNodeListItem(BaseModel):
     status: CognitionFabricNodeStatus = Field(..., description="Current node status")
     last_seen: datetime = Field(..., description="Last heartbeat timestamp")
     enabled: bool = Field(..., description="Whether node is enabled")
+    ip_address: Optional[str] = Field(None, description="Node IP address")
+    port: Optional[int] = Field(None, description="Node port")
     created_at: datetime = Field(..., description="Creation timestamp")
 
 
