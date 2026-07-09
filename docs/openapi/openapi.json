@@ -3376,10 +3376,17 @@
             "description": "Map of kind -> list of subkinds, e.g. {'intent': ['mission'], 'exchange': ['team-formation']}. All supported subkinds must be listed. Required for L9 routing."
           },
           "subprotocols": {
-            "items": {
-              "type": "string"
-            },
-            "type": "array",
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
             "title": "Subprotocols",
             "description": "List of subprotocols supported by this CE, e.g. ['sab']."
           },
@@ -4057,18 +4064,31 @@
             "type": "string",
             "title": "Name"
           },
-          "kind": {
+          "kinds_subkinds": {
             "anyOf": [
               {
-                "type": "string"
+                "additionalProperties": true,
+                "type": "object"
               },
               {
                 "type": "null"
               }
             ],
-            "title": "Kind"
+            "title": "Kinds Subkinds"
           },
-          "subkind": {
+          "subprotocols": {
+            "anyOf": [
+              {
+                "items": {},
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Subprotocols"
+          },
+          "category": {
             "anyOf": [
               {
                 "type": "string"
@@ -4077,7 +4097,7 @@
                 "type": "null"
               }
             ],
-            "title": "Subkind"
+            "title": "Category"
           },
           "url": {
             "type": "string",
@@ -4108,8 +4128,9 @@
         "required": [
           "ce_id",
           "name",
-          "kind",
-          "subkind",
+          "kinds_subkinds",
+          "subprotocols",
+          "category",
           "url",
           "enabled",
           "status",

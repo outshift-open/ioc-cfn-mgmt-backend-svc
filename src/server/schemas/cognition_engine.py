@@ -38,8 +38,8 @@ class CognitionEngineRegisterRequest(BaseModel):
             "All supported subkinds must be listed. Required for L9 routing."
         ),
     )
-    subprotocols: List[str] = Field(
-        default_factory=list, description="List of subprotocols supported by this CE, e.g. ['sab']."
+    subprotocols: Optional[List[str]] = Field(
+        default=None, description="List of subprotocols supported by this CE, e.g. ['sab']."
     )
     category: CECategory = Field(
         default=CECategory.COG,
