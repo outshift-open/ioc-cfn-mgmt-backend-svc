@@ -28,8 +28,11 @@ class CognitionEngine(Base):
     auth = Column(JSONB, nullable=True)
 
     # Type and capabilities
-    kind = Column(String(50), nullable=True)
-    subkind = Column(String(50), nullable=True)
+    # kinds_subkinds: dict mapping kind -> list of subkinds, e.g. {"intent": ["mission"], "exchange": ["team-formation"]}
+    kinds_subkinds = Column(JSONB, nullable=True, default=dict)
+    subprotocols = Column(JSONB, nullable=True, default=list)
+    # category: CE category - 'UNKNOWN', 'GAT' (Gateway), or 'COG' (Cognition, default)
+    category = Column(String(20), nullable=False, default="COG")
     capabilities = Column(JSONB, nullable=True, default=list)
     metrics = Column(JSONB, nullable=True, default=list)
 

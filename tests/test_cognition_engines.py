@@ -62,8 +62,8 @@ class TestCognitionEngineRegister:
         assert data["cfn_id"] == registered_cfn
         assert data["name"] == "test-engine"
         assert data["version"] == "1.0.0"
-        assert data["kind"] is None
-        assert data["subkind"] is None
+        assert data["kinds_subkinds"] is None or data["kinds_subkinds"] == {}
+        assert data["subprotocols"] is None or data["subprotocols"] == []
         assert data["status"] == "offline"
         assert data["created"] is True
 
@@ -111,8 +111,9 @@ class TestCognitionEngineRegister:
             "name": "knowledge-engine",
             "url": "https://ke.internal:9090",
             "version": "2.3.1",
-            "kind": "knowledge",
-            "subkind": "query",
+            "kinds_subkinds": {"knowledge": ["query", "distillation"], "contingency": ["alignment"]},
+            "subprotocols": ["sab", "cip"],
+            "category": "COG",
             "capabilities": ["ingestion", "retrieval", "similarity_search"],
             "metrics": ["kb.documents.indexed", "kb.search.latency_ms"],
             "auth": {"type": "api_key", "credentials": {"api_key": "secret"}},
@@ -124,9 +125,44 @@ class TestCognitionEngineRegister:
 
         assert response.status_code == status.HTTP_201_CREATED
         data = response.json()
-        assert data["kind"] == "knowledge"
-        assert data["subkind"] == "query"
+        assert data["kinds_subkinds"] == {"knowledge": ["query", "distillation"], "contingency": ["alignment"]}
+        assert data["subprotocols"] == ["sab", "cip"]
+        assert data["category"] == "COG"
         assert data["created"] is True
+
+    def test_register_gateway_category(self, client, registered_cfn):
+        """Registration with GAT category for gateway CEs like CASA"""
+        payload = {
+            "cfn_id": registered_cfn,
+            "name": "casa-gateway",
+            "url": "https://casa.internal:9090",
+            "version": "1.0.0",
+            "kinds_subkinds": {"intent": ["mission"]},
+            "subprotocols": ["sab"],
+            "category": "GAT",
+        }
+
+        response = client.post("/api/cognition-engines", json=payload)
+
+        assert response.status_code == status.HTTP_201_CREATED
+        data = response.json()
+        assert data["category"] == "GAT"
+
+    def test_register_defaults_to_cog_category(self, client, registered_cfn):
+        """Registration without category defaults to COG"""
+        payload = {
+            "cfn_id": registered_cfn,
+            "name": "default-category-engine",
+            "url": "https://ce.internal:9090",
+            "version": "1.0.0",
+            "kinds_subkinds": {"knowledge": ["query"]},
+        }
+
+        response = client.post("/api/cognition-engines", json=payload)
+
+        assert response.status_code == status.HTTP_201_CREATED
+        data = response.json()
+        assert data["category"] == "COG"
 
     def test_register_missing_required_fields(self, client, registered_cfn):
         """Missing url or version is rejected with 422"""
@@ -239,7 +275,7 @@ class TestCognitionEngineList:
 
         item = client.get(f"/api/cognition-engines?cfn_id={registered_cfn}").json()["cognition_engines"][0]
 
-        for field in ("id", "cfn_id", "name", "version", "kind", "subkind", "url", "enabled", "status", "config", "mas_config"):
+        for field in ("id", "cfn_id", "name", "version", "kinds_subkinds", "subprotocols", "url", "enabled", "status", "config", "mas_config"):
             assert field in item
         assert "auth" not in item
 
@@ -251,8 +287,8 @@ class TestCognitionEngineGet:
         """Returns full detail for a known engine"""
         ce_id = _register(
             client, registered_cfn, "get-test-engine",
-            kind="knowledge",
-            subkind="distillation",
+            kinds_subkinds={"knowledge": ["distillation", "query"]},
+            subprotocols=["siep"],
             capabilities=["summarize"],
             metrics=["latency_ms"],
         )
@@ -264,8 +300,8 @@ class TestCognitionEngineGet:
         assert data["id"] == ce_id
         assert data["cfn_id"] == registered_cfn
         assert data["name"] == "get-test-engine"
-        assert data["kind"] == "knowledge"
-        assert data["subkind"] == "distillation"
+        assert data["kinds_subkinds"] == {"knowledge": ["distillation", "query"]}
+        assert data["subprotocols"] == ["siep"]
         assert data["capabilities"] == ["summarize"]
         assert data["metrics"] == ["latency_ms"]
         assert data["status"] == "offline"
@@ -644,8 +680,8 @@ class TestCognitionEnginePatch:
             ("name", "new-name"),
             ("cfn_id", "other-cfn"),
             ("version", "9.9.9"),
-            ("kind", "contingency"),
-            ("subkind", "alignment"),
+            ("kinds_subkinds", {"contingency": ["alignment"]}),
+            ("subprotocols", ["tfp"]),
         ]:
             resp = client.patch(f"/api/cognition-engines/{ce_id}", json={field: value})
             assert resp.status_code == status.HTTP_400_BAD_REQUEST, f"Expected 400 for field '{field}'"

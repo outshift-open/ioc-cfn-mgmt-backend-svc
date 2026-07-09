@@ -27,7 +27,7 @@ from server.schemas.cognition_engine import (
 from server.utils import generate_uuid
 from server.utils.encryption import process_config_for_storage
 
-_IMMUTABLE_CE_FIELDS = {"cfn_id", "version", "name", "kind", "subkind"}
+_IMMUTABLE_CE_FIELDS = {"cfn_id", "version", "name", "kinds_subkinds", "subprotocols", "category"}
 
 
 class CognitionEngineService:
@@ -76,8 +76,9 @@ class CognitionEngineService:
 
                 if existing:
                     existing.url = engine_data.url
-                    existing.kind = engine_data.kind
-                    existing.subkind = engine_data.subkind
+                    existing.kinds_subkinds = engine_data.kinds_subkinds  # Required field
+                    existing.subprotocols = engine_data.subprotocols or []
+                    existing.category = engine_data.category.value  # Store enum value as string
                     existing.auth = _auth_for_storage(engine_data.auth)
                     existing.capabilities = engine_data.capabilities or []
                     existing.metrics = engine_data.metrics or []
@@ -96,8 +97,9 @@ class CognitionEngineService:
                         name=engine_data.name,
                         url=engine_data.url,
                         version=engine_data.version,
-                        kind=engine_data.kind,
-                        subkind=engine_data.subkind,
+                        kinds_subkinds=engine_data.kinds_subkinds,  # Required field
+                        subprotocols=engine_data.subprotocols or [],
+                        category=engine_data.category.value,  # Store enum value as string
                         auth=_auth_for_storage(engine_data.auth),
                         capabilities=engine_data.capabilities or [],
                         metrics=engine_data.metrics or [],
@@ -119,8 +121,9 @@ class CognitionEngineService:
                         cfn_id=engine.cfn_id,
                         name=engine.name,
                         version=engine.version,
-                        kind=engine.kind,
-                        subkind=engine.subkind,
+                        kinds_subkinds=engine.kinds_subkinds,
+                        subprotocols=engine.subprotocols,
+                        category=engine.category,
                         enabled=engine.enabled,
                         mas_auto_associate=engine.mas_auto_associate,
                         status=engine.status,
@@ -215,8 +218,9 @@ class CognitionEngineService:
                             cfn_id=e.cfn_id,
                             name=e.name,
                             version=e.version,
-                            kind=e.kind,
-                            subkind=e.subkind,
+                            kinds_subkinds=e.kinds_subkinds,
+                            subprotocols=e.subprotocols,
+                            category=e.category,
                             url=e.url,
                             enabled=e.enabled,
                             mas_auto_associate=e.mas_auto_associate,
@@ -665,8 +669,9 @@ class CognitionEngineService:
                         "id": e.id,
                         "name": e.name,
                         "url": e.url,
-                        "kind": e.kind,
-                        "subkind": e.subkind,
+                        "kinds_subkinds": e.kinds_subkinds or {},
+                        "subprotocols": e.subprotocols or [],
+                        "category": e.category or "COG",
                         "enabled": e.enabled,
                         "status": e.status,
                         "last_seen": e.last_seen.isoformat() if e.last_seen else None,
@@ -798,8 +803,9 @@ def _to_detail(engine: CognitionEngineModel) -> CognitionEngineDetail:
         cfn_id=engine.cfn_id,
         name=engine.name,
         version=engine.version,
-        kind=engine.kind,
-        subkind=engine.subkind,
+        kinds_subkinds=engine.kinds_subkinds,
+        subprotocols=engine.subprotocols,
+        category=engine.category,
         url=engine.url,
         enabled=engine.enabled,
         mas_auto_associate=engine.mas_auto_associate,
