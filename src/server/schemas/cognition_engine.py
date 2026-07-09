@@ -33,7 +33,10 @@ class CognitionEngineRegisterRequest(BaseModel):
     version: str = Field(..., description="CE software version, e.g. '1.2.3'")
     kinds_subkinds: Dict[str, List[str]] = Field(
         ...,
-        description="Map of kind -> list of subkinds, e.g. {'intent': ['mission'], 'exchange': ['team-formation']}. All supported subkinds must be listed. Required for L9 routing.",
+        description=(
+            "Map of kind -> list of subkinds, e.g. {'intent': ['mission'], 'exchange': ['team-formation']}. "
+            "All supported subkinds must be listed. Required for L9 routing."
+        ),
     )
     subprotocols: List[str] = Field(
         default_factory=list, description="List of subprotocols supported by this CE, e.g. ['sab']."

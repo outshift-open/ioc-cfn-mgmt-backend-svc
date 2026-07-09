@@ -84,10 +84,16 @@ def fetch_mas_metrics(
         return JSONResponse(status_code=400, content={"error": f"invalid masId: {masId!r}"})
     parsed_start = _parse_timestamp(start_time)
     if parsed_start is None:
-        return JSONResponse(status_code=400, content={"error": f"invalid start_time: {start_time!r} — expected Unix timestamp, RFC3339, or YYYY-MM-DD"})
+        return JSONResponse(
+            status_code=400,
+            content={"error": f"invalid start_time: {start_time!r} — expected Unix timestamp, RFC3339, or YYYY-MM-DD"},
+        )
     parsed_end = _parse_timestamp(end_time)
     if parsed_end is None:
-        return JSONResponse(status_code=400, content={"error": f"invalid end_time: {end_time!r} — expected Unix timestamp, RFC3339, or YYYY-MM-DD"})
+        return JSONResponse(
+            status_code=400,
+            content={"error": f"invalid end_time: {end_time!r} — expected Unix timestamp, RFC3339, or YYYY-MM-DD"},
+        )
     if parsed_start >= parsed_end:
         return JSONResponse(status_code=400, content={"error": "start_time must be before end_time"})
 

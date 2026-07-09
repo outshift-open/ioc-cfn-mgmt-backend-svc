@@ -623,7 +623,14 @@ class TestMASInlineCEAssociation:
     def _register_ce(self, client, cfn_id: str, name: str) -> str:
         resp = client.post(
             "/api/cognition-engines",
-            json={"cfn_id": cfn_id, "name": name, "url": "http://ce:8080", "version": "1.0.0"},
+            json={
+                "cfn_id": cfn_id,
+                "name": name,
+                "url": "http://ce:8080",
+                "version": "1.0.0",
+                "kinds_subkinds": {"knowledge": ["query"]},
+                "subprotocols": ["sab"],
+            },
         )
         assert resp.status_code == 201
         return resp.json()["ce_id"]

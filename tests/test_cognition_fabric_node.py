@@ -1003,6 +1003,8 @@ class TestCFNConfigCognitionEngines:
                 "name": name,
                 "url": "http://ce.internal:9004",
                 "version": "1.0.0",
+                "kinds_subkinds": {"knowledge": ["query"]},
+                "subprotocols": ["sab"],
                 "auth": self._AUTH,
             },
         )
@@ -1035,7 +1037,7 @@ class TestCFNConfigCognitionEngines:
         self._register_ce(client, cfn_id)
 
         engine = client.get(f"/api/cognitive-fabric-node/{cfn_id}/workspaces").json()["cognition_engines"][0]
-        for field in ("id", "name", "url", "kind", "subkind", "enabled", "status", "capabilities", "metrics", "config", "mas_config", "auth"):
+        for field in ("id", "name", "url", "kinds_subkinds", "subprotocols", "category", "enabled", "status", "capabilities", "metrics", "config", "mas_config", "auth"):
             assert field in engine
 
     def test_workspaces_config_no_ce_when_none_registered(self, client, created_cfn):
@@ -1079,6 +1081,8 @@ class TestCFNConfigCognitionEngines:
                 "name": "auto-ce",
                 "url": "http://ce.internal:9004",
                 "version": "1.0.0",
+                "kinds_subkinds": {"knowledge": ["query"]},
+                "subprotocols": ["sab"],
                 "mas_auto_associate": True,
             },
         ).json()["ce_id"]

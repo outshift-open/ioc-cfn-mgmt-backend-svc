@@ -18,6 +18,8 @@ def _base_payload(cfn_id: str, name: str = "test-engine") -> dict:
         "name": name,
         "url": "http://ce.internal:8080",
         "version": "1.0.0",
+        "kinds_subkinds": {"knowledge": ["query"]},
+        "subprotocols": ["sab"],
     }
 
 
@@ -62,8 +64,8 @@ class TestCognitionEngineRegister:
         assert data["cfn_id"] == registered_cfn
         assert data["name"] == "test-engine"
         assert data["version"] == "1.0.0"
-        assert data["kinds_subkinds"] is None or data["kinds_subkinds"] == {}
-        assert data["subprotocols"] is None or data["subprotocols"] == []
+        assert data["kinds_subkinds"] == {"knowledge": ["query"]}
+        assert data["subprotocols"] == ["sab"]
         assert data["status"] == "offline"
         assert data["created"] is True
 
@@ -156,6 +158,7 @@ class TestCognitionEngineRegister:
             "url": "https://ce.internal:9090",
             "version": "1.0.0",
             "kinds_subkinds": {"knowledge": ["query"]},
+            "subprotocols": ["sab"],
         }
 
         response = client.post("/api/cognition-engines", json=payload)
@@ -1104,6 +1107,8 @@ class TestCognitionEngineAutoAttachTrigger:
             "name": "idempotent-auto-ce",
             "url": "http://ce:8080",
             "version": "1.0.0",
+            "kinds_subkinds": {"knowledge": ["query"]},
+            "subprotocols": ["sab"],
             "mas_auto_associate": True,
         }
         client.post("/api/cognition-engines", json=payload)  # first registration: creates (201)
