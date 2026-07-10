@@ -2768,6 +2768,16 @@
         "title": "AuditCfnPageInfo",
         "description": "Pagination metadata matching the upstream cfn-svc response."
       },
+      "CECategory": {
+        "type": "string",
+        "enum": [
+          "UNKNOWN",
+          "GAT",
+          "COG"
+        ],
+        "title": "CECategory",
+        "description": "Category of a Cognition Engine.\n\n- UNKNOWN: Default/unspecified category\n- GAT: Gateway CE (e.g., CASA)\n- COG: Cognition Engines (all other CEs)"
+      },
       "CognitionEngineAssociateResponse": {
         "properties": {
           "ce_id": {
@@ -2811,27 +2821,39 @@
             "type": "string",
             "title": "Version"
           },
-          "kind": {
+          "kinds_subkinds": {
             "anyOf": [
               {
-                "type": "string"
+                "additionalProperties": {
+                  "items": {
+                    "type": "string"
+                  },
+                  "type": "array"
+                },
+                "type": "object"
               },
               {
                 "type": "null"
               }
             ],
-            "title": "Kind"
+            "title": "Kinds Subkinds"
           },
-          "subkind": {
+          "subprotocols": {
             "anyOf": [
               {
-                "type": "string"
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
               },
               {
                 "type": "null"
               }
             ],
-            "title": "Subkind"
+            "title": "Subprotocols"
+          },
+          "category": {
+            "$ref": "#/components/schemas/CECategory"
           },
           "url": {
             "type": "string",
@@ -2937,8 +2959,9 @@
           "cfn_id",
           "name",
           "version",
-          "kind",
-          "subkind",
+          "kinds_subkinds",
+          "subprotocols",
+          "category",
           "url",
           "enabled",
           "mas_auto_associate",
@@ -3014,27 +3037,39 @@
             "type": "string",
             "title": "Version"
           },
-          "kind": {
+          "kinds_subkinds": {
             "anyOf": [
               {
-                "type": "string"
+                "additionalProperties": {
+                  "items": {
+                    "type": "string"
+                  },
+                  "type": "array"
+                },
+                "type": "object"
               },
               {
                 "type": "null"
               }
             ],
-            "title": "Kind"
+            "title": "Kinds Subkinds"
           },
-          "subkind": {
+          "subprotocols": {
             "anyOf": [
               {
-                "type": "string"
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
               },
               {
                 "type": "null"
               }
             ],
-            "title": "Subkind"
+            "title": "Subprotocols"
+          },
+          "category": {
+            "$ref": "#/components/schemas/CECategory"
           },
           "url": {
             "type": "string",
@@ -3100,8 +3135,9 @@
           "cfn_id",
           "name",
           "version",
-          "kind",
-          "subkind",
+          "kinds_subkinds",
+          "subprotocols",
+          "category",
           "url",
           "enabled",
           "mas_auto_associate",
@@ -3257,34 +3293,54 @@
             "title": "Name",
             "description": "Immutable \u2014 cannot be updated via PATCH"
           },
-          "kind": {
+          "kinds_subkinds": {
             "anyOf": [
               {
-                "type": "string"
+                "additionalProperties": {
+                  "items": {
+                    "type": "string"
+                  },
+                  "type": "array"
+                },
+                "type": "object"
               },
               {
                 "type": "null"
               }
             ],
-            "title": "Kind",
+            "title": "Kinds Subkinds",
             "description": "Immutable \u2014 cannot be updated via PATCH"
           },
-          "subkind": {
+          "subprotocols": {
             "anyOf": [
               {
-                "type": "string"
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
               },
               {
                 "type": "null"
               }
             ],
-            "title": "Subkind",
+            "title": "Subprotocols",
+            "description": "Immutable \u2014 cannot be updated via PATCH"
+          },
+          "category": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/CECategory"
+              },
+              {
+                "type": "null"
+              }
+            ],
             "description": "Immutable \u2014 cannot be updated via PATCH"
           }
         },
         "type": "object",
         "title": "CognitionEnginePatchRequest",
-        "description": "Schema for PATCH /cognition-engines/{id}.\n\nOnly the fields listed here can be updated.\nAttempting to update immutable fields (cfn_id, version, name, kind, subkind)\nwill be rejected with 400."
+        "description": "Schema for PATCH /cognition-engines/{id}.\n\nOnly the fields listed here can be updated.\nAttempting to update immutable fields (cfn_id, version, name, kinds_subkinds, subprotocols, category)\nwill be rejected with 400."
       },
       "CognitionEngineRegisterRequest": {
         "properties": {
@@ -3308,29 +3364,36 @@
             "title": "Version",
             "description": "CE software version, e.g. '1.2.3'"
           },
-          "kind": {
-            "anyOf": [
-              {
+          "kinds_subkinds": {
+            "additionalProperties": {
+              "items": {
                 "type": "string"
               },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Kind",
-            "description": "Engine kind, e.g. 'knowledge', 'contingency'"
+              "type": "array"
+            },
+            "type": "object",
+            "title": "Kinds Subkinds",
+            "description": "Map of kind -> list of subkinds, e.g. {'intent': ['mission'], 'exchange': ['team-formation']}. All supported subkinds must be listed. Required for L9 routing."
           },
-          "subkind": {
+          "subprotocols": {
             "anyOf": [
               {
-                "type": "string"
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
               },
               {
                 "type": "null"
               }
             ],
-            "title": "Subkind",
-            "description": "Engine subkind, e.g. 'distillation', 'query', 'alignment'"
+            "title": "Subprotocols",
+            "description": "List of subprotocols supported by this CE, e.g. ['sab']."
+          },
+          "category": {
+            "$ref": "#/components/schemas/CECategory",
+            "description": "CE category: 'UNKNOWN', 'GAT' (Gateway, e.g. CASA), or 'COG' (Cognition, default for most CEs)",
+            "default": "COG"
           },
           "mas_auto_associate": {
             "type": "boolean",
@@ -3413,7 +3476,8 @@
           "cfn_id",
           "name",
           "url",
-          "version"
+          "version",
+          "kinds_subkinds"
         ],
         "title": "CognitionEngineRegisterRequest",
         "description": "Schema for CE self-registration (idempotent upsert)"
@@ -3436,27 +3500,39 @@
             "type": "string",
             "title": "Version"
           },
-          "kind": {
+          "kinds_subkinds": {
             "anyOf": [
               {
-                "type": "string"
+                "additionalProperties": {
+                  "items": {
+                    "type": "string"
+                  },
+                  "type": "array"
+                },
+                "type": "object"
               },
               {
                 "type": "null"
               }
             ],
-            "title": "Kind"
+            "title": "Kinds Subkinds"
           },
-          "subkind": {
+          "subprotocols": {
             "anyOf": [
               {
-                "type": "string"
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
               },
               {
                 "type": "null"
               }
             ],
-            "title": "Subkind"
+            "title": "Subprotocols"
+          },
+          "category": {
+            "$ref": "#/components/schemas/CECategory"
           },
           "enabled": {
             "type": "boolean",
@@ -3482,8 +3558,9 @@
           "cfn_id",
           "name",
           "version",
-          "kind",
-          "subkind",
+          "kinds_subkinds",
+          "subprotocols",
+          "category",
           "enabled",
           "mas_auto_associate",
           "status",
@@ -3987,18 +4064,31 @@
             "type": "string",
             "title": "Name"
           },
-          "kind": {
+          "kinds_subkinds": {
             "anyOf": [
               {
-                "type": "string"
+                "additionalProperties": true,
+                "type": "object"
               },
               {
                 "type": "null"
               }
             ],
-            "title": "Kind"
+            "title": "Kinds Subkinds"
           },
-          "subkind": {
+          "subprotocols": {
+            "anyOf": [
+              {
+                "items": {},
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Subprotocols"
+          },
+          "category": {
             "anyOf": [
               {
                 "type": "string"
@@ -4007,7 +4097,7 @@
                 "type": "null"
               }
             ],
-            "title": "Subkind"
+            "title": "Category"
           },
           "url": {
             "type": "string",
@@ -4038,8 +4128,9 @@
         "required": [
           "ce_id",
           "name",
-          "kind",
-          "subkind",
+          "kinds_subkinds",
+          "subprotocols",
+          "category",
           "url",
           "enabled",
           "status",

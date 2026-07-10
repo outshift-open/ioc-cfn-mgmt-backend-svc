@@ -5,9 +5,23 @@
 """Cognition Engine schemas"""
 
 from datetime import datetime
-from typing import List, Optional
+from enum import Enum
+from typing import Dict, List, Optional
 
 from pydantic import BaseModel, Field
+
+
+class CECategory(str, Enum):
+    """Category of a Cognition Engine.
+
+    - UNKNOWN: Default/unspecified category
+    - GAT: Gateway CE (e.g., CASA)
+    - COG: Cognition Engines (all other CEs)
+    """
+
+    UNKNOWN = "UNKNOWN"
+    GAT = "GAT"
+    COG = "COG"
 
 
 class CognitionEngineRegisterRequest(BaseModel):
@@ -17,8 +31,20 @@ class CognitionEngineRegisterRequest(BaseModel):
     name: str = Field(..., description="Engine name")
     url: str = Field(..., description="URL for the CFN to reach this engine")
     version: str = Field(..., description="CE software version, e.g. '1.2.3'")
-    kind: Optional[str] = Field(None, description="Engine kind, e.g. 'knowledge', 'contingency'")
-    subkind: Optional[str] = Field(None, description="Engine subkind, e.g. 'distillation', 'query', 'alignment'")
+    kinds_subkinds: Dict[str, List[str]] = Field(
+        ...,
+        description=(
+            "Map of kind -> list of subkinds, e.g. {'intent': ['mission'], 'exchange': ['team-formation']}. "
+            "All supported subkinds must be listed. Required for L9 routing."
+        ),
+    )
+    subprotocols: Optional[List[str]] = Field(
+        default=None, description="List of subprotocols supported by this CE, e.g. ['sab']."
+    )
+    category: CECategory = Field(
+        default=CECategory.COG,
+        description="CE category: 'UNKNOWN', 'GAT' (Gateway, e.g. CASA), or 'COG' (Cognition, default for most CEs)",
+    )
     mas_auto_associate: bool = Field(
         False, description="If true, CE is auto-associated with all MAS under the same CFN's workspaces"
     )
@@ -39,8 +65,9 @@ class CognitionEngineResponse(BaseModel):
     cfn_id: str
     name: str
     version: str
-    kind: Optional[str]
-    subkind: Optional[str]
+    kinds_subkinds: Optional[Dict[str, List[str]]]
+    subprotocols: Optional[List[str]]
+    category: CECategory
     enabled: bool
     mas_auto_associate: bool
     status: str
@@ -54,8 +81,9 @@ class CognitionEngineListItem(BaseModel):
     cfn_id: str
     name: str
     version: str
-    kind: Optional[str]
-    subkind: Optional[str]
+    kinds_subkinds: Optional[Dict[str, List[str]]]
+    subprotocols: Optional[List[str]]
+    category: CECategory
     url: str
     enabled: bool
     mas_auto_associate: bool
@@ -80,8 +108,9 @@ class CognitionEngineDetail(BaseModel):
     cfn_id: str
     name: str
     version: str
-    kind: Optional[str]
-    subkind: Optional[str]
+    kinds_subkinds: Optional[Dict[str, List[str]]]
+    subprotocols: Optional[List[str]]
+    category: CECategory
     url: str
     enabled: bool
     mas_auto_associate: bool
@@ -99,7 +128,7 @@ class CognitionEnginePatchRequest(BaseModel):
     """Schema for PATCH /cognition-engines/{id}.
 
     Only the fields listed here can be updated.
-    Attempting to update immutable fields (cfn_id, version, name, kind, subkind)
+    Attempting to update immutable fields (cfn_id, version, name, kinds_subkinds, subprotocols, category)
     will be rejected with 400.
     """
 
@@ -116,8 +145,9 @@ class CognitionEnginePatchRequest(BaseModel):
     cfn_id: Optional[str] = Field(None, description="Immutable — cannot be updated via PATCH")
     version: Optional[str] = Field(None, description="Immutable — cannot be updated via PATCH")
     name: Optional[str] = Field(None, description="Immutable — cannot be updated via PATCH")
-    kind: Optional[str] = Field(None, description="Immutable — cannot be updated via PATCH")
-    subkind: Optional[str] = Field(None, description="Immutable — cannot be updated via PATCH")
+    kinds_subkinds: Optional[Dict[str, List[str]]] = Field(None, description="Immutable — cannot be updated via PATCH")
+    subprotocols: Optional[List[str]] = Field(None, description="Immutable — cannot be updated via PATCH")
+    category: Optional[CECategory] = Field(None, description="Immutable — cannot be updated via PATCH")
 
 
 class CognitionEngineAssociateResponse(BaseModel):

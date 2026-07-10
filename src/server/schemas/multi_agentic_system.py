@@ -129,8 +129,9 @@ class MasCognitionEngineItem(BaseModel):
 
     ce_id: str
     name: str
-    kind: Optional[str]
-    subkind: Optional[str]
+    kinds_subkinds: Optional[dict]
+    subprotocols: Optional[list]
+    category: Optional[str]
     url: str
     enabled: bool
     status: str
