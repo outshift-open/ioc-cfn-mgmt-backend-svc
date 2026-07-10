@@ -193,7 +193,7 @@ services:
       - LOG_LEVEL=${LOG_LEVEL:-INFO}
       - MGMT_URL=${MGMT_URL:-http://ioc-cfn-mgmt-plane-svc:9000}
       - CFN_NAME=${CFN_NAME:-cfn-new}
-      - CFN_IP=${CFN_IP:-"Not Set"}
+      - CFN_IP=${CFN_IP:-}
       - HEARTBEAT_INTERVAL_SECONDS=${HEARTBEAT_INTERVAL_SECONDS:-10}
       - SERVICE_NAME=${SERVICE_NAME:-ioc-cfn-svc}
       - DB_NAME=${DB_NAME:-cfn_cp}
